@@ -1,14 +1,20 @@
 #! /bin/csh -f
 
+if ( ! $?REMOTEHOST ) then
+	set H=$HOST
+else
+	set H=$REMOTEHOST
+endif
+
 #set font=-adobe-courier-bold-r-normal--11-80-100-100-m-60-iso8859-1
-if ( $REMOTEHOST =~ method* ) \
+if ( "$H" =~ method* ) \
 set font=-adobe-courier-bold-r-normal--25-180-100-100-m-150-iso8859-1
 #set font=-adobe-courier-bold-r-normal--17-120-100-100-m-100-iso8859-1
 #set font=-adobe-courier-bold-r-normal--34-240-100-100-m-200-iso8859-1
 #set font=-adobe-courier-bold-r-normal--14-100-100-100-m-90-iso8859-1
 #set font=-adobe-courier-bold-r-normal--20-140-100-100-m-110-iso8859-1
 #set font=-adobe-courier-bold-r-normal--8-80-75-75-m-50-iso8859-1
-if ( $REMOTEHOST !~ method* ) \
+if ( "$H" !~ method* ) \
 set font=-adobe-courier-bold-r-normal--18-180-75-75-m-110-iso8859-1
 #set font=-adobe-courier-bold-r-normal--12-120-75-75-m-70-iso8859-1
 #set font=-adobe-courier-bold-r-normal--24-240-75-75-m-150-iso8859-1
@@ -72,9 +78,11 @@ set font=-adobe-courier-bold-r-normal--18-180-75-75-m-110-iso8859-1
 #set font=-adobe-courier-medium-r-normal--12-120-75-75-m-70-iso8859-1
 set location=80x35+2+100
 set program=""
+set title="$HOST"
 if ("$3" != "") set program="-e ssh $3"
+if ("$3" != "") set title="$3"
 if ("$2" != "") set font="$2"
 if ("$1" != "") set location="$1"
-(xterm  -title `hostname` -name `hostname` \
+(xterm  -title $title -name $title \
 	-g $location -fn $font \
 	-sb -ls $program )&
