@@ -24,7 +24,7 @@ set lucidb="-b&h-lucidatypewriter-bold-r-normal-sans"
 set lucidm="-b&h-lucidatypewriter-medium-r-normal-sans"
 set hcrm="-hrnet&hcr-grtt-medium-r-normal-"
 
-set font="$lucidb-18-$m1"
+set font="$lucidm-18-$m1"
 
 while ($# > 0)
     switch ( "$1" )
@@ -36,7 +36,27 @@ while ($# > 0)
 	breaksw
     case -location:
     case -l:
-        set location="$2"
+        switch ( "$2" )
+	case 1:
+	    set location=80x35+5+25
+	    breaksw
+	case 2:
+	    set location=80x35+30+50
+	    breaksw
+	case 3:
+	    set location=80x35+55+75
+	    breaksw
+	case 4:
+	    set location=80x35+80+100
+	    breaksw
+	case [5-90]:
+	    echo location should be 1, 2, 3, 4, or a \
+	         geometry specification.
+	    exit 1
+	case *:
+	    set location="$2"
+	    breaksw
+	endsw
 	shift
 	breaksw
 
@@ -470,7 +490,7 @@ while ($# > 0)
 	echo "    ms=misc semicondensed"
 	exit 1
 
-    default:
+    case *:
     	echo unknown argument: "$1"
 	exit 1
 	breaksw
