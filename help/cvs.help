@@ -2,7 +2,7 @@ CVS HELP
 
 File:		cvs.help
 Author:		Bob Walton (walton@deas.harvard.edu)
-Date:		Tue Jun 24 01:40:19 EDT 2003
+Date:		Sat Jun 28 04:25:10 EDT 2003
 
 Purpose: CVS implements a system for storing past and
 present versions of a file "foo" in another file
@@ -166,6 +166,29 @@ WOT (Walton's Own Tools) has a few simple commands that
 are all you normally need to access a repository.  These
 are:
 
+    cvs -d repository-name directory
+    cvs -d repository-name -n directory
+    cvs -d repository-name -e directory
+        Check out a directory (and its subdirectories)
+	from the repository.  The directory is created
+	locally as per `mkdir', and must not previously
+	exist.  With -n, the directory is not in the
+	repository, but is created there.
+
+	With -e, the directory already exists locally,
+	and has files from the repository added to it.
+	But the directory that already exists locally
+	must NOT have been created by cvsout.  Once
+	created by cvsout, use cvsup below, and not
+	cvsout, to move updates from the repository to
+	the local directory.
+
+    mine file ...
+        Make files writable by owner.  The cvsup and
+	cvscom commands below leave files read-only,
+	so you need to make files you want to change
+	writable.
+
     cvscom [file-or-directories ...]
         Commit current directory or listed files and
 	directories to repository.  Commits subdirec-
@@ -175,21 +198,18 @@ are:
         Update current directory or listed files and
 	directories from repository.
 
-    cvsdiff [-rHEAD] [file-or-directories ...]
-        Diff current directory contents, or listed
-	files and contents of listed directories, with
-	last version checked out from repository, or
-	with more recent version (HEAD) checked into
-	repository.
-
     cvsutd [file-or-directories ...]
         Get status of current directory contents, or
 	listed files and contents of listed directories.
 	Just like cvsup, but changes no files or direc-
 	tories.
 
-    mine file ...
-        Make files writable by user.
+    cvsdiff [-rHEAD] [file-or-directories ...]
+        Diff current directory contents, or listed
+	files and contents of listed directories, with
+	last version checked out from repository, or
+	with most recent version (HEAD) checked into
+	repository.
 
 All WOT tools are documented in detail by giving the
 -doc to the tool: e.g., type `cvscom -doc' to get the
@@ -202,26 +222,12 @@ above to get started:
 
 	Create repository.
 
-    cvs -d repository-name checkout project-directory
-
-        Make a copy of the project-directory and all its
-	subdirectories on the local computer.  Only
-	needed when the root directory of a project is
-	first made on the local computer.
-
-	The directory and some of its subdirectories
-	can already exist on the local computer, and
-	files in the repository can be in these direc-
-	tories.  The project-directory `.' checks out
-	everything in the repository to the current
-	directory.
-
     cvs add file-or-directory ...
 
         Add directories or files on the local computer
-	to those that will be stored in the repository.
-	Actually storing the files will be done by the
-	next `cvscom' command.
+	to those that should be stored in the reposi-
+	tory.  Actually storing the files will be done
+	by the next `cvscom' command.
 
 The following other commands are often useful.
 
@@ -240,17 +246,121 @@ The following other commands are often useful.
 
         Get a list of versions of a file or files.
 
-    cvs diff file ...
+    cvs diff file-or-directory ...
     cvs diff -rX.Y file
-    cvs diff -rHEAD file
+    cvs diff -rHEAD file-or-directory
 
         Diff the current local version of a file with
 	the version you last checked out, or with ver-
 	sion X.Y (obtained from `cvs log file'), or with
 	the most recent version (HEAD) in the repository
 	(this might have been checked in by someone else
-	or by you working on a different computer).
+	or by you working on a different computer).  If
+	directories are named, all the files in them and
+	their subdirectories are diff'ed.
 
+Some things cannot be done well by cvs commands, and
+need to be done instead by modifying files in the
+repository itself.  You need to log into the account
+holding the repository to do these things.  After you
+change the repository, you need to run cvsup to move
+the changes to your local version.
+
+    Renaming files.
+        To simply rename a file, mv its ,v file in the
+	repository.  E.g., `mv fee/fi,v fo/fum,v'.
+
+	But if you want to leave some record behind of
+	the file with the old name, say because it was
+	used in a previous release of the system that
+	you might want to check out later, then instead
+	`cp fee/fi,v fo/fum,v' and use `cvs remove fi'
+	in your local version `fee' directory to create
+	a new file `fo/fum' with the same history as
+	`fee/fi', and then move `fee/fi' to the Attic.
+
+    Renaming directories.
+        Create a new directory in the repository, and
+	move all files from the old directory to the
+	new directory, proceeding as per `renaming
+	files' above.  DO NOT DELETE the old directory.
+
+    Deleting a directory.
+        First, empty the directory, removing all files
+	and subdirectories, except the Attic directory.
+	After doing this, but WITHOUT DELETING the
+	directory itself from the repository, the cvsup
+	command will remove any local versions of the
+	directory.
+
+	When ALL local versions EVERYWHERE have been
+	removed by cvsup, it is safe to remove the
+	directory from the repository.  If any local
+	version is left, it will cause troubles when
+	it is not found in the repository.  Just
+	deleting the local copy of the directory will
+	not fix these troubles: you must also delete
+	any reference to the directory in the
+	CVS/Entries file of its parent directory.
+
+    Moving files from RCS to CVS or vice versa.
+        The ,v files in CVS are identical to those of
+	RCS.  Just move them.
+
+	However, the ,v files in an Attic directory
+	have the state `dead' instead of the state
+	`Exp'.  To make then usable by RCS, you should
+	change the state to `Exp' by
+
+		rcs -sExp file,v ...
+
+	Also, RCS files must not be locked when in the
+	repository.  If locked RCS files are moved into
+	the repository, they will cause errors.  The
+	locks can be removed by
+
+		rcs -u file,v ...
+
+TBD
+
+ignoring files.
+	Several cvs commands print the names of files
+	that are not in the repository, such as .dvi
+	or .o files.  There are two ways to get cvs
+	to ignore such files.  First, make a cvsignore
+	file in the CVSROOT module of the repository
+	that includes a filename pattern matching the
+	names of the files to be ignored.  E.g.,
+	cvsignore might have the line `*.dvi *.o'.
+	Alternatively, a .cvsignore file in a
+	a subdirectory will cause cvs to ignore all
+	the files in that subdirectory whose names
+	match the patterns in the .cvsignore file.
+
+	When changing CVSROOT/cvsignore, after you have
+	committed this file, you must go to the repo-
+	sitory and in the repository check out the
+	CVSROOT/cvsignore file using the RCS command
+	co -u (or -l).  Committing CVSROOT/cvsignore
+	with cvs only changes CVSROOT/cvsignore,v in the
+	repository, and not CVSROOT/cvsignore in the
+	repository.
+
+Merging
+	If two people edit the same version of a file
+	independently, the first person to commit will
+	not have any problem.  The second person to
+	commit will have the commit fail.  The second
+	person must then run `cvs update' to get a
+	working version of the file which has the
+	changes made by the first person merged into the
+	second person's working file.  This merge is
+	done by `rcsmerge'.  The file should be examined
+	to see if there are any real conflicts between
+	the changes done by the two people.  If the
+	changes overlap, the file will contain both
+	versions delimited by lines containing `<<<<<<<'
+	and `>>>>>>>'.
     					
 
 
@@ -408,90 +518,6 @@ cvs remove filename ...
 	rcs command `rcs -sExp filename,v' will
 	change the state to the normal `Exp' state
 	and permit these ",v" files to be reused.
-
-Mv'ing and cp'ing ",v" files in the repository:
-	If you want to duplicate or rename files it
-	is not possible to do this properly with CVS
-	commands.  Instead be sure all users have the
-	relevant files committed and updated, go the
-	repository itself, and `cp -p' or `mv' the
-	",v" files or directories.  You can also make
-	new subdirectories in the repository.
-
-	Then run the `update' command for all users.
-	This will get files with new names out of the
-	repository and delete files with obsolete names.
-
-Mv'ing and rmdir'ing directories in the repository:
-	If you do this you are going to get into
-	trouble.
-
-	The safe thing to do is to mv or rm all files
-	in the directories and not touch the directories
-	themselves.  Then wait a long time until users
-	who are doing `cvs update ... -P' have deleted
-	all user copies of the directories.  Only then,
-	AFTER ALL USER COPIES have been removed, is it
-	safe to rmdir the repository directories.
-
-	If you are a user who still has a copy of a
-	directory that has been rmdir'ed from the
-	repository, cvs will not work.  What you must
-	do are TWO things.  First, `rm -rf' your local
-	copy of the directory: specifically, you must
-	get rid of all CVS subdirectories in the
-	directory or its subdirectories.  Second,
-	remove mention of the subdirectory from its
-	parent directory's CVS/Entries file.  If you do
-	only one of these things and then run a cvs
-	command, cvs will undo the one thing you did and
-	then suffer an error.
-
-Mv'ing or cp'ing ",v" files between RCS and CSV.
-	You can `mv' or `cp -p' files from RCS to a
-	CVS repository or vice versa.  When moving
-	an RCS file into the repository, be sure it is
-	unlocked (use `rcs -u filename,v' to unlock
-	the file).
-
-ignoring files.
-	Several cvs commands print the names of files
-	that are not in the repository, such as .dvi
-	or .o files.  There are two ways to get cvs
-	to ignore such files.  First, make a cvsignore
-	file in the CVSROOT module of the repository
-	that includes a filename pattern matching the
-	names of the files to be ignored.  E.g.,
-	cvsignore might have the line `*.dvi *.o'.
-	Alternatively, a .cvsignore file in a
-	a subdirectory will cause cvs to ignore all
-	the files in that subdirectory whose names
-	match the patterns in the .cvsignore file.
-
-	When changing CVSROOT/cvsignore, after you have
-	committed this file, you must go to the repo-
-	sitory and in the repository check out the
-	CVSROOT/cvsignore file using the RCS command
-	co -u (or -l).  Committing CVSROOT/cvsignore
-	with cvs only changes CVSROOT/cvsignore,v in the
-	repository, and not CVSROOT/cvsignore in the
-	repository.
-
-Merging
-	If two people edit the same version of a file
-	independently, the first person to commit will
-	not have any problem.  The second person to
-	commit will have the commit fail.  The second
-	person must then run `cvs update' to get a
-	working version of the file which has the
-	changes made by the first person merged into the
-	second person's working file.  This merge is
-	done by `rcsmerge'.  The file should be examined
-	to see if there are any real conflicts between
-	the changes done by the two people.  If the
-	changes overlap, the file will contain both
-	versions delimited by lines containing `<<<<<<<'
-	and `>>>>>>>'.
 
 Infrequently used commands:
 ------------------------
