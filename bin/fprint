@@ -1,4 +1,4 @@
-#! /bin/csh -f
-# /usr/5bin/pr -f -l56 -e -o4 $argv:q | \
-#	enscript -g -l -f Courier12 -P$PRINTER
-enscript -g -2r -f Courier10 --margins 70:70:: -P$PRINTER $argv:q
+#! /bin/sh
+
+exec enscript -j -2r -b "\$n|%E  %C  %n|\$% of \$=" \
+	-F Courier-Bold14 -f Courier10 -P $PRINTER "$@"
