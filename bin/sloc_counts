@@ -1,0 +1,186 @@
+#!/bin/sh
+#
+# Output the SLOC counts of files.
+#
+# File:		sloc_counts
+# Author:	Bob Walton (walton@deas.harvard.edu)
+# Date:		Thu Jan 23 06:28:39 EST 2003
+#
+# The authors have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+#
+# RCS Info (may not be true date or author):
+#
+#   $Author: hc3 $
+#   $Date: 2003/01/23 12:57:21 $
+#   $RCSfile: sloc_counts,v $
+#   $Revision: 1.1 $
+#
+# The next line starts tcl \
+exec tcl "$0" "$@"
+
+# This is a utility program that does NOT have to run
+# in a judging directory tree.
+
+set document "
+sloc_counts \[-debug\] \[-s\] filename ...
+
+    Output one line per filename.  Each line has the
+    number of SLOCs in the file followed by a space and
+    then the filename.
+
+    With the -s option summary information is printed at
+    the end.
+
+    With the -debug option the lines counted are printed.
+
+    A SLOC, or `Source Line of Code', is defined as
+    follows.
+
+    Files with the extensions .c, .cc, .lsp, .p, and
+    .java are treated specially.  Other files are
+    treated as `shell files'.
+
+    For a .c, .cc, .p, and .java file, a SLOC is a line
+    containing a semi-colon (`;').
+
+    For a .lsp file a SLOC is a line containing a
+    closing parenthesis (`)').
+
+    For a shell file, a SLOC is a non-excluded line,
+    where the following lines are excluded.  Blank lines
+    are excluded.  Lines whose first non-whitespace
+    character is `#' are excluded.  All the lines from
+    the line after a line of the form
+
+    	W*setW+documentW+\"W*
+
+    or a line of the form
+
+    	W*echoW+\"W*
+
+    through the next line containing a \" not preceeded
+    by a backslash are excluded, where W is any white-
+    space character."
+
+# Print documentation if no arguments or -doc* argument.
+
+if { $argc == 0 || [regexp {^-doc} [lindex $argv 0]] } {
+    puts $document
+    exit 1
+}
+
+# Process arguments. 
+
+set summary no
+set debug no
+set files $argv
+if { [lindex $files 0] == "-debug" } {
+    set debug yes
+    set files [lrange $files 1 end]
+}
+if { [lindex $files 0] == "-s" } {
+    set summary yes
+    set files [lrange $files 1 end]
+}
+    
+
+# Computed counts are:
+#
+#     total		total count
+#     extension($ext)	count for files named *.$ext
+#
+set total 0
+
+# Process each file.
+#
+set WS "\[\ \t\]"
+set NOTBS "\[^\\\\\]"
+foreach file $files {
+
+    if { [catch { set in [open $file r] }] } {
+        puts "ERROR: cannot open $file"
+	exit 1
+    }
+
+    set ext [file extension $file]
+
+    set count 0
+    switch $ext {
+	.c	-
+	.cc	-
+	.p	-
+	.java	{
+
+	    while { "yes" } {
+		set line [gets $in]
+		if { [eof $in] } break
+
+		if { [regexp {;} $line] } {
+		    incr count
+		    if { $debug } { puts $line }
+		}
+	    }
+	}
+
+	default	{
+
+	    while { "yes" } {
+		set line [gets $in]
+		if { [eof $in] } break
+
+		set trimmed [string trim $line]
+
+		if { $trimmed == "" } continue
+
+		if { [regexp {^#} $trimmed] } continue
+
+		incr count
+		if { $debug } { puts $line }
+
+		if { [regexp \
+		        "^set${WS}+document${WS}+\"\$" \
+			$trimmed] || \
+		     [regexp \
+		        "^echo${WS}+\"\$" \
+			$trimmed] } {
+		    while { "yes" } {
+			set line [gets $in]
+			if { [eof $in] } break
+			if { [regexp \
+				"(^|${NOTBS})\"" \
+				$line] } \
+			    break
+		    }
+		}
+	    }
+	}
+    }
+
+    puts "$count $file"
+
+    close $in
+    if { $ext == "" } { set ext "NO_EXTENSION" }
+    if { [info exists extension($ext)] } {
+    	incr extension($ext) $count
+    } else {
+        set extension($ext) $count
+    }
+    incr total $count
+}
+
+if { $summary } {
+
+    puts ""
+    puts "SUMMARY:"
+    puts ""
+
+    foreach ext [lsort [array names extension]] {
+        puts "$extension($ext) $ext"
+    }
+    puts ""
+    puts "$total total"
+}
+
+exit 0
