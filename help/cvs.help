@@ -217,11 +217,21 @@ cvs commit -m update filename
 cvs add filename ...
 cvs add directory ...
 cvs remove filename ...
-cvs remove directory ...
-	Marks files or directories that are to be added
-	or removed from the repository.  The actual
-	addition or removal is done by the next CVS
-	`commit' command.
+	Marks files that are to be added or removed from
+	the repository.  The actual addition or removal
+	is done by the next CVS `commit' command.
+
+	A directory can also be added to the repository.
+	However, a directory cannot be removed.  Note
+	that empty directories may be removed by the
+	`cvs update ... -P' command described below,
+	so you should be sure any useful directory is
+	not empty (in worst case by adding a .cvskeep
+	file with meaningless contents).
+
+	A directory cannot be removed from the
+	repository in this way, or even easily.  See
+	`moving and removing directories' below.
 
 	To add just make the file or directory and
 	mention it in an `add' command.
@@ -253,15 +263,30 @@ Mv'ing and cp'ing ",v" files in the repository:
 	This will get files with new names out of the
 	repository and delete files with obsolete names.
 
-	There is one problem that occurs if you mv
-	(or rmdir) a subdirectory in the repository.
-	Then you must remove mention of the
-	subdirectory from its parent directory's
-	CVS/Entries file in any checked out copy of
-	the repository, AND you must rmdir the
-	subdirectory's CVS subdirectory (or the
-	subdirectory itself) from any checked out copy
-	of the repository.
+Mv'ing and rmdir'ing directories in the repository:
+	If you do this you are going to get into
+	trouble.
+
+	The safe thing to do is to mv or rm all files
+	in the directories and not touch the directories
+	themselves.  Then wait a long time until users
+	who are doing `cvs update ... -P' have deleted
+	all user copies of the directories.  Only then,
+	AFTER ALL USER COPIES have been removed, is it
+	safe to rmdir the repository directories.
+
+	If you are a user who still has a copy of a
+	directory that has been rmdir'ed from the
+	repository, cvs will not work.  What you must
+	do are TWO things.  First, `rm -rf' your local
+	copy of the directory: specifically, you must
+	get rid of all CVS subdirectories in the
+	directory or its subdirectories.  Second,
+	remove mention of the subdirectory from its
+	parent directory's CVS/Entries file.  If you do
+	only one of these things and then run a cvs
+	command, cvs will undo the one thing you did and
+	then suffer an error.
 
 Mv'ing or cp'ing ",v" files between RCS and CSV.
 	You can `mv' or `cp -p' files from RCS to a
@@ -318,4 +343,4 @@ CVS/Entries CVS/Root CVS/Repository
 
 Merging
 
-Directory removal and moving
+Changing repository location.
