@@ -1,6 +1,99 @@
 #! /bin/sh
+#
+# Print files, in 60 line x 80 column format by default,
+# or in other formats by option.
+#
+# File:		print
+# Author:	Bob Walton <walton@deas.harvard.edu>
+# Date:		Mon Mar 31 07:40:33 EST 2003
+#
+# The authors have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+#
+# RCS Info (may not be true date or author):
+#
+#   $Author: walton $
+#   $Date: 2003/03/31 13:57:44 $
+#   $RCSfile: print,v $
+#   $Revision: 1.8 $
+
+# UNFINISHED CODE
+
+landscape=""
+filename="\\\$n"
+date="\\\$W  \\\$C  %n"
+pagenumber="\\\$% of \\\$="
+font=10
+tfont=12
+
+case "$1" in
+    -doc* )
+   	echo "
+print [-2fdnLMST] [filename ...]
+
+    Print the files named (or the standard input if
+    the filenames are missing) in a format well suited
+    to files with lines of 56 columns.   This format
+    puts 2 file pages per paper page, and permits at
+    least 40 lines on a file page.
+
+    The printer used is the value of the PRINTER
+    environment variable."
+
+    	exit 1
+	;;
+    -* )
+	case "$1" in
+	*2*)	landscape="-2r"	
+		font=7
+		tfont=10
+		case "$1" in
+		*V*)	font=9 ;;
+		*L*)	font=8 ;;
+		*M*)	font=7 ;;
+		*S*)	font=6 ;;
+		*T*)	font=5 ;;
+		esac
+		;;
+	*)
+		case "$1" in
+		*V*)	font=14 ;;
+		*L*)	font=12 ;;
+		*M*)	font=10 ;;
+		*S*)	font=8 ;;
+		*T*)	font=6 ;;
+		esac
+	esac
+	case "$1" in
+	*fdn*)	filename=""
+		date=""
+		pagenumber=""
+	esac
+	case "$1" in
+	*f*)	filename="\\\$n"
+	esac
+	case "$1" in
+	*d*)	date="\\\$W  \\\$C  %n"
+	esac
+	case "$1" in
+	*p*)	pagenumber="\\\$% of \\\$="
+	esac
+
+	shift
+esac
+
 
 exec enscript -j -b "\$n|\$W  \$C  %n|\$% of \$=" \
 	--margins=48:48:: \
 	-F Courier-Bold12 -f Courier10 \
 	-P $PRINTER "$@"
+
+# Print files.
+#
+enscript -j -2r -b "\$n|\$W  \$C  %n|\$% of \$=" \
+	--margins=48:48:: \
+	-F Courier-Bold14 -f Courier10 \
+	-P $PRINTER "$@"
+
+exit 0
