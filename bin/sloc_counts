@@ -4,7 +4,7 @@
 #
 # File:		sloc_counts
 # Author:	Bob Walton (walton@deas.harvard.edu)
-# Date:		Thu Jan 23 07:59:42 EST 2003
+# Date:		Fri Jan 24 08:35:51 EST 2003
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: hc3 $
-#   $Date: 2003/01/23 13:00:45 $
+#   $Date: 2003/01/24 15:46:41 $
 #   $RCSfile: sloc_counts,v $
-#   $Revision: 1.2 $
+#   $Revision: 1.3 $
 #
 # The next line starts tcl \
 exec tcl "$0" "$@"
@@ -27,7 +27,7 @@ set document "
 sloc_counts \[-debug\] \[-s\] filename ...
 
     Output one line per filename.  Each line has the
-    number of SLOCs in the file followed by a space and
+    number of SLOCs in the file followed by a tab and
     then the filename.
 
     With the -s option summary information is printed at
@@ -156,7 +156,7 @@ foreach file $files {
 	}
     }
 
-    puts "$count $file"
+    puts "$count\t$file"
 
     close $in
     if { $ext == "" } { set ext "NO_EXTENSION" }
@@ -175,10 +175,10 @@ if { $summary } {
     puts ""
 
     foreach ext [lsort [array names extension]] {
-        puts "$extension($ext) $ext"
+        puts "$extension($ext)\t$ext"
     }
     puts ""
-    puts "$total total"
+    puts "$total\ttotal"
 }
 
 exit 0
