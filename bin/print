@@ -5,7 +5,7 @@
 #
 # File:		print
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Fri Feb 20 11:00:36 EST 2004
+# Date:		Tue Oct 12 03:23:55 EDT 2004
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -14,14 +14,15 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2004/02/20 16:36:47 $
+#   $Date: 2004/10/29 09:55:28 $
 #   $RCSfile: print,v $
-#   $Revision: 1.13 $
+#   $Revision: 1.14 $
 
 landscape=""
 border="-j"
 filename="\$n"
-date="\$W  \$C  %n"
+date=" \$W  \$C "
+login=" %n "
 pagenumber="\$% of \$="
 font=10
 titlefont=12
@@ -31,7 +32,7 @@ switches=""
 case "$1" in
     -doc* )
    	echo "
-print [-2fdpWNbo] [-P printer] [filename ...]
+print [-2FfdlpWNbo] [-P printer] [filename ...]
 
     Print the files named, or the standard input if no
     files are named.
@@ -47,9 +48,12 @@ print [-2fdpWNbo] [-P printer] [filename ...]
     overhead projectors, and for printing two columns
     per page (-2 option) with reasonable sized font.
     
-    The header normally includes file name, date, and
-    page number.  -f suppresses the file name; -d sup-
-    presses the date; and -p suppresses the page number.
+    The header normally includes file name, date, login
+    name, and page number.  -f suppresses the file name;
+    -d suppresses the date; -l suppresses the login
+    name; and -p suppresses the page number.  -F prints
+    the full file name instead of just the last compo-
+    nent of the file name.
 
     Normally the page has a border, but -b suppresses
     the border.
@@ -67,7 +71,7 @@ print [-2fdpWNbo] [-P printer] [filename ...]
     -P ) ;;
     -* )
     	switches="$1"
-	if test `expr "$1" : '\-[2fdpWNbo]*$'` -le 1
+	if test `expr "$1" : '\-[2FfdlpWNbo]*$'` -le 1
 	then
 	    echo ERROR: bad option in "$1"
 	    echo \`print -doc\' prints documentation.
@@ -76,6 +80,13 @@ print [-2fdpWNbo] [-P printer] [filename ...]
 	case "$1" in
 	*W*N* | *N*W* )
 		echo ERROR: both -W and -N options \
+			    given.
+		echo \`print -doc\' prints \
+		     documentation.
+		exit 1
+		;;
+	*f*F* | *F*f* )
+		echo ERROR: both -f and -F options \
 			    given.
 		echo \`print -doc\' prints \
 		     documentation.
@@ -104,7 +115,15 @@ print [-2fdpWNbo] [-P printer] [filename ...]
 	esac
 
 	case "$1" in
+	*F*)	filename="\$N"
+	esac
+
+	case "$1" in
 	*d*)	date=""
+	esac
+
+	case "$1" in
+	*l*)	login=""
 	esac
 
 	case "$1" in
@@ -127,6 +146,7 @@ case "$1" in
 		     given.
 		echo \`print -doc\' prints \
 		     documentation.
+		exit 1
 		;;
 	esac
     	shift
@@ -137,7 +157,7 @@ case "$1" in
 esac
 
 exec enscript $landscape $border \
-        -b "$filename|$date|$pagenumber" \
+        -b "$filename|$date$login|$pagenumber" \
 	--margins=48:48:: \
 	-F Courier-Bold$titlefont -f Courier$font \
 	$output "$@"
