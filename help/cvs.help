@@ -112,24 +112,25 @@ used to access the remote repository.
 
 If you are doing a group project in which all users are
 in a UNIX group, it is important that your umask be set
-to 7, and not 77, when running cvs.  This can be
-accomplished by putting:
+to 7, and not 77, when cvs is accessing the repository.
+To accomplish this put:
 
-	alias cvs '(umask 007; \cvs \!*)'
+	setenv CVSUMASK 7
 
 in the .cshrc file of the account that locally accesses
-the repository.  If you do NOT do this, but instead
-run cvs with umask equal to 77, the repository files
-created when you run cvs will be inaccessible to your
-group mates.
+the repository.  If you do NOT do this, but instead let
+cvs access the repository with umask equal to 77, the
+repository files created when you run cvs will be
+inaccessible to your group mates.
 
-Note that using the above alias implies that ALL CVS
-repositories you deal with will have group write
-permissions.  If some repositories are not to be group
-accessible, you may protect the repository top level
-directory against group access, and periodically remove
-group permissions from the files and subdirectories
-in the repository.
+Note that using the above setenv implies that ALL CVS
+repositories you manage with a particular account will
+have group write permissions.  If some of these
+repositories are not to be group accessible, you may
+protect the repository top level directory against group
+access, and, if you like, periodically remove group
+permissions from the files and subdirectories in the
+repository.
 
 Standard CVS User Commands:
 -------- --- ---- --------
@@ -213,7 +214,7 @@ cvs commit -m update filename
 	`remove' command below, and adds files or
 	directories to the repository that were
 	identified by the CVS `add' command below.
-	The `-m update' parameter just statisfies
+	The `-m update' parameter just satisfies
 	the need of `cvs commit' for a message from
 	its user telling the purpose of the commit.
 
