@@ -115,7 +115,7 @@ in a UNIX group, it is important that your umask be set
 to 7, and not 77, when cvs is accessing the repository.
 To accomplish this put:
 
-	setenv CVSUMASK 7
+	setenv CVSUMASK 007
 
 in the .cshrc file of the account that locally accesses
 the repository.  If you do NOT do this, but instead let
