@@ -1,6 +1,0 @@
-#! /bin/csh -f
-#/usr/5bin/pr -f -l48 -e  $argv:q | \
-#	enscript -g -l -f Courier16 -P$PRINTER \
-# enscript -g -f Courier-Bold16 -P$PRINTER $argv:q
-enscript -g -f Courier16 -P$PRINTER $argv:q
-

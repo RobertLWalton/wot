@@ -1,6 +1,0 @@
-#! /bin/sh
-
-exec enscript -j -2r -b "\$n|\$W  \$C  %n|\$% of \$=" \
-	--margins=48:48:: \
-	-F Courier-Bold14 -f Courier10 \
-	-P $PRINTER "$@"

@@ -1,7 +1,0 @@
-#! /bin/sh
-
-exec enscript -j -b "" \
-	--margins=48:48:: \
-	-F Courier-Bold12 -f Courier10 \
-	-P $PRINTER "$@"
-

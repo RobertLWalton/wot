@@ -1,2 +1,0 @@
-#! /bin/csh -f
-enscript -g -2r -P$PRINTER $argv:q

@@ -1,3 +1,0 @@
-#! /bin/csh -f
-enscript -g -2rG -fCourier9 -P$PRINTER $argv:q
-

@@ -1,4 +1,0 @@
-#! /bin/sh
-
-exec enscript -B --margins=64:64:64:64 -f Courier10 \
-	-P $PRINTER "$@"
