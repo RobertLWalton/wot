@@ -14,29 +14,42 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2003/03/31 13:57:44 $
+#   $Date: 2003/03/31 21:01:14 $
 #   $RCSfile: print,v $
-#   $Revision: 1.8 $
+#   $Revision: 1.9 $
 
 # UNFINISHED CODE
 
 landscape=""
-filename="\\\$n"
-date="\\\$W  \\\$C  %n"
-pagenumber="\\\$% of \\\$="
+border="-j"
+filename="\$n"
+date="\$W  \$C  %n"
+pagenumber="\$% of \$="
 font=10
 tfont=12
 
 case "$1" in
     -doc* )
    	echo "
-print [-2fdnLMST] [filename ...]
+print [-2fdpWNb] [filename ...]
 
-    Print the files named (or the standard input if
-    the filenames are missing) in a format well suited
-    to files with lines of 56 columns.   This format
-    puts 2 file pages per paper page, and permits at
-    least 40 lines on a file page.
+    Print the files named.
+
+    Normally one column is printed; -2 prints two
+    columns per page in landscape.
+    
+    Normally the column width is 80 characters; -W is
+    a wide column of 100 characters; -N is a narrow
+    column of 56 characters.  Minimal page lengths are
+    60 lines normally, 40 lines for -N, and 70 lines
+    for -W.
+    
+    The header normally includes file name, date, and
+    page number.  -f suppresses the file name; -d sup-
+    presses the date; and -n suppresses the page number.
+
+    Normally the page has a border, but -b suppresses
+    the border.
 
     The printer used is the value of the PRINTER
     environment variable."
@@ -47,53 +60,156 @@ print [-2fdnLMST] [filename ...]
 	case "$1" in
 	*2*)	landscape="-2r"	
 		font=7
-		tfont=10
 		case "$1" in
-		*V*)	font=9 ;;
-		*L*)	font=8 ;;
-		*M*)	font=7 ;;
-		*S*)	font=6 ;;
-		*T*)	font=5 ;;
+		*W*)	font=6; tfont=10 ;;
+		*N*)	font=10 ;;
 		esac
 		;;
 	*)
 		case "$1" in
-		*V*)	font=14 ;;
-		*L*)	font=12 ;;
+		*W*)	font=8; tfont=10 ;;
 		*M*)	font=10 ;;
-		*S*)	font=8 ;;
-		*T*)	font=6 ;;
+		*N*)	font=15; tfont=15 ;;
 		esac
 	esac
+
 	case "$1" in
-	*fdn*)	filename=""
-		date=""
-		pagenumber=""
+	*b*)	border=""
 	esac
+
 	case "$1" in
-	*f*)	filename="\\\$n"
+	*f*)	filename=""
 	esac
+
 	case "$1" in
-	*d*)	date="\\\$W  \\\$C  %n"
+	*d*)	date=""
 	esac
+
 	case "$1" in
-	*p*)	pagenumber="\\\$% of \\\$="
+	*p*)	pagenumber=""
 	esac
 
 	shift
 esac
 
 
-exec enscript -j -b "\$n|\$W  \$C  %n|\$% of \$=" \
+exec enscript $landscape $border \
+        -b "$filename|$date|$pagenumber" \
 	--margins=48:48:: \
-	-F Courier-Bold12 -f Courier10 \
+	-F Courier-Bold$tfont -f Courier$font \
 	-P $PRINTER "$@"
 
-# Print files.
-#
-enscript -j -2r -b "\$n|\$W  \$C  %n|\$% of \$=" \
-	--margins=48:48:: \
-	-F Courier-Bold14 -f Courier10 \
-	-P $PRINTER "$@"
 
-exit 0
+
+Test Lines
+
+
+56 columns:
+01234567890123456789012345678901234567890123456789012345
+
+80 columns:
+01234567890123456789012345678901234567890123456789012345678901234567890123456789
+
+100 columns:
+0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+
+
+1 line numbers
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99  last line
