@@ -1,2 +1,2 @@
 #! /bin/csh -f
-cvs diff |& grep -v 'cvs.*: Diffing '
+cvs diff $argv:q |& grep -v 'cvs.*: Diffing '

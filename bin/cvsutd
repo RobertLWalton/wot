@@ -4,7 +4,7 @@
 #
 # File:		cvsutd
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Thu Jun 12 22:45:12 EDT 2003
+# Date:		Tue Jun 24 02:55:40 EDT 2003
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,21 +13,23 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2003/06/13 02:49:12 $
+#   $Date: 2003/06/24 07:08:27 $
 #   $RCSfile: cvsutd,v $
-#   $Revision: 1.4 $
+#   $Revision: 1.5 $
 
 switch ( "$1" )
 
    case -doc*:
 
    	echo "\
-cvsutd\
+cvsutd [file-or-directory ...]\
 \
     Check whether the current directory and its sub-\
-    directories are up to date.  Essentually prints out\
-    the same thing that a "'`'"cvsup' command would,\
-    but does not change any files or directories.\
+    directories, or the listed files and directories\
+    (and their subdirectories), are up to date.  Essen-\
+    tually prints out the same thing that a "'`'"cvsup'\
+    command would, but does not change any files or\
+    directories.\
 \
     Some of the possible printed messages are:\
 \
@@ -67,4 +69,4 @@ cvsutd\
 	breaksw
 endsw
 
-cvs -n update -d -P |& grep -v ': Updating'
+cvs -n update -d -P $argv:q |& grep -v ': Updating'

@@ -1,1 +1,2 @@
-cvs commit -m update
+#! /bin/csh -f
+cvs commit -m update $argv:q
