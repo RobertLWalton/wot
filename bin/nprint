@@ -1,0 +1,7 @@
+#! /bin/sh
+
+exec enscript -j -b "||page \$% of \$=" \
+	--margins=48:48:: \
+	-F Courier10 -f Courier10 \
+	-P $PRINTER "$@"
+
