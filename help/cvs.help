@@ -2,7 +2,7 @@ CVS HELP
 
 File:		cvs.help
 Author:		Bob Walton (walton@deas.harvard.edu)
-Version:	2
+Date:		Tue Jun 24 01:40:19 EDT 2003
 
 Purpose: CVS implements a system for storing past and
 present versions of a file "foo" in another file
@@ -15,8 +15,19 @@ read and write the files and directories of the
 repository, or from any remote system that can log into
 such an account using rlogin or ssh.  CVS is standardly
 installed in modern UNIX systems, and it is possible to
-install CVS under the various window's operating
-systems.
+install CVS under other operating systems.  The web site
+for CVS is www.cvshome.org, and this has free downloads
+for common operating systems.
+
+CVS is very useful for a single person who works on
+several different computers that do not have a shared
+file system, or who works on a computer whose file
+system is not regularly backed up.  By placing a CVS
+repository on a backed up computer, it is easy to work
+on a project on many different non-backed up computers;
+just checkout the project whenever you start a work
+session and check it back in when you finish the
+session.
 
 CVS is useful for cooperative projects where many people
 work on the same set of files.  It permits more than one
@@ -31,22 +42,26 @@ recently made.  If the repository is remote from you,
 accessing it using CVS can be slower, however, than a
 local RCS system.  It is easy to move ",v" RCS files
 into a CVS repository and to move them out again, so it
-is easy to switch between using CVS and using RCS.
+is easy to switch between using CVS and using RCS.  And
+it is also possible to place your CVS repository on your
+local computer and back it up on a remote machine as a
+tar file.  This can also be useful if you want to store
+only an encrypted version of your files on the remote
+computer.
 
 The CVS repository is a directory with subdirectories.
-The repository contains subdirectories containing
-",v" files or other subdirectories.  Users maintain
-copies of parts of the repository with ",v" files
-replaced by the files they log (i.e., "foo,v"
-replaced by "foo").  Users may check files in and
-out, and may check all the files and subdirectories
-in a subdirectory system in or out.  Checking "foo"
-in means storing the current version of "foo" in
-"foo,v"; checking "foo" out means copying the most
-recent version of "foo" stored in "foo,v" to the
-user's version of "foo".  The command in CVS to
-check files in is called `commit', and the command
-to check files out is called `update'.
+Repository directories contain ",v" files or and sub-
+directories.  Users maintain copies of parts of the
+repository with ",v" files replaced by the files they
+log (i.e., "foo,v" replaced by "foo").  Users may check
+files in and out, and may check all the files and sub-
+directories in a subdirectory system in or out.  Check-
+ing "foo" in means storing the current version of "foo"
+in "foo,v"; checking "foo" out means copying the most
+recent version of "foo" stored in "foo,v" to the user's
+version of "foo".  The command in CVS to check files in
+is called `commit', and the command to check files out
+is called `update'.
 
 The subdirectory organization of the repository is the
 same as the subdirectory organization of the user of
@@ -60,13 +75,16 @@ repository subdirectories may have Attic subdirectories
 in which ",v" files that have been `removed' from the
 repository are kept (so nothing is ever lost).
 
-The top level of the repository is not itself matched
-to any user subdirectory.  Rather, the top level
-subdirectories are said to define `modules' and are
-matched to user subdirectories.  Modules are checked
-out by a separate CVS `checkout' command, not all
-modules in a repository need be checked out by a given
-user.
+You can checkout any directory in the repository, or
+subtree of directories rooted at any directory of the
+repository.  You do not need to checkout the whole
+repository, but you can do so (just checkout `.').
+Commonly you have one subdirectory of the repository
+for each of your projects, and you checkout projects
+independently.  When you initially start working on a
+project on a particular computer, you use the CVS
+`checkout' command to make a copy of the project
+directory and its subdirectories on the local machine.
 
 The repository name is the full pathname of the
 repository directory if the repository is on the local
@@ -74,12 +92,15 @@ computer; or is of the form:
 
 	login-name@host-name:full-directory-pathname
 
-if the repository is on a local computer.  Because :
+if the repository is on a remote computer.  Because :
 is legal in a windows operating system file name, on
 the windows operating system a local pathname is of
 the form:
 
 	local:full-directory-pathname
+
+CVS repositories are created by running the CVS `init'
+command.
 
 
 Environment Settings
@@ -89,9 +110,9 @@ You should put
 
 	setenv CVSREAD
 
-in your .cshrc file.  This causes files checked out from
-the repository to be marked read-only.  To change a file
-you must first
+in your .cshrc file on the computers you work on.  This
+causes files checked out from the repository to be
+marked read-only.  To change a file you must first
 
 	chmod u+w filename
 
@@ -107,21 +128,27 @@ put:
 
 	setenv CVS_RSH ssh
 
-in your .cshrc file.  If you do NOT do this, rsh will be
-used to access the remote repository.
+in your .cshrc file on the computers you work on.  If
+you do NOT do this, rsh will be used to access the
+remote repository.  CVS works with a remote repository
+by logging into the remote account every time it runs,
+so to avoid having to type a password for every CVS
+command you run, you should set up ssh (or rsh) so that
+you can log into the remote account without typing a
+password (see ssh.help).
 
 If you are doing a group project in which all users are
 in a UNIX group, it is important that your umask be set
-to 7, and not 77, when cvs is accessing the repository.
+to 7, and not 77, when CVS is accessing the repository.
 To accomplish this put:
 
 	setenv CVSUMASK 007
 
-in the .cshrc file of the account that locally accesses
-the repository.  If you do NOT do this, but instead let
-cvs access the repository with umask equal to 77, the
-repository files created when you run cvs will be
-inaccessible to your group mates.
+in the .cshrc file of the account where the repository
+resides.  If you do NOT do this, but instead let CVS
+access the repository with umask equal to 77, the repo-
+sitory files created when you run CVS will be inacces-
+sible to your group mates.
 
 Note that using the above setenv implies that ALL CVS
 repositories you manage with a particular account will
@@ -131,6 +158,101 @@ protect the repository top level directory against group
 access, and, if you like, periodically remove group
 permissions from the files and subdirectories in the
 repository.
+
+WOT Short CVS User Commands:
+--- ----- --- ---- --------
+
+WOT (Walton's Own Tools) has a few simple commands that
+are all you normally need to access a repository.  These
+are:
+
+    cvscom [file-or-directories ...]
+        Commit current directory or listed files and
+	directories to repository.  Commits subdirec-
+	tories of any commited directory, recursively.
+
+    cvsup [file-or-directories ...]
+        Update current directory or listed files and
+	directories from repository.
+
+    cvsdiff [-rHEAD] [file-or-directories ...]
+        Diff current directory contents, or listed
+	files and contents of listed directories, with
+	last version checked out from repository, or
+	with more recent version (HEAD) checked into
+	repository.
+
+    cvsutd [file-or-directories ...]
+        Get status of current directory contents, or
+	listed files and contents of listed directories.
+	Just like cvsup, but changes no files or direc-
+	tories.
+
+    mine file ...
+        Make files writable by user.
+
+All WOT tools are documented in detail by giving the
+-doc to the tool: e.g., type `cvscom -doc' to get the
+documentation of cvscom.
+
+The following standard cvs commands are used with the
+above to get started:
+
+    cvs -d repository-name init
+
+	Create repository.
+
+    cvs -d repository-name checkout project-directory
+
+        Make a copy of the project-directory and all its
+	subdirectories on the local computer.  Only
+	needed when the root directory of a project is
+	first made on the local computer.
+
+	The directory and some of its subdirectories
+	can already exist on the local computer, and
+	files in the repository can be in these direc-
+	tories.  The project-directory `.' checks out
+	everything in the repository to the current
+	directory.
+
+    cvs add file-or-directory ...
+
+        Add directories or files on the local computer
+	to those that will be stored in the repository.
+	Actually storing the files will be done by the
+	next `cvscom' command.
+
+The following other commands are often useful.
+
+    cvs remove file
+
+        Remove a file.  You must first delete the file
+	from the local computer.  Actual removal will
+	be delayed until the next `cvscom' command, and
+	will actually move the file's repository ,v
+	file to an Attic directory in the repository,
+	so it is not really lost.
+
+	DO NOT REMOVE A DIRECTORY.
+
+    cvs log file ...
+
+        Get a list of versions of a file or files.
+
+    cvs diff file ...
+    cvs diff -rX.Y file
+    cvs diff -rHEAD file
+
+        Diff the current local version of a file with
+	the version you last checked out, or with ver-
+	sion X.Y (obtained from `cvs log file'), or with
+	the most recent version (HEAD) in the repository
+	(this might have been checked in by someone else
+	or by you working on a different computer).
+
+    					
+
 
 Standard CVS User Commands:
 -------- --- ---- --------
