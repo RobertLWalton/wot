@@ -31,7 +31,7 @@ recently made.  If the repository is remote from you,
 accessing it using CVS can be slower, however, than a
 local RCS system.  It is easy to move ",v" RCS files
 into a CVS repository and to move them out again, so it
-is easy to switch between using CVS to using RCS.
+is easy to switch between using CVS and using RCS.
 
 The CVS repository is a directory with subdirectories.
 The repository contains subdirectories containing
@@ -68,9 +68,9 @@ out by a separate CVS `checkout' command, not all
 modules in a repository need be checked out by a given
 user.
 
-The repository name is the full pathname of the direct-
-ory if the repository is on the local computer; or is of
-the form:
+The repository name is the full pathname of the
+repository directory if the repository is on the local
+computer; or is of the form:
 
 	login-name@host-name:full-directory-pathname
 
@@ -97,9 +97,9 @@ you must first
 
 and then edit or change the file.  If you do not proceed
 in this fashion, you will find it easy to accidentally
-change a file and check it in, because the checkin
-command typically checks all the changed files in a
-directory tree in.
+change a file and check it in, because the commit
+command typically checks in ALL the changed files in a
+directory tree.
 
 If you have the secure shell ssh available to access the
 account named in a remote repository, then you should
@@ -117,7 +117,8 @@ accomplished by putting:
 
 	alias cvs '(umask 007; \cvs \!*)'
 
-in your .cshrc file.  If you do NOT do this, but instead
+in the .cshrc file of the account that locally accesses
+the repository.  If you do NOT do this, but instead
 run cvs with umask equal to 77, the repository files
 created when you run cvs will be inaccessible to your
 group mates.
@@ -136,7 +137,7 @@ Standard CVS User Commands:
 Note: Commands without a filename run on all files
 in the current directory and its subdirectories.
 The same command with filenames runs only on the named
-files.
+files in the current directory.
 
 cvs -d repository checkout module-name
 
@@ -220,8 +221,8 @@ cvs remove directory ...
 	To add just make the file or directory and
 	mention it in an `add' command.
 
-	To remove delete the file or directory and
-	mention it in a `remove' command.
+	To remove the file or directory, first delete it
+	and then mention it in a cvs `remove' command.
 
 	Removed stuff is not actually removed from the
 	repository.  It is moved to an Attic
@@ -264,6 +265,20 @@ Mv'ing or cp'ing ",v" files between RCS and CSV.
 	unlocked (use `rcs -u filename,v' to unlock
 	the file).
 
+ignoring files.
+	Several cvs commands print the names of files
+	that are not in the repository, such as .dvi
+	or .o files.  There are two ways to get cvs
+	to ignore such files.  First, make a cvsignore
+	file in the CVSROOT module of the repository
+	that includes a filename pattern matching the
+	names of the files to be ignored.  E.g.,
+	cvsignore might have the line `*.dvi *.o'.
+	Alternatively, a .cvsignore file in a
+	a subdirectory will cause cvs to ignore all
+	the files in that subdirectory whose names
+	match the patterns in the .cvsignore file.
+
 
 
 
@@ -273,24 +288,21 @@ Infrequently used commands:
 cvs -d repository-full-pathname init
 	This is used to create a repository.
 
+cvs log
+cvs log filename ...
+	Print the status of all revisions of files.
 
+cvs tag symbolic_tag
+cvs tag symbolic_tag filename ...
+	Attach a symbolic_tag (any character string,
+	quoted if it contains a space) to the
+	current versions of files.  This can be
+	used to mark all the file versions that make
+	a system version.
 
-More Detailed Explanation of CVS:
---------------------------------
+cvs -d repository-name checkout -r symbolic_tag
+	TEST THIS
 
+CVS/Entries CVS/Root CVS/Repository
 
-"checkin"	A technical term meaning to move a file
-		"foo" from the current directory into
-		its repository storage file "foo,v".
-		The file becomes the last version put
-		into "foo,v".  Checkin is done by the
-		CVS `commit' command, and is therefore
-		also called `commit'.
-
-"checkout"	A technical term meaning to copy a file
-		"foo" (actually, a version of "foo", by
-		default the latest version) from its
-		repository storage file "foo,v" to the
-		current directory.  Checkout is done by
-		the CVS `update' command, and is
-		therefore also called `update'.
+Merging
