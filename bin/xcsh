@@ -1,92 +1,486 @@
 #! /bin/csh -f
 
-if ( $?REMOTEHOST ) then
-	set H=$REMOTEHOST
-else if ( $?HOSTNAME ) then
-	set H=$HOSTNAME
-else if ( $?HOST ) then
-	set H=$HOST
-else
-	set H=`hostname`
-endif
-
-#set font=-adobe-courier-bold-r-normal--11-80-100-100-m-60-iso8859-1
-if ( "$H" =~ method* ) \
-set font=-adobe-courier-bold-r-normal--25-180-100-100-m-150-iso8859-1
-#set font=-adobe-courier-bold-r-normal--17-120-100-100-m-100-iso8859-1
-#set font=-adobe-courier-bold-r-normal--34-240-100-100-m-200-iso8859-1
-#set font=-adobe-courier-bold-r-normal--14-100-100-100-m-90-iso8859-1
-#set font=-adobe-courier-bold-r-normal--20-140-100-100-m-110-iso8859-1
-#set font=-adobe-courier-bold-r-normal--8-80-75-75-m-50-iso8859-1
-if ( "$H" !~ method* ) \
-set font=-adobe-courier-bold-r-normal--18-180-75-75-m-110-iso8859-1
-#set font=-adobe-courier-bold-r-normal--12-120-75-75-m-70-iso8859-1
-#set font=-adobe-courier-bold-r-normal--24-240-75-75-m-150-iso8859-1
-#set font=-adobe-courier-bold-r-normal--10-100-75-75-m-60-iso8859-1
-#set font=-adobe-courier-bold-r-normal--14-140-75-75-m-90-iso8859-1
-#set font=-adobe-courier-bold-r-normal--12-120-75-75-m-70-iso8859-1
-
-#set font=-adobe-courier-medium-o-normal--11-80-100-100-m-60-iso8859-1
-#set font=-adobe-courier-medium-o-normal--25-180-100-100-m-150-iso8859-1
-#set font=-adobe-courier-medium-o-normal--20-140-100-100-m-110-iso8859-1
-#set font=-adobe-courier-medium-o-normal--17-120-100-100-m-100-iso8859-1
-#set font=-adobe-courier-medium-o-normal--34-240-100-100-m-200-iso8859-1
-#set font=-adobe-courier-medium-o-normal--14-100-100-100-m-90-iso8859-1
-#set font=-adobe-courier-medium-r-normal--11-80-100-100-m-60-iso8859-1
-#set font=-adobe-courier-medium-r-normal--25-180-100-100-m-150-iso8859-1
-#set font=-adobe-courier-medium-r-normal--17-120-100-100-m-100-iso8859-1
-#set font=-adobe-courier-medium-r-normal--34-240-100-100-m-200-iso8859-1
-#set font=-adobe-courier-medium-r-normal--14-100-100-100-m-90-iso8859-1
-#set font=-adobe-courier-medium-r-normal--20-140-100-100-m-110-iso8859-1
-#set font=-adobe-courier-medium-o-normal--8-80-75-75-m-50-iso8859-1
-#set font=-adobe-courier-medium-o-normal--18-180-75-75-m-110-iso8859-1
-#set font=-adobe-courier-medium-o-normal--14-140-75-75-m-90-iso8859-1
-#set font=-adobe-courier-medium-o-normal--12-120-75-75-m-70-iso8859-1
-#set font=-adobe-courier-medium-o-normal--24-240-75-75-m-150-iso8859-1
-#set font=-adobe-courier-medium-o-normal--10-100-75-75-m-60-iso8859-1
-#set font=-adobe-courier-medium-r-normal--8-80-75-75-m-50-iso8859-1
-#set font=-adobe-courier-medium-r-normal--18-180-75-75-m-110-iso8859-1
-#set font=-adobe-courier-medium-r-normal--12-120-75-75-m-70-iso8859-1
-#set font=-adobe-courier-medium-r-normal--24-240-75-75-m-150-iso8859-1
-#set font=-adobe-courier-medium-r-normal--10-100-75-75-m-60-iso8859-1
-#set font=-adobe-courier-medium-r-normal--14-140-75-75-m-90-iso8859-1
-#set font=-adobe-courier-medium-o-normal--12-120-75-75-m-70-iso8859-1
-
-#set font=-misc-fixed-medium-r-semicondensed--12-110-75-75-c-60-iso8859-1
-#set font=-misc-fixed-medium-r-semicondensed--13-120-75-75-c-60-iso8859-1
-#set font=-misc-fixed-medium-r-normal--10-100-75-75-c-60-iso8859-1
-#set font=-misc-fixed-medium-r-normal--13-120-75-75-c-70-iso8859-1
-#set font=-misc-fixed-medium-r-normal--14-130-75-75-c-70-iso8859-1
-#set font=-misc-fixed-medium-r-normal--9-90-75-75-c-60-iso8859-1
-#set font=-misc-fixed-medium-r-normal--7-70-75-75-c-50-iso8859-1
-#set font=-misc-fixed-medium-r-normal--8-80-75-75-c-50-iso8859-1
-#set font=-misc-fixed-bold-r-semicondensed--13-120-75-75-c-60-iso8859-1
-#set font=-sony-fixed-medium-r-normal--24-170-100-100-c-120-jisx0201.1976-0
-#set font=-misc-fixed-bold-r-normal--13-120-75-75-c-70-iso8859-1
-#set font=-misc-fixed-bold-r-normal--14-130-75-75-c-70-iso8859-1
-#set font=-misc-fixed-medium-r-normal--13-120-75-75-c-80-iso8859-1
-#set font=-sony-fixed-medium-r-normal--16-120-100-100-c-80-iso8859-1
-#set font=-misc-fixed-medium-r-normal--15-140-75-75-c-90-iso8859-1
-#set font=-misc-fixed-medium-r-semicondensed--13-120-75-75-c-60-iso8859-8
-#set font=-misc-fixed-bold-r-normal--13-120-75-75-c-80-iso8859-1
-#set font=-misc-fixed-medium-r-normal--14-130-75-75-c-70-jisx0201.1976-0
-#set font=-misc-fixed-bold-r-normal--15-140-75-75-c-90-iso8859-1
-#set font=-misc-fixed-medium-r-normal--13-120-75-75-c-80-iso8859-8
-#set font=-sony-fixed-medium-r-normal--16-120-100-100-c-80-jisx0201.1976-0
-#set font=-jis-fixed-medium-r-normal--24-230-75-75-c-240-jisx0208.1983-0
-#set font=-jis-fixed-medium-r-normal--16-150-75-75-c-160-jisx0208.1983-0
-#set font=-misc-fixed-medium-r-normal--14-130-75-75-c-140-jisx0208.1983-0
-#set font=-misc-fixed-medium-r-normal--20-200-75-75-c-100-iso8859-1
-#set font=-sony-fixed-medium-r-normal--24-170-100-100-c-120-iso8859-1
-
-#set font=-adobe-courier-medium-r-normal--12-120-75-75-m-70-iso8859-1
 set location=80x35+2+100
 set program=""
-set title="$H"
-if ("$3" != "") set program="-e ssh $3"
-if ("$3" != "") set title="$3"
-if ("$2" != "") set font="$2"
-if ("$1" != "") set location="$1"
-(xterm  -title $title -name $title \
-	-g $location -fn $font \
+set title="`hostname -s`"
+
+set c1="*-c-*-iso8859-1"
+set m1="*-m-*-iso8859-1"
+
+set bitb=-bitstream-terminal-bold-r-normal-
+set bitm=-bitstream-terminal-medium-r-normal-
+set decb=-dec-terminal-bold-r-normal-
+set decm=-dec-terminal-medium-r-normal-
+set miscb=-misc-fixed-bold-r-normal-
+set miscbs=-misc-fixed-bold-r-semicondensed-
+set miscm=-misc-fixed-medium-r-normal-
+set miscms=-misc-fixed-medium-r-semicondensed-
+set schub=-schumacher-clean-bold-r-normal-
+set schum=-schumacher-clean-medium-r-normal-
+set sonym=-sony-fixed-medium-r-normal-
+set adobeb=-adobe-courier-bold-r-normal-
+set adobem=-adobe-courier-medium-r-normal-
+set lucidb="-b&h-lucidatypewriter-bold-r-normal-sans"
+set lucidm="-b&h-lucidatypewriter-medium-r-normal-sans"
+set hcrm="-hrnet&hcr-grtt-medium-r-normal-"
+
+set font="$lucidb-18-$m1"
+
+while ($# > 0)
+    switch ( "$1" )
+    case -host:
+    case -h:
+        set program="-e ssh $2"
+        set title="$2"
+	shift
+	breaksw
+    case -location:
+    case -l:
+        set location="$2"
+	shift
+	breaksw
+
+    case 10bl:
+	set font="$lucidb-10-$m1"
+	breaksw
+    case 10ba:
+	set font="$adobeb-10-$m1"
+	breaksw
+    case 10bs:
+	set font="$schub-10-$c1"
+	breaksw
+    case 10b*:
+        echo use one of 10bl 10ba 10bs
+	exit 1
+	breaksw
+
+    case 10ml:
+	set font="$lucidm-10-$m1"
+	breaksw
+    case 10ma:
+	set font="$adobem-10-$m1"
+	breaksw
+    case 10ms:
+	set font="$schum-10-$c1"
+	breaksw
+    case 10mm:
+	set font="$miscm-10-$c1"
+	breaksw
+    case 10mh:
+	set font="$hrcm-10-$m1"
+	breaksw
+    case 10m*:
+        echo use one of 10ml 10ma 10ms 10mm 10mh
+	exit 1
+	breaksw
+
+    case 11bl:
+	set font="$lucidb-11-$m1"
+	breaksw
+    case 11ba:
+	set font="$adobeb-11-$m1"
+	breaksw
+    case 11b*:
+        echo use one of 11bl 11ba
+	exit 1
+	breaksw
+
+    case 11ml:
+	set font="$lucidm-11-$m1"
+	breaksw
+    case 11ma:
+	set font="$adobem-11-$m1"
+	breaksw
+    case 11m*:
+        echo use one of 11ml 11ma
+	exit 1
+	breaksw
+
+    case 12bl:
+	set font="$lucidb-12-$m1"
+	breaksw
+    case 12ba:
+	set font="$adobeb-12-$m1"
+	breaksw
+    case 12bs:
+	set font="$schub-12-$c1"
+	breaksw
+    case 12b*:
+        echo use one of 12bl 12ba 12bs
+	exit 1
+	breaksw
+
+    case 12bml:
+	set font="$lucidm-12-$m1"
+	breaksw
+    case 12ma:
+	set font="$adobem-12-$m1"
+	breaksw
+    case 12ms:
+	set font="$schum-12-$c1"
+	breaksw
+    case 12mh:
+	set font="$hrcm-12-$m1"
+	breaksw
+    case 12mm:
+	set font="$miscms-12-$c1"
+	breaksw
+    case 12m*:
+        echo use one of 12ml 12ma 12ms 12mm 12mh
+	exit 1
+	breaksw
+
+    case 13bs:
+	set font="$schub-13-$c1"
+	breaksw
+    case 13bm:
+	set font="$miscb-13-$c1"
+	breaksw
+    case 13bms:
+	set font="$miscbs-13-$c1"
+	breaksw
+    case 13b*:
+        echo use one of 13bs 13bm 13bms
+	exit 1
+	breaksw
+
+    case 13ms:
+	set font="$schum-13-$c1"
+	breaksw
+    case 13mm:
+	set font="$miscm-13-$c1"
+	breaksw
+    case 13mms:
+	set font="$miscms-13-$c1"
+	breaksw
+    case 13m*:
+        echo use one of 13ms 13mm 13mms
+	exit 1
+	breaksw
+
+    case 14bl:
+	set font="$lucidb-14-$m1"
+	breaksw
+    case 14ba:
+	set font="$adobeb-14-$m1"
+	breaksw
+    case 14bs:
+	set font="$schub-14-$c1"
+	breaksw
+    case 14bm:
+	set font="$miscb-14-$c1"
+	breaksw
+    case 14bd:
+	set font="$decb-14-$c1"
+	breaksw
+    case 14b*:
+        echo use one of 14bl 14ba 14bs 14bm 14bd
+	exit 1
+	breaksw
+
+    case 14ml:
+	set font="$lucidm-14-$m1"
+	breaksw
+    case 14ma:
+	set font="$adobem-14-$m1"
+	breaksw
+    case 14ms:
+	set font="$schum-14-$c1"
+	breaksw
+    case 14mm:
+	set font="$miscm-14-$c1"
+	breaksw
+    case 14md:
+	set font="$decm-14-$c1"
+	breaksw
+    case 14m*:
+        echo use one of 14ml 14ma 14ms 14mm 14md
+	exit 1
+	breaksw
+
+    case 15bs:
+	set font="$schub-15-$c1"
+	breaksw
+    case 15bm:
+	set font="$miscb-15-$c1"
+	breaksw
+    case 15b*:
+        echo use one of 15bs 15bm
+	exit 1
+	breaksw
+
+    case 15ms:
+	set font="$schum-15-$c1"
+	breaksw
+    case 15mh:
+	set font="$hrcm-15-$m1"
+	breaksw
+    case 15mm:
+	set font="$miscm-15-$c1"
+	breaksw
+    case 15m*:
+        echo use one of 15ms 15mh 15mm
+	exit 1
+	breaksw
+
+    case 16bs:
+	set font="$schub-16-$c1"
+	breaksw
+    case 16b*:
+        echo use one of 16bs
+	exit 1
+	breaksw
+
+    case 16ms:
+	set font="$schum-16-$c1"
+	breaksw
+    case 16mn:
+	set font="$sonym-16-$c1"
+	breaksw
+    case 16m*:
+        echo use one of 16ms 16mn
+	exit 1
+	breaksw
+
+    case 17bl:
+	set font="$lucidb-17-$m1"
+	breaksw
+    case 17ba:
+	set font="$adobeb-17-$m1"
+	breaksw
+    case 17b*:
+        echo use one of 17bl 17ba
+	exit 1
+	breaksw
+
+    case 17ml:
+	set font="$lucidm-17-$m1"
+	breaksw
+    case 17ma:
+	set font="$adobem-17-$m1"
+	breaksw
+    case 17mh:
+	set font="$hrcm-17-$m1"
+	breaksw
+    case 17m*:
+        echo use one of 17ml 17ma 17mh
+	exit 1
+	breaksw
+
+    case 18bl:
+	set font="$lucidb-18-$m1"
+	breaksw
+    case 18ba:
+	set font="$adobeb-18-$m1"
+	breaksw
+    case 18bb:
+	set font="$bitb-18-$c1"
+	breaksw
+    case 18b*:
+        echo use one of 18bl 18ba 18bb
+	exit 1
+	breaksw
+
+    case 18ml:
+	set font="$lucidm-18-$m1"
+	breaksw
+    case 18ma:
+	set font="$adobem-18-$m1"
+	breaksw
+    case 18mb:
+	set font="$bitm-18-$c1"
+	breaksw
+    case 18m*:
+        echo use one of 18ml 18ma 18mb
+	exit 1
+	breaksw
+
+    case 19bl:
+	set font="$lucidb-19-$m1"
+	breaksw
+    case 19b*:
+        echo use one of 19bl
+	exit 1
+	breaksw
+
+    case 19ml:
+	set font="$lucidm-19-$m1"
+	breaksw
+    case 19mh:
+	set font="$hrcm-19-$m1"
+	breaksw
+    case 19m*:
+        echo use one of 19ml 19mh
+	exit 1
+	breaksw
+
+    case 20bl:
+	set font="$lucidb-20-$m1"
+	breaksw
+    case 20ba:
+	set font="$adobeb-20-$m1"
+	breaksw
+    case 10b*:
+        echo use one of 20bl 20ba
+	exit 1
+	breaksw
+
+    case 20ml:
+	set font="$lucidm-20-$m1"
+	breaksw
+    case 20ma:
+	set font="$adobem-20-$m1"
+	breaksw
+    case 20mm:
+	set font="$miscm-20-$c1"
+	breaksw
+    case 20m*:
+        echo use one of 20ml 20ma 20mm
+	exit 1
+	breaksw
+
+    case 21mh:
+	set font="$hrcm-21-$m1"
+	breaksw
+    case 21m*:
+        echo use one of 21mh
+	exit 1
+	breaksw
+
+    case 24bl:
+	set font="$lucidb-24-$m1"
+	breaksw
+    case 24ba:
+	set font="$adobeb-24-$m1"
+	breaksw
+    case 24b*:
+        echo use one of 24bl 24ba
+	exit 1
+	breaksw
+
+    case 24ml:
+	set font="$lucidm-24-$m1"
+	breaksw
+    case 24ma:
+	set font="$adobem-24-$m1"
+	breaksw
+    case 24mn:
+	set font="$sonym-24-$c1"
+	breaksw
+    case 24m*:
+        echo use one of 24ml 24ma 24mn
+	exit 1
+	breaksw
+
+    case 25bl:
+	set font="$lucidb-25-$m1"
+	breaksw
+    case 25ba:
+	set font="$adobeb-25-$m1"
+	breaksw
+    case 25b*:
+        echo use one of 25bl 25ba
+	exit 1
+	breaksw
+
+    case 25ml:
+	set font="$lucidm-25-$m1"
+	breaksw
+    case 25ma:
+	set font="$adobem-25-$m1"
+	breaksw
+    case 25mh:
+	set font="$hrcm-25-$m1"
+	breaksw
+    case 25m*:
+        echo use one of 25ml 25ma 25mh
+	exit 1
+	breaksw
+
+    case 26bl:
+	set font="$lucidb-26-$m1"
+	breaksw
+    case 26b*:
+        echo use one of 26bl
+	exit 1
+	breaksw
+
+    case 26ml:
+	set font="$lucidm-26-$m1"
+	breaksw
+    case 26m*:
+        echo use one of 26ml
+	exit 1
+	breaksw
+
+    case 31mh:
+	set font="$hrcm-31-$m1"
+	breaksw
+    case 31m*:
+        echo use one of 31mh
+	exit 1
+	breaksw
+
+    case 34bl:
+	set font="$lucidb-34-$m1"
+	breaksw
+    case 34ba:
+	set font="$adobeb-34-$m1"
+	breaksw
+    case 34b*:
+        echo use one of 34bl 34ba
+	exit 1
+	breaksw
+
+    case 34ml:
+	set font="$lucidm-34-$m1"
+	breaksw
+    case 34ma:
+	set font="$adobem-34-$m1"
+	breaksw
+    case 34m*:
+        echo use one of 34ml 34ma
+	exit 1
+	breaksw
+
+    case 37mh:
+	set font="$hrcm-37-$m1"
+	breaksw
+    case 37m*:
+        echo use one of 37mh
+	exit 1
+	breaksw
+
+    case 50mh:
+	set font="$hrcm-50-$m1"
+	breaksw
+    case 50m*:
+        echo use one of 50mh
+	exit 1
+	breaksw
+
+    case [1-8]*:
+        echo "font argument is PPWS"
+        echo "PP = [1-9][0-9] = point size:"
+	echo "     10-21, 24-16, 31, 34, 37, 50"
+        echo "W = [bm] = weight: b = bold, m = medium"
+        echo "S = [abdhlmns] = style"
+	echo "    a=adobe, b=bitstream, d=dec, h=hrcm"
+	echo "    l=lucid, m=misc, n=sony, s=schumacher"
+	echo "    ms=misc semicondensed"
+	exit 1
+
+    default:
+    	echo unknown argument: "$1"
+	exit 1
+	breaksw
+
+    endsw
+    shift
+end
+
+(xterm  -title "$title" -name "$title" \
+	-g "$location" -fn "$font" \
 	-sb -ls $program )&
+
+exit 0
