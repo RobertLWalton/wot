@@ -4,7 +4,7 @@
 #
 # File:		sloc_counts
 # Author:	Bob Walton (walton@deas.harvard.edu)
-# Date:		Thu Jan 23 06:28:39 EST 2003
+# Date:		Thu Jan 23 07:59:42 EST 2003
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: hc3 $
-#   $Date: 2003/01/23 12:57:21 $
+#   $Date: 2003/01/23 13:00:45 $
 #   $RCSfile: sloc_counts,v $
-#   $Revision: 1.1 $
+#   $Revision: 1.2 $
 #
 # The next line starts tcl \
 exec tcl "$0" "$@"
@@ -33,7 +33,8 @@ sloc_counts \[-debug\] \[-s\] filename ...
     With the -s option summary information is printed at
     the end.
 
-    With the -debug option the lines counted are printed.
+    With the -debug option the lines counted are
+    printed.
 
     A SLOC, or `Source Line of Code', is defined as
     follows.
@@ -52,15 +53,12 @@ sloc_counts \[-debug\] \[-s\] filename ...
     where the following lines are excluded.  Blank lines
     are excluded.  Lines whose first non-whitespace
     character is `#' are excluded.  All the lines from
-    the line after a line of the form
+    the line after a line of one of the two forms
 
     	W*setW+documentW+\"W*
-
-    or a line of the form
-
     	W*echoW+\"W*
 
-    through the next line containing a \" not preceeded
+    through the next line containing a \" not preceded
     by a backslash are excluded, where W is any white-
     space character."
 
