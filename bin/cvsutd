@@ -1,0 +1,2 @@
+#! /bin/csh -f
+cvs status |& grep Status | grep -v Up-to-date

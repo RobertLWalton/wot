@@ -1,0 +1,2 @@
+#! /bin/csh -f
+/usr/5bin/pr -t -f -l60 -e -o4 $argv:q | lpr

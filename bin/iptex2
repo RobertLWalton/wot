@@ -1,0 +1,2 @@
+#! /bin/csh -f
+dvips -f $argv[2-]:q <$1 | psnup -2 -pletter -d | lpr -P$PRINTER

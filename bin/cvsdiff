@@ -1,0 +1,2 @@
+#! /bin/csh -f
+cvs diff |& grep -v 'cvs.*: Diffing '

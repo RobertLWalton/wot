@@ -1,0 +1,2 @@
+#! /bin/csh -f
+chkpage -c72 -l60 $argv:q

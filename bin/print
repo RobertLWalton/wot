@@ -1,0 +1,2 @@
+#! /bin/csh -f
+/usr/5bin/pr -f -l64 -e -o4 $argv:q | enscript -g -l -f Courier10 -P$PRINTER
