@@ -2,7 +2,7 @@ SSH HELP
 
 File:		ssh.help
 Author:		Bob Walton (walton@deas.harvard.edu)
-Date:		Fri Jun 27 08:05:38 EDT 2003
+Date:		Mon Jun 30 21:00:48 EDT 2003
 
 SSH, the `Secure Shell', is just a way of connecting to
 a remote computer's account so you can use a shell in
@@ -53,7 +53,7 @@ or files in the directory
 
 	.ssh2/hostkeys
 
-The lines or host_keys file names give the name of the
+The lines or hostkeys file names give the name of the
 remote host whose keys they store.  As a remote host may
 be known under several names, ALL keys relating to ANY
 of these several names for the host must be deleted.
@@ -80,14 +80,14 @@ The commands
 
 can be used to copy files to or from your current local
 directory and the home directory of the remote account
-on the remote host.  You can also use pathnames and
-copy directories.  -r copies directories recursively,
-and -p preserves file modes (rwx).  Scp is layered on
-top of ssh, and requires the same passwords.
+on the remote host.  You can also use absolute remote
+pathnames and copy directories.  -r copies directories
+recursively, and -p preserves file modes (rwx).  Scp is
+layered on top of ssh, and requires the same passwords.
 
 SSH replaces the previous RSH (and rcp) commands of
 UNIX, and the telnet (and ftp) internet commands.  The
-advantage of SSH is that is encrypts all data it sends
+advantage of SSH is that it encrypts all data it sends
 over the internet, so only your local host and the
 remote host can see the actual data.  SSH has become
 ubiquitous in many places, including large universities,
@@ -149,12 +149,12 @@ since the hacker, instead of simply reading files from
 your computer's disk, would have to monitor your
 computer at the moment you logged into it and used
 passwords.  Eventually hackers will learn to do this
-regularly by means of trojan horses, or more specifical-
-ly, slightly alterred versions of the SSH agent program
+regularly by means of Trojan horses, or more specifical-
+ly, slightly altered versions of the SSH agent program
 that transmit the keys they record to a hacker.  But for
 now hackers tend to fall on easier prey, while system
 administrators are getting better at immediately identi-
-fying when a computer has been hacked an shutting it
+fying when a computer has been hacked and shutting it
 down.
 
 First we will describe how to generate keys and set
@@ -174,7 +174,7 @@ If you are unsure which to use, use rsa.  But if you are
 going to connect to a legacy remote account whose
 computer only understands the older SSH protocol 1, you
 may need to use rsa1.  RSA is a standard developed by
-the university professors Rivest, Shamir, and Adlenam.
+the university professors Rivest, Shamir, and Adleman.
 DSA, Digital Signature Algorithm, is a government stan-
 dard developed by NIST, the National Institute of Stan-
 dards and Technology, for use in a digital signature
@@ -270,29 +270,29 @@ program to be forwarded to any other computer account
 you log into with ssh.
 
 The first time you use a private key file while an ssh-
-agent process is running, you the file will be loaded
-into the agent.  If the file is protected by a password,
-you will be asked for the password at this time.  There-
-after, whenever the private key is needed, all ssh and
-scp will find it by looking in the agent, and not need
-to consult you or be given a password.
+agent process is running, the file will be loaded into
+the agent.  If the file is protected by a password, you
+will be asked for the password at this time.  There-
+after, whenever the private key is needed, ssh and scp
+will find it by looking in the agent, and not need to
+consult you or be given a password.
 
 You can load keys into the agent with the command
 
 	ssh-add private-key-file-name ...
 
 If several keys have the same password, you need to type
-the password only once.  A good idea is to put the like
+the password only once.  A good idea is to put
 
 	alias key ssh-add private-key-file-name ...
 
 in your .cshrc file, use the same password for all key
-files, and upon loggin in locally, type the command
+files, and upon login in locally, type the command
 `key' and then the password.  This loads all your keys
 into the agent and eliminates any subsequent need for
 the password during your login session.
 
-Using DSA is just like using RSA, just change `rsa' to
+Using DSA is just like using RSA; just change `rsa' to
 `dsa' in all file names given in the previous discu-
 sion.
 
@@ -314,13 +314,13 @@ you must
    Use `ssh -1' instead of `ssh'.
    Use `scp -o Protocol=1' instead of `scp'.
 
-If you have all the key files
+If you have all or any of the key files
 
 	.ssh/id_rsa
 	.ssh/id_dsa
-	.ssh/identify
+	.ssh/identity
 
-then ssh programs will find all these keys without
+then ssh programs will find these key files without
 being given key file names explicitly.
 
 Not all SSH's use the same file names and file formats
@@ -356,8 +356,8 @@ string of random looking characters containing no
 spaces.  This is the key proper, encoded in `base64',
 a system of encoding that encodes 6 bits in a non-space
 ASCII character.  To use this with `~/.ssh2' you make
-files `~/.ssh2/fee.compub' and `~/.ssh2/fi.compub' with
-the format:
+files `~/.ssh2/fee.compub' and `~/.ssh2/fi.compub' each
+with the format:
 
     ---- BEGIN SSH2 PUBLIC KEY ----
     key-proper-on-one-line
@@ -369,5 +369,9 @@ and the file `~/.ssh2/authorization' containing
     Key fi.compub
 
 Forwarding keys does not seem to work when you log into
-a remote account that uses this SSH form a local account
+a remote account that uses this SSH from a local account
 that uses OpenSSH, even though it is advertise to work.
+Attempts to find configuration settings so the forward-
+ing keys will work have so far failed in this case, and
+it is speculated that the two SSH's use different agent
+protocols (even though both use SSH protocol 2).
