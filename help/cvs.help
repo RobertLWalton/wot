@@ -1,0 +1,151 @@
+CVS HELP
+
+File:		cvs.help
+Author:		Bob Walton (walton@deas.harvard.edu)
+Version:	1
+
+Purpose: CVS implements a system for storing past and
+present versions of a file "foo" in another file
+"foo,v" that is located in a CVS repository.  In storing
+many versions of "foo" in "foo,v", CVS stores mostly
+just the differences between versions, thus saving much
+storage space compared to a normal file system.  The CVS
+repository can be accessed from any account that can
+read and write the files and directories of the
+repository, or from any remote system that can log into
+such an account using rlogin or ssh.  CVS is standardly
+installed in modern UNIX systems, and it is possible to
+install CVS under the various window's operating
+systems.
+
+CVS is useful for cooperative projects where many people
+work on the same set of files.  It permits more than one
+person to work on the same file in parallel, and merges
+the results, though some human intervention is required
+for checking and cleanup of the merge.
+
+CVS uses RCS to maintain the ",v" files.  Like RCS is
+us also useful for backing up files in case you accident-
+ally delete them, and for seeing what changes you
+recently made.  If the repository is remote from you,
+accessing it using CVS can be slower, however, than a
+local RCS system.  It is easy to move ",v" RCS files
+into a CVS repository and to move them out again, so it
+is fairly easy to switch between using CVS to using RCS.
+
+The CVS repository is a directory with subdirectories.
+The repository name is the full pathname of the direct-
+ory if the repository is on the local computer; or is of
+the form:
+
+	login-name@host-name:full-directory-pathname
+
+if the repository is on a local computer.
+
+The repository contains subdirectories containing
+",v" files or other subdirectories.  Users maintain
+copies of parts of the repository with ",v" files
+replaced by the files they log (i.e., "foo,v"
+replaced by "foo").  Users may check files in and
+out, and may check all the files and subdirectories
+in a subdirectory system in or out.  Checking "foo"
+in means storing the current version of "foo" in
+"foo,v"; checking "foo" out means copying the most
+recent version of "foo" stored in "foo,v" to the
+user's version of "foo".
+
+Standard User CVS Commands:
+
+cvs -d repository checkout subdirectory-name
+
+	Does a `mkdir subdirectory-name' and checks
+	out all files and subdirectories of this
+	the named subdirectory.
+
+cvs status -v
+cvs status -v | grep Status
+cvs status -v filename
+
+	Identifies all files in the repository that
+	store the history of files in the current
+	directory and its subdirectories, and for
+	each such file gives the status of the user's
+	version of the file.  A file Status is most
+	commonly one of:
+
+	    Up-to-date	User's version of file is the
+			same as repository's version.
+
+	    Locally	User has modified his version of
+	    Modified    the file since he checked it
+			out of the repository.
+
+	    Needs	Repository version is more
+	    Patch	recent than the user's version.
+	    or Checkout
+
+	    Needs	User has modified his version of
+	    Merge	the files since he checked it
+			out of the repository, and the
+			repository now holds a version
+			more recent than the version the
+			user checked out.
+
+	[What about files other users have added?]
+			
+
+cvs diff
+cvs diff filename
+cvs diff -r... filename
+
+cvs update
+cvs update filename
+							/
+	Checks out any files in the current directory
+	or its subdirectory that are different in the
+	repository than in the 
+
+cvs commit -m update
+cvs commit -m update filename
+
+cvs add filename ...
+cvs remove filename ...
+
+Mv'ing and cp'ing ".v" files in the respository:
+
+
+
+Infrequently used commands:
+------------------------
+
+cvs -d repository-full-pathname init
+
+
+
+More Detailed Explanation of RCS:
+--------------------------------
+
+
+"checkin"	A technical term meaning to move a file
+		"foo" from the current directory into
+		its RCS storage file "RCS/foo,v".  The
+		file becomes the last version put into
+		"RCS/foo,v", and the file is deleted
+		from the current directory.
+
+"checkout"	A technical term meaning to copy a file
+		"foo" (actually, a version of "foo", by
+		default the latest version) from its
+		RCS storage file "RCS/foo,v" to the
+		current directory.
+
+"locked"	A technical term.  "RCS/foo,v"
+		contains a bit that indicates whether
+		(the latest version of) "foo" is locked
+		or unlocked.  If "foo" is locked, it
+		has been checked out with the intention
+		of writing it, and it is OK to check it
+		back in.  If "foo" is unlocked, it is
+		not permitted to check it back in (it
+		may have been checked out just for the
+		purpose of reading it).
