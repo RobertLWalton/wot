@@ -50,8 +50,12 @@ while ($# > 0)
 	    set location=80x35+80+100
 	    breaksw
 	case [5-90]:
-	    echo location should be 1, 2, 3, 4, or a \
-	         geometry specification.
+	    echo "location should be 1, 2, 3, 4, or" \
+		    "WxH+X+Y"
+	    echo "  W and H are width in columns and" \
+		    "height in lines"
+	    echo "  X and Y are the upper left corner" \
+		    "offset in pixels"
 	    exit 1
 	case *:
 	    set location="$2"
@@ -87,7 +91,7 @@ while ($# > 0)
 	set font="$miscm-10-$c1"
 	breaksw
     case 10mh:
-	set font="$hrcm-10-$m1"
+	set font="$hcrm-10-$m1"
 	breaksw
     case 10m*:
         echo use one of 10ml 10ma 10ms 10mm 10mh
@@ -140,13 +144,13 @@ while ($# > 0)
 	set font="$schum-12-$c1"
 	breaksw
     case 12mh:
-	set font="$hrcm-12-$m1"
+	set font="$hcrm-12-$m1"
 	breaksw
-    case 12mm:
+    case 12mms:
 	set font="$miscms-12-$c1"
 	breaksw
     case 12m*:
-        echo use one of 12ml 12ma 12ms 12mm 12mh
+        echo use one of 12ml 12ma 12ms 12mms 12mh
 	exit 1
 	breaksw
 
@@ -233,7 +237,7 @@ while ($# > 0)
 	set font="$schum-15-$c1"
 	breaksw
     case 15mh:
-	set font="$hrcm-15-$m1"
+	set font="$hcrm-15-$m1"
 	breaksw
     case 15mm:
 	set font="$miscm-15-$c1"
@@ -280,7 +284,7 @@ while ($# > 0)
 	set font="$adobem-17-$m1"
 	breaksw
     case 17mh:
-	set font="$hrcm-17-$m1"
+	set font="$hcrm-17-$m1"
 	breaksw
     case 17m*:
         echo use one of 17ml 17ma 17mh
@@ -327,7 +331,7 @@ while ($# > 0)
 	set font="$lucidm-19-$m1"
 	breaksw
     case 19mh:
-	set font="$hrcm-19-$m1"
+	set font="$hcrm-19-$m1"
 	breaksw
     case 19m*:
         echo use one of 19ml 19mh
@@ -340,7 +344,7 @@ while ($# > 0)
     case 20ba:
 	set font="$adobeb-20-$m1"
 	breaksw
-    case 10b*:
+    case 20b*:
         echo use one of 20bl 20ba
 	exit 1
 	breaksw
@@ -360,7 +364,7 @@ while ($# > 0)
 	breaksw
 
     case 21mh:
-	set font="$hrcm-21-$m1"
+	set font="$hcrm-21-$m1"
 	breaksw
     case 21m*:
         echo use one of 21mh
@@ -410,7 +414,7 @@ while ($# > 0)
 	set font="$adobem-25-$m1"
 	breaksw
     case 25mh:
-	set font="$hrcm-25-$m1"
+	set font="$hcrm-25-$m1"
 	breaksw
     case 25m*:
         echo use one of 25ml 25ma 25mh
@@ -434,7 +438,7 @@ while ($# > 0)
 	breaksw
 
     case 31mh:
-	set font="$hrcm-31-$m1"
+	set font="$hcrm-31-$m1"
 	breaksw
     case 31m*:
         echo use one of 31mh
@@ -464,7 +468,7 @@ while ($# > 0)
 	breaksw
 
     case 37mh:
-	set font="$hrcm-37-$m1"
+	set font="$hcrm-37-$m1"
 	breaksw
     case 37m*:
         echo use one of 37mh
@@ -472,7 +476,7 @@ while ($# > 0)
 	breaksw
 
     case 50mh:
-	set font="$hrcm-50-$m1"
+	set font="$hcrm-50-$m1"
 	breaksw
     case 50m*:
         echo use one of 50mh
@@ -482,16 +486,36 @@ while ($# > 0)
     case [1-8]*:
         echo "font argument is PPWS"
         echo "PP = [1-9][0-9] = point size:"
-	echo "     10-21, 24-16, 31, 34, 37, 50"
+	echo "     10-21, 24-26, 31, 34, 37, 50"
         echo "W = [bm] = weight: b = bold, m = medium"
-        echo "S = [abdhlmns] = style"
-	echo "    a=adobe, b=bitstream, d=dec, h=hrcm"
-	echo "    l=lucid, m=misc, n=sony, s=schumacher"
+        echo "S = [abdhlmns] or ms = style"
+	echo "    a=adobe, b=bitstream, d=dec, h=hcr,"
+	echo "    l=lucid, m=misc, n=sony, s=schumacher,"
 	echo "    ms=misc semicondensed"
 	exit 1
 
     case *:
-    	echo unknown argument: "$1"
+    	echo "xcsh [font] [-l location] [-h host]"
+	echo ""
+        echo "Font argument is PPWS:"
+        echo "  PP = [1-9][0-9] = point size:"
+	echo "       10-21, 24-26, 31, 34, 37, 50"
+        echo "  W = [bm] = weight: b = bold, m = medium"
+        echo "  S = [abdhlmns] or ms = style"
+	echo "      a=adobe, b=bitstream, d=dec, h=hcr,"
+	echo "      l=lucid, m=misc, n=sony," \
+			"s=schumacher,"
+	echo "      ms=misc semicondensed"
+	echo ""
+	echo "location argument is 1, 2, 3, 4, or" \
+		"WxH+X+Y"
+	echo "  W and H are width in columns and" \
+	    	"height in lines"
+    	echo "  X and Y are the upper left corner" \
+		"offset in pixels"
+	echo ""
+	echo "If host is given, program is" \
+		'`ssh host'"'."
 	exit 1
 	breaksw
 
