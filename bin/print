@@ -5,7 +5,7 @@
 #
 # File:		print
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Tue Jul  8 06:41:20 EDT 2003
+# Date:		Fri Feb 20 11:00:36 EST 2004
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -14,9 +14,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2003/07/08 10:41:05 $
+#   $Date: 2004/02/20 16:36:47 $
 #   $RCSfile: print,v $
-#   $Revision: 1.12 $
+#   $Revision: 1.13 $
 
 landscape=""
 border="-j"
@@ -49,7 +49,7 @@ print [-2fdpWNbo] [-P printer] [filename ...]
     
     The header normally includes file name, date, and
     page number.  -f suppresses the file name; -d sup-
-    presses the date; and -n suppresses the page number.
+    presses the date; and -p suppresses the page number.
 
     Normally the page has a border, but -b suppresses
     the border.
