@@ -288,6 +288,10 @@ Infrequently used commands:
 cvs -d repository-full-pathname init
 	This is used to create a repository.
 
+cd repository-full-pathname; mkdir module; \
+    chmod 770 module
+	Make a new module.
+
 cvs log
 cvs log filename ...
 	Print the status of all revisions of files.
