@@ -2,7 +2,7 @@
 
 set location=80x35+2+100
 set program=""
-set title="`hostname -s`"
+set title="`hostname`"
 
 set c1="*-c-*-iso8859-1"
 set m1="*-m-*-iso8859-1"
@@ -26,7 +26,7 @@ set hcrm="-hrnet&hcr-grtt-medium-r-normal-"
 
 set font="$lucidm-18-$m1"
 
-while ($# > 0)
+while ($#argv > 0)
     switch ( "$1" )
     case -host:
     case -h:
