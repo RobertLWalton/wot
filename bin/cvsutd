@@ -4,7 +4,7 @@
 #
 # File:		cvsutd
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Tue Jun 10 11:13:16 EDT 2003
+# Date:		Thu Jun 12 22:45:12 EDT 2003
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2003/06/10 16:02:38 $
+#   $Date: 2003/06/13 02:49:12 $
 #   $RCSfile: cvsutd,v $
-#   $Revision: 1.3 $
+#   $Revision: 1.4 $
 
 switch ( "$1" )
 
@@ -27,8 +27,42 @@ cvsutd\
     Check whether the current directory and its sub-\
     directories are up to date.  Essentually prints out\
     the same thing that a "'`'"cvsup' command would,\
-    but does not change any files or directories."
-
+    but does not change any files or directories.\
+\
+    Some of the possible printed messages are:\
+\
+    ? filename	File is not known to CVS.\
+    U filename	File would be copied from repository by\
+    		cvsup.\
+    P filename	File would be patched from repository\
+    		by cvsup.\
+    M filename	File is more recent than the version of\
+    		the file in the repository.  The file\
+		will not altered by cvsup.\
+    C filename	File is a modification of a repository\
+    		version of the file that is NOT the\
+		most recent version of the file in the\
+		repository.  If cvsup is executed, it\
+		will merge the most recent version in\
+		the repository with the file by using\
+		the rcsmerge(1) command.\
+\
+		BEWARE: even non-overlapping changes\
+		may conflict and cause the file to be\
+		defective.  Use\
+\
+			cvs diff -rHEAD filename\
+\
+		to examine differences of the file from\
+		the most recent version in the reposi-\
+		tory.\
+\
+    A filename	File has been "'`'"cvs add'ed but not\
+    		yet been committed to the repository.\
+    R filename	File has been "'`'"cvs remove'd but\
+    		this remove has not yet been commited\
+		to the repository.\
+"
     	exit 1
 	breaksw
 endsw
