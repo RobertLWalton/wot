@@ -5,7 +5,7 @@
 #
 # File:		print
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Mon Mar 31 07:40:33 EST 2003
+# Date:		Tue Jun 10 03:05:18 EDT 2003
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -14,11 +14,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2003/06/09 15:07:29 $
+#   $Date: 2003/06/10 07:41:07 $
 #   $RCSfile: print,v $
-#   $Revision: 1.10 $
-
-# UNFINISHED CODE
+#   $Revision: 1.11 $
 
 landscape=""
 border="-j"
@@ -26,15 +24,17 @@ filename="\$n"
 date="\$W  \$C  %n"
 pagenumber="\$% of \$="
 font=10
-tfont=12
+titlefont=12
 output="-P $PRINTER"
+switches=""
 
 case "$1" in
-    -doc* )
+    -doc* | "" )
    	echo "
-print [-2fdpWNb] [filename ...]
+print [-2fdpWNbo] [-P printer] [filename ...]
 
-    Print the files named.
+    Print the files named, or the standard input if no
+    files are named.
 
     Normally one column is printed; -2 prints two
     columns per page in landscape.
@@ -43,7 +43,9 @@ print [-2fdpWNb] [filename ...]
     a wide column of 100 characters; -N is a narrow
     column of 56 characters.  Minimal page lengths are
     60 lines normally, 40 lines for -N, and 70 lines
-    for -W.
+    for -W.  -N is optimal for printing viewgraphs for
+    overhead projectors, and for printing two columns
+    per page (-2 option) with reasonable sized font.
     
     The header normally includes file name, date, and
     page number.  -f suppresses the file name; -d sup-
@@ -53,7 +55,8 @@ print [-2fdpWNb] [filename ...]
     the border.
 
     The printer used is the value of the PRINTER
-    environment variable.  The -o option routes output
+    environment variable.  The -P printer option changes
+    the printer used.  The -o option routes output
     to the standard output, instead of to a printer.
     Note that remarks are always printed on the standard
     error, so the standard error and standard output
@@ -61,20 +64,34 @@ print [-2fdpWNb] [filename ...]
 
     	exit 1
 	;;
+    -P ) ;;
     -* )
+    	switches="$1"
+	if test `expr "$1" : '\-[2fdpWNbo]*$'` -le 1
+	then
+	    echo ERROR: bad option in "$1"
+	    echo \`print -doc\' prints documentation.
+	    exit 1
+	fi
 	case "$1" in
+	*W*N* | *N*W* )
+		echo ERROR: both -W and -N options \
+			    given.
+		echo \`print -doc\' prints \
+		     documentation.
+		exit 1
+		;;
 	*2*)	landscape="-2r"	
 		font=7
 		case "$1" in
-		*W*)	font=6; tfont=10 ;;
+		*W*)	font=6; titlefont=10 ;;
 		*N*)	font=10 ;;
 		esac
 		;;
 	*)
 		case "$1" in
-		*W*)	font=8; tfont=10 ;;
-		*M*)	font=10 ;;
-		*N*)	font=15; tfont=15 ;;
+		*W*)	font=8; titlefont=10 ;;
+		*N*)	font=15; titlefont=15 ;;
 		esac
 	esac
 
@@ -102,10 +119,27 @@ print [-2fdpWNb] [filename ...]
 esac
 
 
+case "$1" in
+    -P )
+	case "$switches" in
+	*o* )
+		echo ERROR: both -o and -P options \
+		     given.
+		echo \`print -doc\' prints \
+		     documentation.
+		;;
+	esac
+    	shift
+	output="-P $1"
+	echo >&2 Printer is $1
+	shift
+    	;;
+esac
+
 exec enscript $landscape $border \
         -b "$filename|$date|$pagenumber" \
 	--margins=48:48:: \
-	-F Courier-Bold$tfont -f Courier$font \
+	-F Courier-Bold$titlefont -f Courier$font \
 	$output "$@"
 
 
