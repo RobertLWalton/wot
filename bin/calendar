@@ -4,7 +4,7 @@
 #
 # File:		spe-server
 # Author:	Bob Walton (walton@deas.harvard.edu)
-# Date:		Tue Jan 27 02:30:54 EST 2004
+# Date:		Fri Jan 30 19:46:43 EST 2004
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,17 +13,38 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2004/01/30 18:22:55 $
+#   $Date: 2004/01/31 01:09:35 $
 #   $RCSfile: calendar,v $
-#   $Revision: 1.1 $
+#   $Revision: 1.2 $
 #
 # The next line starts tclsh \
 exec tclsh "$0" "$@"
 
-set date [clock format [clock seconds] -format "%m %d"]
-set month [lindex $date 0]
-set day [lindex $date 1]
+# set month = {m1 m2 m3 m4} and day = {d1 d2 d3 d4}
+# where m1/d1 is today, m2/d2 tommorrow, m3/d3 the
+# day after tommorrow, etc.
+#
+set time [clock seconds]
+set month {}
+set day {}
+set count 1
+while { $count <= 4 } {
+    set date [clock format $time -format "%m %d"]
+    set m [lindex $date 0]
+    regexp {^0*([1-9].*)$} $m forget m
+    set d [lindex $date 1]
+    regexp {^0*([1-9].*)$} $d forget d
+    lappend month $m
+    lappend day $d
+    incr time [expr 24 * 60 * 60]
+    incr count
+}
 
+puts "MONTH $month\nDAY   $day"
+
+# Go through the lines of stdin printing those with
+# a date matching one of those listed in month/day.
+#
 while { "yes" } {
 
     set line [gets stdin]
@@ -31,10 +52,13 @@ while { "yes" } {
     regsub -all "\[ \t,/\]+" $line " " items
     set last ""
     foreach item [split $items " "] {
-        if { $item != $day } {
+	regexp {^0*([1-9].*)$} $item forget item
+	set index [lsearch -exact $day $item]
+        if { $index < 0 } {
 	    set last $item
 	    continue
 	}
+
 	set last [string tolower $last]
 	set len [string length $last]
 	set lenm1 [expr $len - 1]
@@ -54,10 +78,11 @@ while { "yes" } {
 		incr m
 	    }
 	}
-        if { $last == $month } {
+
+	regexp {^0*([1-9].*)$} $last forget last
+        if { $last == [lindex $month $index] } {
 	    puts $line
 	}
 	set last $item
     }
 }
-
