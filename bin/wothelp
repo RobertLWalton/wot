@@ -1,0 +1,38 @@
+cat <<EOF
+
+Print Commands:
+
+    CVS Commands.
+	cvscom			Commit to repository.
+	cvsup			Update from repository.
+	cvsdiff			Diff with repository.
+	cvsutd			Get status of any non-
+				up-to-date files.
+
+    Format for code and ASCII documentation.
+				40 lines x 56 columns.
+	fprint file ...		Prints the files, two
+				pages per page.
+	vfprint			Prints the files as
+				viewgraphs.
+	fcheck file ...		Checks that the files
+				have 40x56 format.
+	fcheckc file ...	Checks that the files
+				have ...x56 format:
+				there is no limit to
+				page length.  Good for
+				code, but not documen-
+				tation.
+
+    Format for ARPA proposals.  60 lines x 72 columns.
+	arpaprint file ...	Prints the files.
+	arpacheck file ...	Checks that the files
+				have 60 x 72 format.
+
+    Miscellaneous.
+	rmtex basename ...	Remove latex generated
+				output files with names
+				such as basename.toc
+	slocs file ...		Count the SLOCS in .c or
+				.cc or JAVA files.
+EOF
