@@ -191,7 +191,7 @@ cvs diff -rVVV filename
 	the diff listing.
 
 
-cvs update
+cvs update -d -P
 cvs update filename ..
 	Checks out files that have been updated in the
 	repository since the user last checked out the
