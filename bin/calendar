@@ -4,7 +4,7 @@
 #
 # File:		calendar
 # Author:	Bob Walton (walton@deas.harvard.edu)
-# Date:		Tue Mar  2 13:13:56 EST 2004
+# Date:		Fri Mar  5 07:33:39 EST 2004
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,23 +13,25 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2004/03/02 18:31:10 $
+#   $Date: 2004/03/05 13:26:45 $
 #   $RCSfile: calendar,v $
-#   $Revision: 1.5 $
+#   $Revision: 1.6 $
 #
 # The next line starts tclsh \
 exec tclsh "$0" "$@"
 
 set document "
-calendar \[date\] <calendar-file
+calendar \[date \[days\]\] <calendar-file
 
 Outputs each line of calendar-file that contains a date
-or any of the following three days.  The date argument
-defaults to the current date.  Dates in the file are in
-`month day' form, where month can be a number or an ab-
-breviation with 3 or more letters.  The month and day
-can be separated by any sequence of spaces, commas, and
-slashes.  Years are ignored."
+or any of the following `days' days.  The date argument
+defaults to the current date and the days argument to 3.
+Dates in the file are in `month day' form, where month
+can be a number or an abbreviation with 3 or more
+letters.  The month and day can be separated by any
+sequence of spaces and slashes, the month can be pre-
+ceeded by any non-alphanumeric, and the day can be
+followed by any non-alphanumeric.  Years are ignored."
 
 if { [regexp {^-doc} [lindex $argv 0]] } {
     puts $document
@@ -44,14 +46,28 @@ set mark $mark$mark
 # day after tommorrow, etc.
 #
 if { $argc >= 1 } {
-    set time [clock scan [lindex $argv 0]]
+    if { [catch { set time \
+                      [clock scan [lindex $argv 0]] }] \
+	        } {
+        puts "calendar: BAD DATE: [lindex $argv 0]"
+	exit 1
+    }
 } else {
     set time [clock seconds]
 }
+if { $argc >= 2 } {
+    set days [lindex $argv 1]
+    if { ! [regexp {[0-9]+} $days] } {
+        puts "calendar: BAD NUMBER OF DAYS: $days"
+	exit 1
+    }
+} else {
+    set days 3
+}
 set month {}
 set day {}
-set count 1
-while { $count <= 4 } {
+set count 0
+while { $count <= $days } {
     set date [clock format $time -format "%m %d"]
     set m [lindex $date 0]
     regexp {^0*([1-9].*)$} $m forget m
@@ -71,16 +87,21 @@ while { "yes" } {
 
     set line [gets stdin]
     if { [eof stdin] } break
-    regsub -all "\[ \t,/\]+" $line " " items
+    regsub -all "\[ \t/\]+" $line " " items
     set last ""
     foreach item [split $items " "] {
-	regexp {^0*([1-9].*)$} $item forget item
-	set index [lsearch -exact $day $item]
+
+	set ditem $item
+	regexp {^0*([1-9][0-9]*)($|[^a-zA-Z0-9])} \
+	       $ditem forget ditem
+	set index [lsearch -exact $day $ditem]
         if { $index < 0 } {
 	    set last $item
 	    continue
 	}
-
+ 
+ 	regexp {(^|[^a-zA-Z0-9])([a-zA-Z0-9]+)$} \
+	       $last forget forget last
 	set last [string tolower $last]
 	set len [string length $last]
 	set lenm1 [expr $len - 1]
@@ -109,6 +130,7 @@ while { "yes" } {
 		puts $mark
 	    }
 	    puts $line
+	    break
 	}
 	set last $item
     }
