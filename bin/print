@@ -5,7 +5,7 @@
 #
 # File:		print
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Tue Jun 10 03:05:18 EDT 2003
+# Date:		Tue Jul  8 06:41:20 EDT 2003
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -14,9 +14,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2003/06/10 07:41:07 $
+#   $Date: 2003/07/08 10:41:05 $
 #   $RCSfile: print,v $
-#   $Revision: 1.11 $
+#   $Revision: 1.12 $
 
 landscape=""
 border="-j"
@@ -29,7 +29,7 @@ output="-P $PRINTER"
 switches=""
 
 case "$1" in
-    -doc* | "" )
+    -doc* )
    	echo "
 print [-2fdpWNbo] [-P printer] [filename ...]
 
