@@ -1,10 +1,10 @@
 #! /bin/csh -f
 
 if ( $#argv >= 2 && "$1" == "-debug" ) then
-    set out = less
+    set out = "grep '[^ 	]' | less"
     shift
 else
-    set out = "grep -c ."
+    set out = "grep -c '[^ 	]'"
 endif
 
 set c = ()
@@ -23,6 +23,6 @@ foreach x ($argv:q)
     endsw
 end
 
-( eval "$c" ) | eval $out
+eval "( $c ) | $out"
 
 exit 0
