@@ -195,9 +195,11 @@ cvs update -d -P
 cvs update filename ..
 	Checks out files that have been updated in the
 	repository since the user last checked out the
-	files.  Also removes files removed from the
-	repository and adds files added to the
-	repository.
+	files.  The command without filenames and
+	with the -d and -P options also removes files
+	removed from the repository, adds files added
+	to the repository, and removes local copies of
+	directories that are empty in the repository.
 
 cvs commit -m update
 cvs commit -m update filename
@@ -208,6 +210,9 @@ cvs commit -m update filename
 	`remove' command below, and adds files or
 	directories to the repository that were
 	identified by the CVS `add' command below.
+	The `-m update' parameter just statisfies
+	the need of `cvs commit' for a message from
+	its user telling the purpose of the commit.
 
 cvs add filename ...
 cvs add directory ...
@@ -307,6 +312,10 @@ cvs tag symbolic_tag filename ...
 cvs -d repository-name checkout -r symbolic_tag
 	TEST THIS
 
+TO BE DONE:
+
 CVS/Entries CVS/Root CVS/Repository
 
 Merging
+
+Directory removal and moving
