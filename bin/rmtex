@@ -1,5 +1,5 @@
 #! /bin/csh -f
 
 foreach x ( $argv:q )
-    rm -f $x.{dvi,ps,log,aux,bbl,blg,idx,ilg,ind,toc,lof}
+    rm -f $x.{dvi,ps,pdf,log,aux,bbl,blg,idx,ilg,ind,toc,lof}
 end

@@ -1,0 +1,22 @@
+#! /bin/csh -f
+
+switch ( "$1" )
+case "":
+case -doc*:
+    echo "ascii2pdf filename"
+    echo ""
+    echo "produces a bunch of latex files named filename.*"
+    echo "and then a pdf file named filename.pdf"
+endsw
+
+rm -f $1.tex
+echo >>$1.tex '\\documentclass[12pt]{article}'
+echo >>$1.tex '\\begin{document}'
+echo >>$1.tex '\\begin{verbatim}'
+sed  >>$1.tex < "$1" -e '/^$/s//\\end{verbatim}\\newpage\\begin{verbatim}/'
+echo >>$1.tex '\\end{verbatim}'
+echo >>$1.tex '\\end{document}'
+
+pdflatex "$1"
+
+exit 0
