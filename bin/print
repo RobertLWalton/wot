@@ -14,9 +14,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2003/03/31 21:01:14 $
+#   $Date: 2003/06/09 15:07:29 $
 #   $RCSfile: print,v $
-#   $Revision: 1.9 $
+#   $Revision: 1.10 $
 
 # UNFINISHED CODE
 
@@ -27,6 +27,7 @@ date="\$W  \$C  %n"
 pagenumber="\$% of \$="
 font=10
 tfont=12
+output="-P $PRINTER"
 
 case "$1" in
     -doc* )
@@ -52,7 +53,11 @@ print [-2fdpWNb] [filename ...]
     the border.
 
     The printer used is the value of the PRINTER
-    environment variable."
+    environment variable.  The -o option routes output
+    to the standard output, instead of to a printer.
+    Note that remarks are always printed on the standard
+    error, so the standard error and standard output
+    should NOT be combined if the -o option is used."
 
     	exit 1
 	;;
@@ -89,6 +94,10 @@ print [-2fdpWNb] [filename ...]
 	*p*)	pagenumber=""
 	esac
 
+	case "$1" in
+	*o*)	output="-p -"
+	esac
+
 	shift
 esac
 
@@ -97,7 +106,7 @@ exec enscript $landscape $border \
         -b "$filename|$date|$pagenumber" \
 	--margins=48:48:: \
 	-F Courier-Bold$tfont -f Courier$font \
-	-P $PRINTER "$@"
+	$output "$@"
 
 
 
