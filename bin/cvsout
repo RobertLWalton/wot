@@ -2,9 +2,9 @@
 #
 # Create new project directory.
 #
-# File:		cvsnew
+# File:		cvsout
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Wed Jun 25 07:21:56 EDT 2003
+# Date:		Wed Jun 25 12:11:07 EDT 2003
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,27 +13,35 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2003/06/25 11:41:57 $
+#   $Date: 2003/06/25 16:11:59 $
 #   $RCSfile: cvsout,v $
-#   $Revision: 1.1 $
+#   $Revision: 1.2 $
 
 switch ( "$1" )
 
    case -doc*:
 
    	echo "\
-cvsnew -d repository-name directory\
+cvsout -d repository-name [-n | -e] directory\
 \
-    Make a new directory in the repository.  The direc-\
-    tory must not previously exist: it will be made.\
-    The directory is checked out after it has been\
-    made, as per\
+    Checkout a repository directory.  If the -n option\
+    is given and the directory does not exist in the \
+    repository, the directory is made in the reposi-\
+    tory.  Unless the -e option is given, the directory\
+    must not exist locally, as it will be made locally\
+    as per "'`'"mkdir directory'.  You can use\
 \
-	cvs -d repository-name checkout directory\
+	cvsout -d repository-name -e .\
+\
+    to checkout the entire repository to the current\
+    directory.  If the -e option is given, the existing\
+    local directory may already contain files, which" \
+    	"are\
+    not disturbed if they are not in the repository.\
 \
     This command should NOT be used to make a new sub-\
     directory of an already checked out directory.\
-    In that case use "'`'"mkdir' followed by\
+    In that case use "'`'"mkdir directory' followed by\
 \
 	cvs add directory\
 "
@@ -44,12 +52,51 @@ cvsnew -d repository-name directory\
     case -d:
         breaksw
     default:
-        echo "ERROR: first argument must be -d, as in"
-   	echo "cvsnew -d repository-name directory"
+        echo "ERROR: first argument must be -d"
 	exit 1
 endsw
 
-mkdir "$3"
-( cd "$3"; cvs -d "$2" import -m initialize \
-                       "$3" `basename ~` initial )
-cvs -d "$2" checkout "$3"
+switch ( "$3" )
+    case -e:
+        if ( "$5" != "" ) then
+	    echo "ERROR: cannot understand $3 $4 $5"
+	    exit 1
+	endif
+	set e=yes
+        set n=no
+	set d="$4"
+	breaksw
+    case -n:
+        if ( "$5" != "" ) then
+	    echo "ERROR: cannot understand $3 $4 $5"
+	    exit 1
+	endif
+	set e=no
+        set n=yes
+	set d="$4"
+	breaksw
+    default:
+        if ( "$4" != "" ) then
+	    echo "ERROR: cannot understand $3 $4"
+	    exit 1
+	endif
+
+	set e=no
+        set n=no
+	set d="$3"
+	breaksw
+endsw
+
+
+if ( "$e" == "no" ) then
+    mkdir "$d"
+else if ( ! -d "$d" ) then
+    echo "ERROR: $d is not an existing directory"
+    exit 1
+endif
+
+if ( "$n" == "yes" ) then
+    ( cd "$d"; cvs -d "$2" import -m initialize \
+			   "$d" `basename ~` initial )
+endif
+cvs -d "$2" checkout "$d"
