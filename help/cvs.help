@@ -24,9 +24,9 @@ person to work on the same file in parallel, and merges
 the results, though some human intervention is required
 for checking and cleanup of the merge.
 
-CVS uses RCS to maintain the ",v" files.  Like RCS is
-us also useful for backing up files in case you accident-
-ally delete them, and for seeing what changes you
+CVS uses RCS to maintain the ",v" files.  Like RCS, CVS
+is also useful for backing up files in case you acci-
+dentally delete them, and for seeing what changes you
 recently made.  If the repository is remote from you,
 accessing it using CVS can be slower, however, than a
 local RCS system.  It is easy to move ",v" RCS files
@@ -34,14 +34,6 @@ into a CVS repository and to move them out again, so it
 is fairly easy to switch between using CVS to using RCS.
 
 The CVS repository is a directory with subdirectories.
-The repository name is the full pathname of the direct-
-ory if the repository is on the local computer; or is of
-the form:
-
-	login-name@host-name:full-directory-pathname
-
-if the repository is on a local computer.
-
 The repository contains subdirectories containing
 ",v" files or other subdirectories.  Users maintain
 copies of parts of the repository with ",v" files
@@ -52,19 +44,61 @@ in a subdirectory system in or out.  Checking "foo"
 in means storing the current version of "foo" in
 "foo,v"; checking "foo" out means copying the most
 recent version of "foo" stored in "foo,v" to the
-user's version of "foo".
+user's version of "foo".  The command in CVS to
+check files in is called `commit', and the command
+to check files out is called `update'.
+
+The subdirectory organization of the repository is the
+same as the subdirectory organization of the user of
+the repository: the differences are that where there
+is a file named "foo,v" in the repository, there is
+a file named "foo" in the associated user subdirectory,
+and that the user subdirectory has a CVS subdirectory
+used for bookkeeping.  The root of the repository has
+a CVSROOT subdirectory for bookkeeping, and the
+repository subdirectories may have Attic subdirectories
+in which ",v" files that have been `removed' from the
+repository are kept (so nothing is ever lost).
+
+The top level of the repository is not itself matched
+to any user subdirectory.  Rather, the top level
+subdirectories are said to define `modules' and are
+matched to user subdirectories.  Modules are checked
+out by a separate CVS `checkout' command, not all
+modules in a repository need be checked out by a given
+user.
+
+The repository name is the full pathname of the direct-
+ory if the repository is on the local computer; or is of
+the form:
+
+	login-name@host-name:full-directory-pathname
+
+if the repository is on a local computer.  Because :
+is legal in a windows operating system file name, on
+the windows operating system a local pathname is of
+the form:
+
+	local:full-directory-pathname
+
 
 Standard User CVS Commands:
 
-cvs -d repository checkout subdirectory-name
+Note: Commands without a filename run on all files
+in the current directory and its subdirectories.
+The same command with filenames runs only on the named
+files.
 
-	Does a `mkdir subdirectory-name' and checks
-	out all files and subdirectories of this
-	the named subdirectory.
+cvs -d repository checkout module-name
+
+	Does a `mkdir module-name' and checks out all
+	files and subdirectories of the named module
+	(i.e., top level subdirectory).
 
 cvs status -v
 cvs status -v | grep Status
-cvs status -v filename
+cvs status -v filename ...
+cvs status -v filename ... | grep Status
 
 	Identifies all files in the repository that
 	store the history of files in the current
@@ -95,23 +129,103 @@ cvs status -v filename
 			
 
 cvs diff
-cvs diff filename
-cvs diff -r... filename
+cvs diff filename ...
+cvs diff -rVVV filename
+	Prints a diff listing between the last version
+	of a file that the user checked out of the
+	repository (NOTE: this may not be the latest
+	version in the repository) and the user's
+	version of the file, if the user has modified
+	the file.  With -rVVV, release VVV (e.g., 1.4)
+	of the file in the repository is used for making
+	the diff listing.
+
 
 cvs update
-cvs update filename
-							/
-	Checks out any files in the current directory
-	or its subdirectory that are different in the
-	repository than in the 
+cvs update filename ..
+	Checks out files that have been updated in the
+	repository since the user last checked out the
+	files.  Also removes files removed from the
+	repository and adds files added to the
+	repository.
 
 cvs commit -m update
 cvs commit -m update filename
+	Checks in files that the user has updated since
+	the user last checked out the files.  Also
+	removes files or directories removed from the
+	repository that were identified by the CVS
+	`remove' command below, and adds files or
+	directories to the repository that were
+	identified by the CVS `add' command below.
 
 cvs add filename ...
+cvs add directory ...
 cvs remove filename ...
+cvs remove directory ...
+	Marks files or directories that are to be added
+	or removed from the repository.  The actual
+	addition or removal is done by the next CVS
+	`commit' command.
 
-Mv'ing and cp'ing ".v" files in the respository:
+	To add just make the file or directory and
+	mention it in an `add' command.
+
+	To remove delete the file or directory and
+	mention it in a `remove' command.
+
+	Removed stuff is not actually removed from the
+	repository.  It is moved to an Attic
+	subdirectory of the directory it was in.  The
+	",v" files in an Attic have state `dead' for
+	their last revision, and this prevents the
+	use of these files by CVS even if they are
+	moved out of the Attic subdirectorys.  The
+	rcs command `rcs -sExp filename,v' will
+	change the state to the normal `Exp' state
+	and permit these ",v" files to be reused.
+
+
+Mv'ing and cp'ing ",v" files in the respository:
+	If you want to duplicate or rename files it
+	is not possible to do this properly with CVS
+	commands.  Instead be sure all users have the
+	relevant files committed and updated, go the
+	repository itself, and `cp -p' or `mv' the
+	",v" files or directories.  You can also make
+	new subdirectories in the repository.
+
+	Then run the `update' command for all users.
+	This will get files with new names out of the
+	repository and delete files with obsolete names.
+
+Mv'ing or cp'ing ",v" files between RCS and CSV.
+	You can `mv' or `cp -p' files from RCS to a
+	CVS repository or vice versa.  When moving
+	an RCS file into the repository, be sure it is
+	unlocked (use `rcs -u filename,v' to unlock
+	the file).
+
+Group repositories:
+	If you are using a repository as a member of a
+	unix group, you must be sure files written into
+	the repository have group write permissions.
+	The easiest way to do this is to put
+
+		alias cvs umask 007; cvs
+
+	into the `.cshrc' file of any account you plan
+	to use to access the repository.
+
+	Note that this will mean that ALL CVS
+	repositories you deal with will have group
+	write permissions.  If some repositories are
+	not to be group accessible, you may protect
+	the repository top level directory against
+	group access, and periodically remove group
+	permissions from the files and subdirectories
+	in the repository.
+
 
 
 
@@ -119,6 +233,7 @@ Infrequently used commands:
 ------------------------
 
 cvs -d repository-full-pathname init
+	This is used to create a repository.
 
 
 
@@ -128,24 +243,16 @@ More Detailed Explanation of RCS:
 
 "checkin"	A technical term meaning to move a file
 		"foo" from the current directory into
-		its RCS storage file "RCS/foo,v".  The
-		file becomes the last version put into
-		"RCS/foo,v", and the file is deleted
-		from the current directory.
+		its repository storage file "foo,v".
+		The file becomes the last version put
+		into "foo,v".  Checkin is done by the
+		CVS `commit' command, and is therefore
+		also called `commit'.
 
 "checkout"	A technical term meaning to copy a file
 		"foo" (actually, a version of "foo", by
 		default the latest version) from its
-		RCS storage file "RCS/foo,v" to the
-		current directory.
-
-"locked"	A technical term.  "RCS/foo,v"
-		contains a bit that indicates whether
-		(the latest version of) "foo" is locked
-		or unlocked.  If "foo" is locked, it
-		has been checked out with the intention
-		of writing it, and it is OK to check it
-		back in.  If "foo" is unlocked, it is
-		not permitted to check it back in (it
-		may have been checked out just for the
-		purpose of reading it).
+		repository storage file "foo,v" to the
+		current directory.  Checkout is done by
+		the CVS `update' command, and is
+		therefore also called `update'.
