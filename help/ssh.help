@@ -2,7 +2,7 @@ SSH HELP
 
 File:		ssh.help
 Author:		Bob Walton (walton@deas.harvard.edu)
-Date:		Mon Jun 30 21:15:42 EDT 2003
+Date:		Fri Jul  4 22:22:12 EDT 2003
 
 SSH, the `Secure Shell', is just a way of connecting to
 a remote computer's account so you can use a shell in
@@ -182,7 +182,7 @@ system (called DSS).
 
 To generate an rsa key use the command
 
-	ssh-keygen -t rsa1 -f file-name
+	ssh-keygen -t rsa -f file-name
 
 The private key is generated in the named file.  The
 public key is generated in the `file-name.pub' file.
@@ -334,20 +334,27 @@ a different SSH that just understands protocol 1 is
 However, this uses the same rsa1 file names as
 `OpenSSH_2.9p2' in RedHat 7.2.
 
-An example of of a different SSH that understands
-protocol 2 is
+An example of different SSH's that understand protocol 2
+are
 
-    SSH Version 2.0.13 (also running under sun-solaris)
+    SSH Secure Shell 3.2.5 (non-commercial version)
+    	on i686-pc-linux-gnu (under mandrake linux)
+    SSH Version 2.0.13 (running under sun-solaris)
 
-This SSH:
 
-    Uses `~/.ssh2' instead of `~/.ssh'.
-    Uses `~/.ssh2/hostkeys/*' instead of lines in
-         `~/.ssh/known_hosts'.
+These SSH's:
 
-    Uses the file `~/.ssh2/authorization' in combination
+    Use `~/.ssh2' instead of `~/.ssh'.
+    Use `~/.ssh2/hostkeys/*' instead of lines in
+        `~/.ssh/known_hosts'.
+
+    Use the file `~/.ssh2/authorization' in combination
     with particular public key files instead of lines
     in the file `~/.ssh/authorized_keys2'.
+
+    Use the file `~/.ssh2/identification' that lists
+    particular private key files instead of using a
+    single private key file with a special name.
 
 Suppose you have public key files named fee.pub and
 fi.pub, each containing a long line.  Inspection of that
@@ -360,7 +367,7 @@ files `~/.ssh2/fee.compub' and `~/.ssh2/fi.compub' each
 with the format:
 
     ---- BEGIN SSH2 PUBLIC KEY ----
-    key-proper-on-one-line
+    public-key-proper-on-one-line
     ---- END SSH2 PUBLIC KEY ----
 
 and the file `~/.ssh2/authorization' containing
