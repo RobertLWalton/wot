@@ -1,0 +1,63 @@
+#!/bin/sh
+#
+# SPE server program.
+#
+# File:		spe-server
+# Author:	Bob Walton (walton@deas.harvard.edu)
+# Date:		Tue Jan 27 02:30:54 EST 2004
+#
+# The authors have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+#
+# RCS Info (may not be true date or author):
+#
+#   $Author: walton $
+#   $Date: 2004/01/30 18:22:55 $
+#   $RCSfile: calendar,v $
+#   $Revision: 1.1 $
+#
+# The next line starts tclsh \
+exec tclsh "$0" "$@"
+
+set date [clock format [clock seconds] -format "%m %d"]
+set month [lindex $date 0]
+set day [lindex $date 1]
+
+while { "yes" } {
+
+    set line [gets stdin]
+    if { [eof stdin] } break
+    regsub -all "\[ \t,/\]+" $line " " items
+    set last ""
+    foreach item [split $items " "] {
+        if { $item != $day } {
+	    set last $item
+	    continue
+	}
+	set last [string tolower $last]
+	set len [string length $last]
+	set lenm1 [expr $len - 1]
+	if {    [regexp {^[a-z]*$} $last] \
+	     && $len >= 3 } {
+	    set m 1
+	    foreach mon { january february march \
+	    		  april may june \
+			  july august sepember \
+			  october november december \
+			} {
+	        if {    [string range $mon 0 $lenm1] \
+		     == $last } {
+		    set last $m
+		    break
+		}
+		incr m
+	    }
+	}
+        if { $last == $month } {
+	    puts $line
+	}
+	set last $item
+    }
+}
+
