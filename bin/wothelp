@@ -10,6 +10,9 @@ Print Commands:
 				up-to-date files.
         mine file ...		Make files writable by
 				user.
+	cvs add file ...	Add files (or director-
+				ies) to those controlled
+				by cvs.
 
     Format for code and ASCII documentation.
 				40 lines x 56 columns.
