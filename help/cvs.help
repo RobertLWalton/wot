@@ -175,8 +175,11 @@ cvs status -v filename ... | grep Status
 			more recent than the version the
 			user checked out.
 
-	[What about files other users have added?]
-			
+	Unfortunately, files other users have added and
+	the current user has never checked out are not
+	mentioned.  You need to do a cvs update -d -P
+	to get them or even to see them.
+
 
 cvs diff
 cvs diff filename ...
@@ -238,7 +241,7 @@ cvs remove filename ...
 
 	To remove the file or directory, first delete it
 	and then mention it in a cvs `remove' command.
-
+
 	Removed stuff is not actually removed from the
 	repository.  It is moved to an Attic
 	subdirectory of the directory it was in.  The
@@ -249,7 +252,7 @@ cvs remove filename ...
 	rcs command `rcs -sExp filename,v' will
 	change the state to the normal `Exp' state
 	and permit these ",v" files to be reused.
-
+
 Mv'ing and cp'ing ",v" files in the repository:
 	If you want to duplicate or rename files it
 	is not possible to do this properly with CVS
@@ -274,7 +277,7 @@ Mv'ing and rmdir'ing directories in the repository:
 	all user copies of the directories.  Only then,
 	AFTER ALL USER COPIES have been removed, is it
 	safe to rmdir the repository directories.
-
+
 	If you are a user who still has a copy of a
 	directory that has been rmdir'ed from the
 	repository, cvs will not work.  What you must
