@@ -1,0 +1,3 @@
+#!/bin/csh -f
+
+chmod u+w $argv:q

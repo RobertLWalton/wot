@@ -8,6 +8,8 @@ Print Commands:
 	cvsdiff			Diff with repository.
 	cvsutd			Get status of any non-
 				up-to-date files.
+        mine file ...		Make files writable by
+				user.
 
     Format for code and ASCII documentation.
 				40 lines x 56 columns.
