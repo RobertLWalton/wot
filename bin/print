@@ -2,5 +2,5 @@
 
 exec enscript -j -b "\$n|\$W  \$C  %n|\$% of \$=" \
 	--margins=48:48:: \
-	-F Courier-Bold12 -f Courier11 \
+	-F Courier-Bold12 -f Courier10 \
 	-P $PRINTER "$@"
