@@ -1,2 +1,3 @@
 #! /bin/csh -f
-cvs status |& grep Status | grep -v Up-to-date
+cvs -n update -d -P |& grep -v ': Updating'
+# cvs status |& grep Status | grep -v Up-to-date

@@ -1,4 +1,4 @@
-cat <<EOF
+cat <<EOF | less
 
 Print Commands:
 
@@ -7,7 +7,9 @@ Print Commands:
 	cvsup			Update from repository.
 	cvsdiff			Diff with repository.
 	cvsutd			Get status of any non-
-				up-to-date files.
+				up-to-date files; like
+				cvsup but modifies no
+				files or directories.
         mine file ...		Make files writable by
 				user.
 	cvs add file ...	Add files (or director-

@@ -146,6 +146,9 @@ cvs -d repository checkout module-name
 	files and subdirectories of the named module
 	(i.e., top level subdirectory).
 
+	You may also use `.' as a module-name.  This
+	checks out all subdirectories in the repository.
+
 cvs status -v
 cvs status -v | grep Status
 cvs status -v filename ...
@@ -178,8 +181,8 @@ cvs status -v filename ... | grep Status
 
 	Unfortunately, files other users have added and
 	the current user has never checked out are not
-	mentioned.  You need to do a cvs update -d -P
-	to get them or even to see them.
+	mentioned.  You need to do a cvs -n update -d -P
+	to see them.
 
 
 cvs diff
@@ -204,6 +207,36 @@ cvs update filename ..
 	removed from the repository, adds files added
 	to the repository, and removes local copies of
 	directories that are empty in the repository.
+
+cvs -n update -d -P
+	Ditto but just tells you what cvs update -d -P
+	would do, and does not actually do it.  Files
+	are listed with status as follows:
+
+		? File not added to cvs.
+
+		U File updated in repository but not
+		  in working directory.
+
+		A File cvs added in working directory
+		  but not yet commited to repository.
+
+		R File cvs removed in working directory
+		  but not yet commited to repository.
+
+		M File modified in working directory
+		  and not yet committed to repository.
+
+		  If file is also modified in repository
+		  relative to when it was last checked
+		  out to working directory, then the
+		  two independent sets of modifications
+		  do NOT conflict.
+
+		C Ditto but the file is modified both
+		  in the working directory and the
+		  repository and the modifications DO
+		  conflict.
 
 cvs commit -m update
 cvs commit -m update filename
@@ -312,10 +345,32 @@ ignoring files.
 	a subdirectory will cause cvs to ignore all
 	the files in that subdirectory whose names
 	match the patterns in the .cvsignore file.
-
-
 
+	When changing CVSROOT/cvsignore, after you have
+	committed this file, you must go to the repo-
+	sitory and in the repository check out the
+	CVSROOT/cvsignore file using the RCS command
+	co -u (or -l).  Committing CVSROOT/cvsignore
+	with cvs only changes CVSROOT/cvsignore,v in the
+	repository, and not CVSROOT/cvsignore in the
+	repository.
 
+Merging
+	If two people edit the same version of a file
+	independently, the first person to commit will
+	not have any problem.  The second person to
+	commit will have the commit fail.  The second
+	person must then run `cvs update' to get a
+	working version of the file which has the
+	changes made by the first person merged into the
+	second person's working file.  This merge is
+	done by `rcsmerge'.  The file should be examined
+	to see if there are any real conflicts between
+	the changes done by the two people.  If the
+	changes overlap, the file will contain both
+	versions delimited by lines containing `<<<<<<<'
+	and `>>>>>>>'.
+
 Infrequently used commands:
 ------------------------
 
@@ -338,14 +393,28 @@ cvs tag symbolic_tag filename ...
 	used to mark all the file versions that make
 	a system version.
 
-cvs -d repository-name checkout -r symbolic_tag
-	TEST THIS
-
-TO BE DONE:
+cvs -d repository-name checkout -r symbolic_tag module
+	This checks out the module but produces only
+	those files which have versions with the given
+	symbolic_tag, producing just the versions of
+	these files with that tag.
 
 CVS/Entries CVS/Root CVS/Repository
-
-Merging
-   FOO
-
+	Each working directory has a CVS subdirectory
+	containing these files.  The Entries file lists
+	the files and subdirectories in the working
+	directory that are under cvs control, and gives
+	information about their status.  The Root file
+	is just the name of the repository, taken from
+	the -d option of the checkout command.  The
+	Repository file names the repository directory
+	that matches the working directory.
+
 Changing repository location.
+       You can move the repository, or make copies, with
+       mv or `cp -R'.  You can repoint an existing
+       working directory to a moved or copied repository
+       by editing all the CVS/Root files in the working
+       directory and its subdirectories, and if
+       necessary also editing all the CVS/Repository
+       files in these directories.
