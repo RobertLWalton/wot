@@ -1,0 +1,55 @@
+#! /bin/csh -fe
+#
+# Create new project directory.
+#
+# File:		cvsnew
+# Author:	Bob Walton <walton@deas.harvard.edu>
+# Date:		Wed Jun 25 07:21:56 EDT 2003
+#
+# The authors have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+#
+# RCS Info (may not be true date or author):
+#
+#   $Author: walton $
+#   $Date: 2003/06/25 11:41:57 $
+#   $RCSfile: cvsout,v $
+#   $Revision: 1.1 $
+
+switch ( "$1" )
+
+   case -doc*:
+
+   	echo "\
+cvsnew -d repository-name directory\
+\
+    Make a new directory in the repository.  The direc-\
+    tory must not previously exist: it will be made.\
+    The directory is checked out after it has been\
+    made, as per\
+\
+	cvs -d repository-name checkout directory\
+\
+    This command should NOT be used to make a new sub-\
+    directory of an already checked out directory.\
+    In that case use "'`'"mkdir' followed by\
+\
+	cvs add directory\
+"
+
+
+    	exit 1
+	breaksw
+    case -d:
+        breaksw
+    default:
+        echo "ERROR: first argument must be -d, as in"
+   	echo "cvsnew -d repository-name directory"
+	exit 1
+endsw
+
+mkdir "$3"
+( cd "$3"; cvs -d "$2" import -m initialize \
+                       "$3" `basename ~` initial )
+cvs -d "$2" checkout "$3"
