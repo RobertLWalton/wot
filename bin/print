@@ -1,4 +1,4 @@
 #! /bin/sh
 
-exec enscript -j -b "\$n|%E  %C  %n|\$% of \$=" \
+exec enscript -j -b "\$n|\$E  \$C  %n|\$% of \$=" \
 	-F Courier-Bold12 -f Courier11 -P $PRINTER "$@"
