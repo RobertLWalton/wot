@@ -2,7 +2,7 @@ SSH HELP
 
 File:		ssh.help
 Author:		Bob Walton (walton@deas.harvard.edu)
-Date:		Mon Jun 30 21:00:48 EDT 2003
+Date:		Mon Jun 30 21:15:42 EDT 2003
 
 SSH, the `Secure Shell', is just a way of connecting to
 a remote computer's account so you can use a shell in
@@ -33,7 +33,7 @@ host you will be asked about continuing the first time
 you use each distinct name.  The key storage system only
 knows the names you use, not the actual identity of the
 host.
-
+
 If after storing authentication keys for a remote host,
 the sshd daemon running on that host changes its keys
 (as when new software is installed on that host), you
@@ -69,7 +69,7 @@ about answering `yes'.  However, if you learn that a
 remote host has been compromised, you should delete
 all authentication keys for the host, and wait until
 the host is reinitialized before connecting to it again.
-
+
 The commands
 
     scp [-rp] local-file-name \
@@ -96,7 +96,7 @@ less secure computer on a university network, and use
 that computer to snoop the network and read the unen-
 crypted passwords that the telnet and ftp protocols were
 transmitting.  SSH makes this impossible.
-
+
 SSH also has a very effective and secure mechanism for
 enabling you to avoid typing passwords every time you
 use it, which we will now explain.  This mechanism is
@@ -125,7 +125,7 @@ to do this is to just have a different private key for
 every local account, and if that local account or its
 computer is hacked, immediately delete all the associa-
 ted public keys from all the remote accounts.
-
+
 A second more secure way is to encrypt the private key
 with a password and run a process called an SSH agent in
 your local account.  The first time you use a private
@@ -163,7 +163,7 @@ describe other systems to some extent.
 
 The RedHat 7.2 SSH is `OpenSSH_2.9p2, SSH protocols
 1.5/2.0, OpenSSL 0x0090602f'.
-
+
 There are three kinds of key pairs you can generate:
 
 	rsa1	RSA for SSH protocol 1
@@ -201,7 +201,7 @@ the name `~/.ssh/id_rsa' is used.  With this in mind,
 a good file name is something like
 
 	~/.ssh/account-name_host-name_id_rsa
-
+
 that identifies the account using the private key and
 the type of key.
 
@@ -237,7 +237,7 @@ name
 to your private key.  This is where all SSH programs
 will look when they are not given a `-i' option and
 there is no ssh agent which is already storing the key.
-
+
 To run an ssh-agent you should set up each local account
 so a process running the ssh-agent program is started
 when you log in and stopped when you log out.  This can
@@ -276,7 +276,7 @@ will be asked for the password at this time.  There-
 after, whenever the private key is needed, ssh and scp
 will find it by looking in the agent, and not need to
 consult you or be given a password.
-
+
 You can load keys into the agent with the command
 
 	ssh-add private-key-file-name ...
@@ -313,7 +313,7 @@ you must
 
    Use `ssh -1' instead of `ssh'.
    Use `scp -o Protocol=1' instead of `scp'.
-
+
 If you have all or any of the key files
 
 	.ssh/id_rsa
@@ -348,7 +348,7 @@ This SSH:
     Uses the file `~/.ssh2/authorization' in combination
     with particular public key files instead of lines
     in the file `~/.ssh/authorized_keys2'.
-
+
 Suppose you have public key files named fee.pub and
 fi.pub, each containing a long line.  Inspection of that
 line shows it has three parts, one of which is a long
@@ -371,7 +371,7 @@ and the file `~/.ssh2/authorization' containing
 Forwarding keys does not seem to work when you log into
 a remote account that uses this SSH from a local account
 that uses OpenSSH, even though it is advertise to work.
-Attempts to find configuration settings so the forward-
+Attempts to find configuration settings so that forward-
 ing keys will work have so far failed in this case, and
 it is speculated that the two SSH's use different agent
 protocols (even though both use SSH protocol 2).
