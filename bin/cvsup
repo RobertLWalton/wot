@@ -1,1 +1,70 @@
-cvs update -d -P
+#! /bin/csh -f
+#
+# Check whether current CVS checkout is up to date.
+#
+# File:		cvsup
+# Author:	Bob Walton <walton@deas.harvard.edu>
+# Date:		Tue Jun 10 11:31:58 EDT 2003
+#
+# The authors have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+#
+# RCS Info (may not be true date or author):
+#
+#   $Author: walton $
+#   $Date: 2003/06/10 16:02:38 $
+#   $RCSfile: cvsup,v $
+#   $Revision: 1.2 $
+
+switch ( "$1" )
+
+   case -doc*:
+
+   	echo "\
+cvsup\
+\
+    Update the current directory and its" \
+    	"subdirectories.\
+\
+    The "'`'"cvsutd' command can be used to print out\
+    the same thing without actually changing any files\
+    or directories.\
+\
+    Some of the possible printed messages are:\
+\
+    ? filename	File is not known to CVS.\
+    U filename	File copied from repository.\
+    P filename	File patched from repository.\
+    M filename	File is more recent than the version of\
+    		the file in the repository.  The file\
+		is not altered.\
+    C filename	File is a modification of a repository\
+    		version of the file that is NOT the\
+		most recent version of the file in the\
+		repository.  The most recent version in\
+		the repository is merged into the file\
+		by the rcsmerge(1) command.  If there\
+		are overlapping changes, a warning is\
+		printed, and both changes are inserted\
+		in the file, between lines containing\
+		"'`'"<<<<<<<' and "'`'">>>>>>>'.\
+\
+		BEWARE: even non-overlapping changes\
+		may conflict and cause the file to be\
+		defective.  Use "'`'"cvs diff' to exa-\
+		mine changes from previous versions.\
+\
+    A filename	File has been "'`'"cvs add'ed but not\
+    		yet been committed to the repository.\
+    R filename	File has been "'`'"cvs remove'd but\
+    		this remove has not yet been commited\
+		to the repository.\
+"
+
+
+    	exit 1
+	breaksw
+endsw
+
+cvs update -d -P |& grep -v ': Updating'
