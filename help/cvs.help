@@ -2,7 +2,7 @@ CVS HELP
 
 File:		cvs.help
 Author:		Bob Walton (walton@deas.harvard.edu)
-Version:	1
+Version:	2
 
 Purpose: CVS implements a system for storing past and
 present versions of a file "foo" in another file
