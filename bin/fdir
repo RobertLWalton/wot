@@ -1,0 +1,5 @@
+#! /bin/sh
+
+(pwd; echo ""; ls -l ) | \
+    enscript -j -r -b "|`pwd`|\$% of \$=" \
+	-F Courier-Bold14 -f Courier10 -P $PRINTER
