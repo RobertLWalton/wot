@@ -1,0 +1,23 @@
+#!/bin/sh
+
+case "$2" in
+    "")
+    	echo changeroot old-name new-name
+	exit 1
+	;;
+esac
+
+case "$3" in
+    "" )
+    	find . -name CVS -exec $0 $1 $2 '{}/Root' ';'
+	;;
+    * )
+    	echo "$3":
+    	ed "$3" <<EOF
+s/$1/$2/p
+w
+q
+EOF
+	;;
+
+esac
