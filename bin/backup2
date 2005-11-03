@@ -9,7 +9,7 @@ backup DIRECTORY\
 \
     Creates the files BACKUPDIR/THISHOST-DIRECTORY-DATE.tar\
     and BACKUPDIR/THISHOST-DIRECTORY-DATE.tar.gpg.  Deletes\
-    previous versions of these files first.  The scp's the\
+    previous versions of these files first.  Then scp's the\
     files to ACCOUNT:ACCOUNTDIR.  In the file names, replaces\
     any '/'s in DIRECTORY by '-'s.\
 \
