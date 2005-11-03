@@ -1,0 +1,59 @@
+#!/bin/csh -f
+
+# backup	Bob Walton
+
+switch ("$1")
+case -doc*:
+	echo "\
+backup DIRECTORY\
+\
+    Creates the files BACKUPDIR/THISHOST-DIRECTORY-DATE.tar\
+    and BACKUPDIR/THISHOST-DIRECTORY-DATE.tar.gpg.  Deletes\
+    previous versions of these files first.  The scp's the\
+    files to ACCOUNT:ACCOUNTDIR.  In the file names, replaces\
+    any '/'s in DIRECTORY by '-'s.\
+\
+    Excludes files listed in DIRECTORY/.backup-ignore from the\
+    backup (this file is passed as the --exclude-from argument\
+    to tar).\
+\
+    Ends with\
+\
+	ssh ACCOUNT ls -ogtr \\
+	    ACCOUNTDIR/THISHOST-DIRECTORY-[0-9]*.tar*\
+\
+    BACKUPDIR, THISHOST, etc. are defined in '~/.backup.rc'."
+    exit 1
+endsw
+
+source ~/.backup.rc
+
+set d = `date +%Y-%m-%d`
+set n = "$1"
+while ( $n:q =~ /* )
+    set n = ` expr $n:q : '/\(.*\)$' `
+end
+while ( $n:q =~ */ )
+    set n = ` expr $n:q : '\(.*\)/$' `
+end
+set n = `echo $n | tr / -`
+
+set opt = ( )
+if ( -r "$1/.backup-ignore" ) then
+    set opt = ( --exclude-from "$1/.backup-ignore" )
+endif
+
+echo tar cf ${BACKUPDIR}/${THISHOST}-$n-$d.tar $opt:q "$1"
+rm -f ${BACKUPDIR}/${THISHOST}-$n-$d.tar
+tar cf ${BACKUPDIR}/${THISHOST}-$n-$d.tar $opt:q "$1"
+chmod 400 ${BACKUPDIR}/${THISHOST}-$n-$d.tar
+
+echo gpg -c ${BACKUPDIR}/${THISHOST}-$n-$d.tar
+rm -f ${BACKUPDIR}/${THISHOST}-$n-$d.tar.gpg
+gpg -c ${BACKUPDIR}/${THISHOST}-$n-$d.tar
+chmod 400 ${BACKUPDIR}/${THISHOST}-$n-$d.tar.gpg
+
+echo scp ${BACKUPDIR}/${THISHOST}-$n-$d.tar.gpg ${ACCOUNT}:.
+scp ${BACKUPDIR}/${THISHOST}-$n-$d.tar.gpg ${ACCOUNT}:${ACCOUNTDIR}
+
+ssh ${ACCOUNT} ls -ogtr ${ACCOUNTDIR}/${THISHOST}-$n-[0-9]*.tar.gpg
