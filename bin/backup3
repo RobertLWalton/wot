@@ -4,7 +4,7 @@
 #
 # File:		backup
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Fri Nov 11 14:26:39 EST 2005
+# Date:		Wed May 31 04:13:40 EDT 2006
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2006/05/31 08:09:33 $
+#   $Date: 2006/05/31 08:12:11 $
 #   $RCSfile: backup3,v $
-#   $Revision: 1.5 $
+#   $Revision: 1.6 $
 
 switch ("$1")
 case -doc*:
@@ -70,7 +70,7 @@ chmod 400 ${BACKUPDIR}/${THISHOST}-$n-$d.tar.gpg
 
 echo ssh ${ACCOUNT} rm -f ${ACCOUNTDIR}/${THISHOST}-$n-$d.tar.gpg
 ssh ${ACCOUNT} rm -f ${ACCOUNTDIR}/${THISHOST}-$n-$d.tar.gpg
-echo scp ${BACKUPDIR}/${THISHOST}-$n-$d.tar.gpg ${ACCOUNT}:.
+echo scp ${BACKUPDIR}/${THISHOST}-$n-$d.tar.gpg ${ACCOUNT}:${ACCOUNTDIR}
 scp ${BACKUPDIR}/${THISHOST}-$n-$d.tar.gpg ${ACCOUNT}:${ACCOUNTDIR}
 
 ssh ${ACCOUNT} ls -ogtr ${ACCOUNTDIR}/${THISHOST}-$n-'[0-9]*'.tar.gpg
