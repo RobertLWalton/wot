@@ -5,7 +5,7 @@
 #
 # File:		print
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Tue Oct 12 03:23:55 EDT 2004
+# Date:		Wed May 31 04:14:07 EDT 2006
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -14,9 +14,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2004/10/29 09:55:28 $
+#   $Date: 2006/05/31 08:28:04 $
 #   $RCSfile: print,v $
-#   $Revision: 1.14 $
+#   $Revision: 1.15 $
 
 landscape=""
 border="-j"
@@ -32,7 +32,7 @@ switches=""
 case "$1" in
     -doc* )
    	echo "
-print [-2FfdlpWNbo] [-P printer] [filename ...]
+print [-2FfdlpWNVbo] [-P printer] [filename ...]
 
     Print the files named, or the standard input if no
     files are named.
@@ -41,12 +41,14 @@ print [-2FfdlpWNbo] [-P printer] [filename ...]
     columns per page in landscape.
     
     Normally the column width is 80 characters; -W is
-    a wide column of 100 characters; -N is a narrow
-    column of 56 characters.  Minimal page lengths are
-    60 lines normally, 40 lines for -N, and 70 lines
-    for -W.  -N is optimal for printing viewgraphs for
-    overhead projectors, and for printing two columns
-    per page (-2 option) with reasonable sized font.
+    a wide column of 100 characters; -N is a narrow col-
+    umn of 56 characters; -V is a very wide column of
+    132 characters.  Minimal page lengths are 60 lines
+    normally, 40 lines for -N, 70 lines for -W, and 100
+    lines for -V.  -N is optimal for printing viewgraphs
+    for overhead projectors, and for printing two col-
+    umns per page (-2 option) with reasonable sized
+    font.  -V is NOT allowed with -2.
     
     The header normally includes file name, date, login
     name, and page number.  -f suppresses the file name;
@@ -71,16 +73,23 @@ print [-2FfdlpWNbo] [-P printer] [filename ...]
     -P ) ;;
     -* )
     	switches="$1"
-	if test `expr "$1" : '\-[2FfdlpWNbo]*$'` -le 1
+	if test `expr "$1" : '\-[2FfdlpWNVbo]*$'` -le 1
 	then
 	    echo ERROR: bad option in "$1"
 	    echo \`print -doc\' prints documentation.
 	    exit 1
 	fi
 	case "$1" in
-	*W*N* | *N*W* )
-		echo ERROR: both -W and -N options \
-			    given.
+	*W*[NV]* | *N*[WV]* | *V*[WN]* )
+		echo ERROR: -W, -N, or -V options \
+			    conflict.
+		echo \`print -doc\' prints \
+		     documentation.
+		exit 1
+		;;
+	*V*2* | *2*V* )
+		echo ERROR: -V and -2 options \
+			    conflict.
 		echo \`print -doc\' prints \
 		     documentation.
 		exit 1
@@ -101,6 +110,7 @@ print [-2FfdlpWNbo] [-P printer] [filename ...]
 		;;
 	*)
 		case "$1" in
+		*V*)	font=6; titlefont=10 ;;
 		*W*)	font=8; titlefont=10 ;;
 		*N*)	font=15; titlefont=15 ;;
 		esac
@@ -175,6 +185,9 @@ Test Lines
 
 100 columns:
 0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+
+132 columns:
+012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901
 
 
 1 line numbers
@@ -275,4 +288,15 @@ Test Lines
 96
 97
 98
-99  last line
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110  last line
