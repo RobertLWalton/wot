@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Sat Aug  5 08:13:27 EDT 2006
+** Date:	Sat Aug  5 12:21:01 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/05 12:48:33 $
+**   $Date: 2006/08/05 20:38:36 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.6 $
+**   $Revision: 1.7 $
 */
 
 #include <stdio.h>
@@ -21,12 +21,16 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <string.h>
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#define _XOPEN_SOURCE
+#define _XOPEN_SOURCE_EXTENDED
+#include <time.h>
 
 char documentation [] =
 "efm moveto target file ...\n"
@@ -102,6 +106,131 @@ char documentation [] =
 "    you log out, and may be killed at any time.\n"
 ;
 
+/* Data is a list of entries, one entry per line.
+ */
+struct entry {
+
+    char * filename;
+    char * md5sum;
+    unsigned mode;
+    unsigned date;
+    char * key;
+
+    struct entry * previous;
+};
+struct entry * last_entry = NULL;
+
+/* Given a pointer into the line buffer, scan the next
+ * lexeme.  A lexeme is a sequence of non-whitespace
+ * characters, or is " quoted.  "" denotes " in quoted
+ * lexemes, but there are no other escapes.  A pointer
+ * to the NUL terminated lexeme is returned.  Lexemes
+ * must be separated by whitespace.  This function
+ * modifies the buffer pointer to point to the next
+ * lexeme.  If there are no lexemes, NULL is returned.
+ */
+char * get_lexeme ( char ** buffer )
+{
+    char * p = * buffer;
+    while ( isspace ( * p ) ) ++ p;
+    char * result = p;
+    if ( * p == '"' )
+    {
+	char * q = result;
+	++ p;
+	while ( * p )
+	{
+	    if ( * p == '"' )
+	    {
+		++ p;
+	        if ( * p != '"' ) break;
+	    }
+	    * q ++ = * p ++;
+	}
+	* buffer = p;
+	* q = 0;
+    }
+    else
+    {
+        while ( * p && ! isspace ( * p ) ) ++ p;
+	if ( isspace ( * p ) ) * p ++ = 0;
+	* buffer = p;
+    }
+    return * result ? result : NULL;
+}
+
+/* Read index from file descriptor.
+ */
+void read_index ( int fd )
+{
+    char buffer [4000];
+    FILE * f = fdopen ( fd, "r" );
+    while ( fgets ( buffer, 4000, f ) )
+    {
+        if ( strlen ( buffer ) == 3999 )
+	{
+	    printf ( "ERROR: EFM-INDEX line too"
+	             " long\n" );
+	    exit ( 1 );
+	}
+	char * b = buffer;
+	if ( * b == 0 || isspace ( * b ) ) continue;
+
+	char * filename = get_lexeme ( & b );
+	char * md5sum = get_lexeme ( & b );
+	char * mode = get_lexeme ( & b );
+	char * date = get_lexeme ( & b );
+	char * key = get_lexeme ( & b );
+
+	if ( strlen ( md5sum ) != 16 )
+	{
+	    printf ( "ERROR: bad EFM-INDEX md5sum (%s)"
+	             " for file %s\n",
+		     md5sum, filename );
+	    exit ( 1 );
+	}
+	char * q;
+	unsigned long m = strtoul ( mode, & q, 8 );
+	if ( * q || m >= ( 1 << 16 ) )
+	{
+	    printf ( "ERROR: bad EFM-INDEX mode (%s)"
+	             " for file %s\n",
+		     mode, filename );
+	    exit ( 1 );
+	}
+	time_t d = getdate ( date );
+	if ( d < 0 )
+	{
+	    printf ( "ERROR: bad EFM-INDEX date (%s)"
+	             " for file %s\n",
+		     date, filename );
+	    exit ( 1 );
+	}
+	if ( strlen ( key ) != 16 )
+	{
+	    printf ( "ERROR: bad EFM-INDEX md5sum (%s)"
+	             " for file %s\n",
+		     key, filename );
+	    exit ( 1 );
+	}
+
+	struct entry * e =
+	    (struct entry * )
+	    malloc ( sizeof ( struct entry ) );
+	e->filename = strdup ( filename );
+	e->md5sum = strdup ( md5sum );
+	e->mode = m;
+	e->date = d;
+	e->key = strdup ( key );
+	e->previous = last_entry;
+	last_entry = e;
+    }
+}
+
+
+
+
+
 /* Print error message from errno value and then call
  * exit ( 1 );
  */
@@ -140,7 +269,8 @@ int cwait ( pid_t child )
  * and given user only read/write mode.  Password is
  * plength string of bytes.  If error, return -1.
  */
-int crypt ( const char * input,
+int crypt ( int decrypt,
+            const char * input,
             const char * output,
 	    const char * password, int plength,
 	    pid_t * child )
@@ -221,11 +351,17 @@ int crypt ( const char * input,
 	int fd = getdtablesize();
 	while ( fd > 3 ) close ( fd -- );
 
-	if ( execlp ( "gpg", "gpg",
-		      /* "--cipher-alog", "BLOWFISH", */
-	              "--passphrase-fd", "3",
-		      "--batch", "-q",
-		      NULL ) < 0 )
+	if ( ( decrypt ?
+	       execlp ( "gpg", "gpg",
+	                "--passphrase-fd", "3",
+		        "--batch", "-q",
+		        NULL ) :
+	       execlp ( "gpg", "gpg", "-c"
+		        "--cipher-alog", "BLOWFISH",
+	                "--passphrase-fd", "3",
+		        "--batch", "-q",
+		        NULL )
+	     ) < 0 )
 	    error ( errno );
     }
 
@@ -268,7 +404,7 @@ int main ( int argc, char ** argv )
 
 	int indexchild;
 	int indexfd =
-	    crypt ( "EFM-INDEX.gpg", NULL,
+	    crypt ( 1, "EFM-INDEX.gpg", NULL,
 	            "fum", 3, & indexchild );
 	if ( indexfd < 0 ) exit ( 1 );
 	FILE * indexf = fdopen ( indexfd, "r" );
