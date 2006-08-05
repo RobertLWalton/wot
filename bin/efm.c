@@ -11,18 +11,22 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/05 09:39:03 $
+**   $Date: 2006/08/05 11:35:47 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.4 $
+**   $Revision: 1.5 $
 */
 
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <assert.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
 
 char documentation [] =
 "efm moveto target file ...\n"
@@ -98,11 +102,144 @@ char documentation [] =
 "    you log out, and may be killed at any time.\n"
 ;
 
+/* Print error message from errno value and then call
+ * exit ( 1 );
+ */
 void error ( int err_no )
 {
     const char * s = strerror ( errno );
     printf ( "ERROR: %s\n", s );
     exit ( 1 );
+}
+
+/* Wait for a child to terminate.  Return -1 if child
+ * suffered error and 0 otherwise.
+ */
+int cwait ( pid_t child )
+{
+    int status;
+    if ( waitpid ( child, & status, 0 ) < 0 )
+        error ( errno );
+    if ( WIFEXITED ( status )
+         &&
+	 WEXITSTATUS ( status ) == 0 )
+        return 0;
+    else
+        return -1;
+}
+
+/* Encrypt/decrypt file.  If input file is NULL, return
+ * file descriptor to write input into.  If output file
+ * is NULL, return file descriptor to read output from.
+ * If a descriptor is returned, the child process on
+ * the other end of the descriptor pipe has its pid
+ * returned in the child argument.
+ *
+ * Output files are created, truncated if they exist,
+ * and given user only read/write mode.  Password is
+ * plength string of bytes.  If error, return -1.
+ */
+int crypt ( const char * input,
+            const char * output,
+	    const char * password, int plength,
+	    pid_t * child )
+{
+    int infd, outfd, passfd, passwritefd, result;
+    assert ( input != NULL || output != NULL );
+
+    if ( input == NULL )
+    {
+        int fd[2];
+	if ( pipe ( fd ) < 0 ) error ( errno );
+	result = fd[1];
+	infd = fd[0];
+    }
+    else
+    {
+        infd = open ( input, O_RDONLY );
+	if ( infd < 0 )
+	{
+	    printf ( "ERROR: cannot open %s"
+	             " for reading\n", input );
+	    return -1;
+	}
+    }
+
+    if ( output == NULL )
+    {
+        int fd[2];
+	if ( pipe ( fd ) < 0 ) error ( errno );
+	result = fd[0];
+	outfd = fd[1];
+    }
+    else
+    {
+        outfd = open ( output,
+	               O_WRONLY + O_CREAT + O_TRUNC,
+		       S_IWUSR + S_IRUSR );
+	if ( outfd < 0 )
+	{
+	    printf ( "ERROR: cannot open %s"
+	             " for writing\n", output );
+	    return -1;
+	}
+    }
+
+    {
+        int fd[2];
+	if ( pipe ( fd ) < 0 ) error ( errno );
+	passfd = fd[0];
+	passwritefd = fd[1];
+    }
+
+    * child = fork();
+    if ( * child < 0 ) error ( errno );
+
+    if ( * child == 0 )
+    {
+	/* Set fd's as follows:
+	 * 	0 -> infd
+	 *	1 -> outfd
+	 *	2 -> parent's 1
+	 *	3 -> passfd
+	 */
+	close ( 0 );
+	if ( dup2 ( infd, 0 ) < 0 ) error ( errno );
+	close ( infd );
+	close ( 2 );
+	if ( dup2 ( 1, 2 ) < 0 ) error ( errno );
+	close ( 1 );
+	if ( dup2 ( outfd, 1 ) < 0 ) error ( errno );
+	close ( outfd );
+	if ( passfd != 3 )
+	{
+	    if ( dup2 ( passfd, 3 ) < 0 )
+		error ( errno );
+	    close ( passfd );
+	}
+	int fd = getdtablesize();
+	while ( fd > 3 ) close ( fd -- );
+
+	if ( execlp ( "gpg", "gpg",
+	              "--passphrase-fd", "2",
+		      "--batch",
+		      NULL ) < 0 )
+	    error ( errno );
+
+    }
+
+    close ( infd );
+    close ( outfd );
+    close ( passfd );
+
+    if ( write ( passwritefd, password, plength ) < 0 )
+        error ( errno );
+    close ( passwritefd );
+
+    if ( input != NULL && output != NULL )
+        return cwait ( * child );
+    else
+	return result;
 }
 
 int main ( int argc, char ** argv )
