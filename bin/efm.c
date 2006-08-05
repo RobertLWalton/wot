@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Sat Nov 16 05:25:15 EST 2002
+** Date:	Sat Aug  5 05:01:39 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,14 +11,15 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/05 02:03:23 $
+**   $Date: 2006/08/05 09:23:33 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.2 $
+**   $Revision: 1.3 $
 */
 
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -106,8 +107,6 @@ void error ( int err_no )
 
 int main ( int argc, char ** argv )
 {
-    int sockfd;
-    struct sockaddr_un sa;
 
     if ( argc < 2 )
     {
@@ -115,14 +114,37 @@ int main ( int argc, char ** argv )
 	exit (1);
     }
 
-    sockfd = socket ( PF_UNIX, SOCK_STREAM, 0 );
-    if ( sockfd < 0 ) error ( errno );
+    int tofd = socket ( PF_UNIX, SOCK_STREAM, 0 );
+    if ( tofd < 0 ) error ( errno );
+    struct sockaddr_un sa;
     sa.sun_family = AF_UNIX;
     strcpy ( sa.sun_path, "EFM-INDEX.sock" );
-    if ( connect ( sockfd,
+    if ( connect ( tofd,
                    (const struct sockaddr *) & sa,
 		   sizeof ( sa ) ) < 0 )
-        error ( errno );
+    {
+	if ( errno == ECONNREFUSED )
+	    unlink ( sa.sun_path );
+	else if ( errno != ENOENT )
+	    error ( errno );
 
+	int fromfd = socket ( PF_UNIX, SOCK_STREAM, 0 );
+	if ( bind ( fromfd,
+		    (const struct sockaddr *) & sa,
+		    sizeof ( sa ) ) < 0 )
+	    error ( errno );
+	if ( listen ( fromfd, 0 ) ) error ( errno );
+	pid_t childpid = fork ( );
+	if ( childpid < 0 ) error ( errno );
+	if ( childpid == 0 )
+	{
+	    close ( tofd );
+	    sleep ( 200 );
+	    printf ( "CHILD DONE\n" );
+	    exit ( 0 );
+	}
+    }
+
+    printf ( "PARENT DONE\n" );
     exit (0);
 }
