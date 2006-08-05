@@ -11,12 +11,17 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/04 18:39:36 $
+**   $Date: 2006/08/05 02:03:23 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.1 $
+**   $Revision: 1.2 $
 */
 
 #include <stdio.h>
+#include <string.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 char documentation [] =
 "efm moveto target file ...\n"
@@ -92,12 +97,32 @@ char documentation [] =
 "    you log out, and may be killed at any time.\n"
 ;
 
+void error ( int err_no )
+{
+    const char * s = strerror ( errno );
+    printf ( "ERROR: %s\n", s );
+    exit ( 1 );
+}
+
 int main ( int argc, char ** argv )
 {
+    int sockfd;
+    struct sockaddr_un sa;
+
     if ( argc < 2 )
     {
 	printf ( documentation );
 	exit (1);
     }
+
+    sockfd = socket ( PF_UNIX, SOCK_STREAM, 0 );
+    if ( sockfd < 0 ) error ( errno );
+    sa.sun_family = AF_UNIX;
+    strcpy ( sa.sun_path, "EFM-INDEX.sock" );
+    if ( connect ( sockfd,
+                   (const struct sockaddr *) & sa,
+		   sizeof ( sa ) ) < 0 )
+        error ( errno );
+
     exit (0);
 }
