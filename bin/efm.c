@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Sat Aug  5 05:01:39 EDT 2006
+** Date:	Sat Aug  5 05:24:09 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/05 09:23:33 $
+**   $Date: 2006/08/05 09:39:03 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.3 $
+**   $Revision: 1.4 $
 */
 
 #include <stdio.h>
@@ -128,23 +128,36 @@ int main ( int argc, char ** argv )
 	else if ( errno != ENOENT )
 	    error ( errno );
 
-	int fromfd = socket ( PF_UNIX, SOCK_STREAM, 0 );
-	if ( bind ( fromfd,
+	int listenfd = socket ( PF_UNIX, SOCK_STREAM, 0 );
+	if ( bind ( listenfd,
 		    (const struct sockaddr *) & sa,
 		    sizeof ( sa ) ) < 0 )
 	    error ( errno );
-	if ( listen ( fromfd, 0 ) ) error ( errno );
+	if ( listen ( listenfd, 0 ) ) error ( errno );
 	pid_t childpid = fork ( );
 	if ( childpid < 0 ) error ( errno );
 	if ( childpid == 0 )
 	{
 	    close ( tofd );
-	    sleep ( 200 );
+	    int fromfd =
+	        accept ( listenfd, NULL, NULL );
+	    if ( fromfd < 0 ) error ( errno );
+	    FILE * fromf = fdopen ( fromfd, "r" );
+	    char buffer[1000];
+	    fgets ( buffer, 1000, fromf );
+	    printf ( "%s\n", buffer );
 	    printf ( "CHILD DONE\n" );
 	    exit ( 0 );
 	}
+	if ( connect ( tofd,
+		       (const struct sockaddr *) & sa,
+		       sizeof ( sa ) ) < 0 )
+	    error ( errno );
     }
 
+    sleep ( 2 );
+    write ( tofd, "MESSAGE\n", 8 );
+    sleep ( 2 );
     printf ( "PARENT DONE\n" );
     exit (0);
 }
