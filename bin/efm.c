@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Sat Aug  5 05:24:09 EDT 2006
+** Date:	Sat Aug  5 08:13:27 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/05 11:35:47 $
+**   $Date: 2006/08/05 12:48:33 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.5 $
+**   $Revision: 1.6 $
 */
 
 #include <stdio.h>
@@ -70,15 +70,15 @@ char documentation [] =
 "    ted until it has been removed.  No two files\n"
 "    are allowed to have the same MD5sum.\n"
 "\n"
-"    You must create and encrypt an initial empty\n"
-"    EFM-INDEX.gpg file by using the gpg program.\n"
-"\n"
 "    The date and mode are used to set the file modi-\n"
 "    fication date and mode of the file when it is\n"
 "    decrypted.  The MD5sum is used to check the in-\n"
 "    grity of the decryption.  The key is the sym-\n"
 "    metric encryption/decryption key, and is 128\n"
 "    bits in 16 hexadecimal digits.\n"
+"\n"
+"    You must create and encrypt an initial empty\n"
+"    EFM-INDEX.gpg file by using the gpg program.\n"
 "\n"
 "    An external program is used to encrypt/decrypt\n"
 "    files.  By default this is gpg.  The encrypted\n"
@@ -133,7 +133,8 @@ int cwait ( pid_t child )
  * is NULL, return file descriptor to read output from.
  * If a descriptor is returned, the child process on
  * the other end of the descriptor pipe has its pid
- * returned in the child argument.
+ * returned in the child argument.  This can be passed
+ * to cwait after the returned descriptor is closed.
  *
  * Output files are created, truncated if they exist,
  * and given user only read/write mode.  Password is
@@ -221,11 +222,11 @@ int crypt ( const char * input,
 	while ( fd > 3 ) close ( fd -- );
 
 	if ( execlp ( "gpg", "gpg",
-	              "--passphrase-fd", "2",
-		      "--batch",
+		      /* "--cipher-alog", "BLOWFISH", */
+	              "--passphrase-fd", "3",
+		      "--batch", "-q",
 		      NULL ) < 0 )
 	    error ( errno );
-
     }
 
     close ( infd );
@@ -265,6 +266,23 @@ int main ( int argc, char ** argv )
 	else if ( errno != ENOENT )
 	    error ( errno );
 
+	int indexchild;
+	int indexfd =
+	    crypt ( "EFM-INDEX.gpg", NULL,
+	            "fum", 3, & indexchild );
+	if ( indexfd < 0 ) exit ( 1 );
+	FILE * indexf = fdopen ( indexfd, "r" );
+	char buffer[1000];
+	while ( fgets ( buffer, 1000, indexf ) )
+	    printf ( "%s", buffer );
+	fclose ( indexf );
+	if ( cwait ( indexchild ) < 0 )
+	{
+	    printf ( "ERROR: error decypting"
+	             " EFM-INDEX.gpg\n" );
+	    exit ( 1 );
+	}
+
 	int listenfd = socket ( PF_UNIX, SOCK_STREAM, 0 );
 	if ( bind ( listenfd,
 		    (const struct sockaddr *) & sa,
@@ -280,7 +298,6 @@ int main ( int argc, char ** argv )
 	        accept ( listenfd, NULL, NULL );
 	    if ( fromfd < 0 ) error ( errno );
 	    FILE * fromf = fdopen ( fromfd, "r" );
-	    char buffer[1000];
 	    fgets ( buffer, 1000, fromf );
 	    printf ( "%s\n", buffer );
 	    printf ( "CHILD DONE\n" );
