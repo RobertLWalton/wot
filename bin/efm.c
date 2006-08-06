@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Sat Aug  5 12:21:01 EDT 2006
+** Date:	Sun Aug  6 05:34:53 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/05 20:38:36 $
+**   $Date: 2006/08/06 10:32:38 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.7 $
+**   $Revision: 1.8 $
 */
 
 #include <stdio.h>
@@ -63,9 +63,22 @@ char documentation [] =
 "\n"
 "    The current directory must contain an encrypted\n"
 "    index file named \"EFM-INDEX.gpg\".  When de-\n"
-"    crypted the lines of this file have the form:\n"
+"    crypted the lines of this file are in pairs of\n"
+"    the form:\n"
 "\n"
-"        filename MD5sum mode \"date\" key\n"
+"	 filename\n"
+"            MD5sum mode date key\n"
+"\n"
+"    where the first line is not indented and the\n"
+"    second line is.  The filename may be quoted\n"
+"    with \"'s if it contains special characters,\n"
+"    and a quote in such a filename is represented\n"
+"    by a pair of quotes (\"\").  The date will\n"
+"    always be quoted.\n"
+"\n"
+"    Lines at the beginning of the file whose first\n"
+"    character is # are comment lines, and are\n"
+"    preserved.  Blank lines are forbidden.\n"
 "\n"
 "    A line for a file is created when the file is\n"
 "    encrypted and deleted when the encrypted file\n"
@@ -77,9 +90,13 @@ char documentation [] =
 "    The date and mode are used to set the file modi-\n"
 "    fication date and mode of the file when it is\n"
 "    decrypted.  The MD5sum is used to check the in-\n"
-"    grity of the decryption.  The key is the sym-\n"
-"    metric encryption/decryption key, and is 128\n"
-"    bits in 16 hexadecimal digits.\n"
+"    grity of the decryption.  The mode is 4 octal\n"
+"    digits and the MD5sum is 16 hexadecimal digits.\n"
+"    The key is the symmetric encryption/decryption\n"
+"    key for the file, and is the uppercase 16 digit\n"
+"    hexadecimal representation of a 128 bit random\n"
+"    number.  However, it is this 16 character repre-\n"
+"    sentation, and NOT the number, that is the key.\n"
 "\n"
 "    You must create and encrypt an initial empty\n"
 "    EFM-INDEX.gpg file by using the gpg program.\n"
@@ -106,19 +123,38 @@ char documentation [] =
 "    you log out, and may be killed at any time.\n"
 ;
 
+#define MAX_LINE_SIZE 4000
+
 /* Data is a list of entries, one entry per line.
  */
 struct entry {
 
     char * filename;
+        /* Filename may not contain \0 or \n and may
+	 * not be more than (MAX_LINE_SIZE-2)/2
+	 * characters long (so its quoted lexeme will
+	 * fit on one line).
+	 */
+
     char * md5sum;
     unsigned mode;
-    unsigned date;
+    time_t date;
     char * key;
 
-    struct entry * previous;
+    struct entry * next;
 };
+struct entry * first_entry = NULL;
 struct entry * last_entry = NULL;
+
+/* Comment lines are just a list of lines.
+ */
+struct comment {
+    char * line;
+
+    struct comment * next;
+};
+struct comment * first_comment = NULL;
+struct comment * last_comment = NULL;
 
 /* Given a pointer into the line buffer, scan the next
  * lexeme.  A lexeme is a sequence of non-whitespace
@@ -159,28 +195,105 @@ char * get_lexeme ( char ** buffer )
     return * result ? result : NULL;
 }
 
-/* Read index from file descriptor.
+/* Given a pointer into the line buffer and the char-
+ * acter string of a lexeme, write the lexeme into the
+ * buffer.  The lexeme is quoted if it contains any
+ * non-graphic characters, #, or ".  The buffer pointer
+ * is up dated.
  */
-void read_index ( int fd )
+void put_lexeme ( char ** buffer, const char * lexeme )
 {
-    char buffer [4000];
-    FILE * f = fdopen ( fd, "r" );
+    const char * p = lexeme;
+    int quote = 0;
+    while ( * p && ! quote )
+    {
+        char c = * p ++;
+	quote = ( c <= ' ' || c >= 0177 || c == '"'
+				        || c == '#' );
+    }
+    if ( ! quote )
+    {
+        strcpy ( * buffer, lexeme );
+	* buffer += strlen ( * buffer );
+    }
+    else
+    {
+        p = lexeme;
+	char * q = * buffer;
+	* q ++ = '"';
+	while ( * p )
+	{
+	    char c = * p ++;
+	    if ( c == '"' ) * q ++ = '"';
+	    * q ++ = c;
+	}
+	* q ++ = '"';
+	* buffer = q;
+    }
+}
+
+/* Read index from file stream.
+ */
+void read_index ( FILE * f )
+{
+    char buffer [MAX_LINE_SIZE+2];
+    int begin = 1;
+    int even = 1;
+    char * filename;
     while ( fgets ( buffer, 4000, f ) )
     {
-        if ( strlen ( buffer ) == 3999 )
+        int length = strlen ( buffer );
+        if ( length == MAX_LINE_SIZE+1 )
 	{
 	    printf ( "ERROR: EFM-INDEX line too"
 	             " long\n" );
 	    exit ( 1 );
 	}
-	char * b = buffer;
-	if ( * b == 0 || isspace ( * b ) ) continue;
+	assert ( buffer[length-1] == '\n' );
+	buffer[length-1] = 0;
 
-	char * filename = get_lexeme ( & b );
+	if ( begin && buffer[0] == '#' )
+	{
+	    struct comment * c =
+	        (struct comment *)
+		malloc ( sizeof ( struct comment ) );
+	    c->line = strdup ( buffer );
+	    c->next = NULL;
+	    if ( first_comment == NULL )
+		last_comment = first_comment = c;
+	    else
+		last_comment = last_comment->next = c;
+	    continue;
+	}
+	char * b = buffer;
+
+	if ( even )
+	{
+	    filename = get_lexeme ( & b );
+	    if ( get_lexeme ( & b ) )
+	    {
+		printf ( "ERROR: stuff on line after"
+		         " filename for file %s\n",
+			 filename );
+		exit ( 1 );
+	    }
+	    even = 0;
+	    continue;
+	}
+	even = 1;
+
 	char * md5sum = get_lexeme ( & b );
 	char * mode = get_lexeme ( & b );
 	char * date = get_lexeme ( & b );
 	char * key = get_lexeme ( & b );
+
+	if ( get_lexeme ( & b ) )
+	{
+	    printf ( "ERROR: stuff on line after"
+		     " key for file %s\n",
+		     filename );
+	    exit ( 1 );
+	}
 
 	if ( strlen ( md5sum ) != 16 )
 	{
@@ -198,7 +311,8 @@ void read_index ( int fd )
 		     mode, filename );
 	    exit ( 1 );
 	}
-	time_t d = getdate ( date );
+	struct tm * td = getdate ( date );
+	time_t d = mktime ( td );
 	if ( d < 0 )
 	{
 	    printf ( "ERROR: bad EFM-INDEX date (%s)"
@@ -222,14 +336,59 @@ void read_index ( int fd )
 	e->mode = m;
 	e->date = d;
 	e->key = strdup ( key );
-	e->previous = last_entry;
-	last_entry = e;
+	e->next = NULL;
+	if ( first_entry == NULL )
+	    last_entry = first_entry = e;
+	else
+	    last_entry = last_entry->next = e;
     }
 }
 
+/* Write index into file stream.
+ */
+void write_index ( FILE * f )
+{
+    struct comment * c = first_comment;
+    for ( ; c; c = c->next )
+        fprintf ( f, "%s\n", c->line );
+    struct entry * e = first_entry;
+    char buffer [ MAX_LINE_SIZE + 1 ];
+    for ( ; e; e = e->next )
+    {
+        char * b = buffer;
+	put_lexeme ( & b, e->filename );
+	* b = 0;
+        fprintf ( f, "%s\n", buffer );
+	b = buffer;
+	strcpy ( b, "    " );
+	b += 4;
+	put_lexeme ( & b, e->md5sum );
+	* b ++ = ' ';
+	sprintf ( b, "%04o", e->mode );
+	b += 4;
+	* b ++ = ' ';
+	put_lexeme
+	    ( & b, asctime ( gmtime ( & e->date ) ) );
+	* b ++ = ' ';
+	put_lexeme ( & b, e->key );
+	* b = 0;
+        fprintf ( f, "%s\n", buffer );
+    }
+}
 
-
-
+/* Check if index has existing file with given MD5sum.
+ * Return entry if yes, NULL if no.
+ */
+struct entry * find_md5sum ( const char * md5sum )
+{
+    struct entry * e = first_entry;
+    for ( ; e; e = e->next )
+    {
+        if ( strcmp ( md5sum, e->md5sum ) == 0 )
+	    return e;
+    }
+    return NULL;
+}
 
 /* Print error message from errno value and then call
  * exit ( 1 );
