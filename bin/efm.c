@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Sun Aug  6 05:34:53 EDT 2006
+** Date:	Sun Aug  6 08:24:51 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/06 10:32:38 $
+**   $Date: 2006/08/06 12:24:42 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.8 $
+**   $Revision: 1.9 $
 */
 
 #include <stdio.h>
@@ -124,6 +124,7 @@ char documentation [] =
 ;
 
 #define MAX_LINE_SIZE 4000
+const char * time_format = "%Y/%m/%d %H:%M:%S";
 
 /* Data is a list of entries, one entry per line.
  */
@@ -265,11 +266,12 @@ void read_index ( FILE * f )
 		last_comment = last_comment->next = c;
 	    continue;
 	}
+	begin = 0;
 	char * b = buffer;
 
 	if ( even )
 	{
-	    filename = get_lexeme ( & b );
+	    filename = strdup ( get_lexeme ( & b ) );
 	    if ( get_lexeme ( & b ) )
 	    {
 		printf ( "ERROR: stuff on line after"
@@ -311,9 +313,11 @@ void read_index ( FILE * f )
 		     mode, filename );
 	    exit ( 1 );
 	}
-	struct tm * td = getdate ( date );
-	time_t d = mktime ( td );
-	if ( d < 0 )
+	struct tm td;
+	char * ts = strptime ( date, time_format, & td );
+	time_t d = ( ts == NULL || * ts != 0 ) ? -1 :
+	           mktime ( & td );
+	if ( d == -1 )
 	{
 	    printf ( "ERROR: bad EFM-INDEX date (%s)"
 	             " for file %s\n",
@@ -331,7 +335,7 @@ void read_index ( FILE * f )
 	struct entry * e =
 	    (struct entry * )
 	    malloc ( sizeof ( struct entry ) );
-	e->filename = strdup ( filename );
+	e->filename = filename;
 	e->md5sum = strdup ( md5sum );
 	e->mode = m;
 	e->date = d;
@@ -367,8 +371,10 @@ void write_index ( FILE * f )
 	sprintf ( b, "%04o", e->mode );
 	b += 4;
 	* b ++ = ' ';
-	put_lexeme
-	    ( & b, asctime ( gmtime ( & e->date ) ) );
+	char tbuffer [100];
+	strftime ( tbuffer, 100, time_format, 
+	           gmtime ( & e->date ) );
+	put_lexeme ( & b, tbuffer );
 	* b ++ = ' ';
 	put_lexeme ( & b, e->key );
 	* b = 0;
@@ -538,6 +544,9 @@ int crypt ( int decrypt,
 	return result;
 }
 
+char * password = NULL;
+    /* Password read from user for EFM-INDEX.*. */
+
 int main ( int argc, char ** argv )
 {
 
@@ -561,15 +570,17 @@ int main ( int argc, char ** argv )
 	else if ( errno != ENOENT )
 	    error ( errno );
 
+	const char * pass = getpass( "Password: " );
+	if ( pass == NULL ) error ( errno );
+	password = strdup ( pass );
+
 	int indexchild;
 	int indexfd =
 	    crypt ( 1, "EFM-INDEX.gpg", NULL,
-	            "fum", 3, & indexchild );
+	            password, 3, & indexchild );
 	if ( indexfd < 0 ) exit ( 1 );
 	FILE * indexf = fdopen ( indexfd, "r" );
-	char buffer[1000];
-	while ( fgets ( buffer, 1000, indexf ) )
-	    printf ( "%s", buffer );
+	read_index ( indexf );
 	fclose ( indexf );
 	if ( cwait ( indexchild ) < 0 )
 	{
@@ -577,6 +588,8 @@ int main ( int argc, char ** argv )
 	             " EFM-INDEX.gpg\n" );
 	    exit ( 1 );
 	}
+
+	write_index ( stdout );
 
 	int listenfd = socket ( PF_UNIX, SOCK_STREAM, 0 );
 	if ( bind ( listenfd,
@@ -588,6 +601,7 @@ int main ( int argc, char ** argv )
 	if ( childpid < 0 ) error ( errno );
 	if ( childpid == 0 )
 	{
+	    char buffer [1000];
 	    close ( tofd );
 	    int fromfd =
 	        accept ( listenfd, NULL, NULL );
