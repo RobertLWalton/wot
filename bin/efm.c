@@ -1,8 +1,8 @@
 /* Encrypted File Management (EFM) Program.
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
-** File:	efm.c
-** Date:	Sun Aug  6 08:24:51 EDT 2006
+** File:	Mon Aug  7 03:07:37 EDT 2006
+** Date:	Mon Aug  7 02:55:00 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/06 12:24:42 $
+**   $Date: 2006/08/07 07:54:45 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.9 $
+**   $Revision: 1.10 $
 */
 
 #include <stdio.h>
@@ -123,8 +123,10 @@ char documentation [] =
 "    you log out, and may be killed at any time.\n"
 ;
 
-#define MAX_LINE_SIZE 4000
+#define MAX_LEXEME_SIZE 2000
+#define MAX_LINE_SIZE ( 2 * MAX_LEXEME_SIZE + 10 )
 const char * time_format = "%Y/%m/%d %H:%M:%S";
+#define END_STRING "\001\002\003\004"
 
 /* Data is a list of entries, one entry per line.
  */
@@ -199,13 +201,14 @@ char * get_lexeme ( char ** buffer )
 /* Given a pointer into the line buffer and the char-
  * acter string of a lexeme, write the lexeme into the
  * buffer.  The lexeme is quoted if it contains any
- * non-graphic characters, #, or ".  The buffer pointer
- * is up dated.
+ * non-graphic characters, #, or ".  It is also quoted
+ * if it is the empty string.  The buffer pointer is
+ * updated to point after the lexeme.
  */
 void put_lexeme ( char ** buffer, const char * lexeme )
 {
     const char * p = lexeme;
-    int quote = 0;
+    int quote = ( * p == 0 );
     while ( * p && ! quote )
     {
         char c = * p ++;
@@ -241,7 +244,7 @@ void read_index ( FILE * f )
     int begin = 1;
     int even = 1;
     char * filename;
-    while ( fgets ( buffer, 4000, f ) )
+    while ( fgets ( buffer, MAX_LINE_SIZE+2, f ) )
     {
         int length = strlen ( buffer );
         if ( length == MAX_LINE_SIZE+1 )
@@ -549,6 +552,7 @@ char * password = NULL;
 
 int main ( int argc, char ** argv )
 {
+    char buffer [MAX_LINE_SIZE+2];
 
     if ( argc < 2 )
     {
@@ -601,15 +605,30 @@ int main ( int argc, char ** argv )
 	if ( childpid < 0 ) error ( errno );
 	if ( childpid == 0 )
 	{
-	    char buffer [1000];
 	    close ( tofd );
-	    int fromfd =
-	        accept ( listenfd, NULL, NULL );
-	    if ( fromfd < 0 ) error ( errno );
-	    FILE * fromf = fdopen ( fromfd, "r" );
-	    fgets ( buffer, 1000, fromf );
-	    printf ( "%s\n", buffer );
-	    printf ( "CHILD DONE\n" );
+	    while ( 1 )
+	    {
+		int fromfd =
+		    accept ( listenfd, NULL, NULL );
+		if ( fromfd < 0 ) error ( errno );
+		/* To work the child needs two FILE's
+		 * for some reason.
+		 */
+		FILE * inf = fdopen ( fromfd, "r" );
+		FILE * outf = fdopen ( fromfd, "w" );
+		if ( outf == NULL ) error ( errno );
+		while ( fgets ( buffer, MAX_LINE_SIZE+2,
+				inf ) )
+		{
+		    if ( buffer[0] == '\n' ) break;
+		    buffer[strlen(buffer)-1] = 0;
+		    fprintf ( outf, "[%s]\n", buffer );
+		}
+		fprintf ( outf, "%s\n", END_STRING );
+		fclose ( outf );
+		fclose ( inf );
+		sleep ( 2 );
+	    }
 	    exit ( 0 );
 	}
 	if ( connect ( tofd,
@@ -618,8 +637,37 @@ int main ( int argc, char ** argv )
 	    error ( errno );
     }
 
-    sleep ( 2 );
-    write ( tofd, "MESSAGE\n", 8 );
+    /* To work the parend needs one a+ FILE for some
+     * reason.
+     */
+    FILE * tof = fdopen ( tofd, "a+" );
+
+    /* Send arguments to child.  Each argument sent as
+     * a lexeme on its own line.  At the end of the
+     * argument list, a blank line is written.
+     */
+    char ** argp = argv + 1;
+    for ( ; * argp; ++ argp )
+    {
+        char * b = buffer;
+	if ( strlen ( * argp ) > MAX_LEXEME_SIZE )
+	{
+	    printf ( "ERROR: program argument too long:"
+	             " %s\n", * argp );
+	    exit ( 1 );
+	}
+	put_lexeme ( & b , * argp );
+	* b ++ = 0;
+	fprintf ( tof, "%s\n", buffer );
+    }
+    fprintf ( tof, "\n" );
+    while ( fgets ( buffer, MAX_LINE_SIZE+2, tof ) )
+    {
+        if ( strcmp ( buffer, END_STRING "\n" ) == 0 )
+	    break;
+	printf ( "%s", buffer );
+    }
+    fclose ( tof );
     sleep ( 2 );
     printf ( "PARENT DONE\n" );
     exit (0);
