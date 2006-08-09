@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	Mon Aug  7 03:07:37 EDT 2006
-** Date:	Mon Aug  7 02:55:00 EDT 2006
+** Date:	Wed Aug  9 03:44:03 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/07 07:54:45 $
+**   $Date: 2006/08/09 08:52:49 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.10 $
+**   $Revision: 1.11 $
 */
 
 #include <stdio.h>
@@ -125,8 +125,32 @@ char documentation [] =
 
 #define MAX_LEXEME_SIZE 2000
 #define MAX_LINE_SIZE ( 2 * MAX_LEXEME_SIZE + 10 )
+
+typedef char line_buffer[MAX_LINE_SIZE+2];
+
 const char * time_format = "%Y/%m/%d %H:%M:%S";
 #define END_STRING "\001\002\003\004"
+
+/* Get Line from input stream into line buffer.
+ * Delete any \n from end of line.  Signal error if
+ * line is too long.  Return true if line found, and
+ * false on end of file.
+ */
+int get_line ( line_buffer buffer, FILE * in )
+{
+    if ( ! fgets ( buffer, MAX_LINE_SIZE+2, in ) )
+        return 0;
+    int length = strlen ( buffer );
+    if ( length == MAX_LINE_SIZE+1 )
+    {
+	printf ( "ERROR: line too long:\n" );
+	printf ( "%-60.60s...\n", buffer );
+	exit ( 1 );
+    }
+    assert ( buffer[length-1] == '\n' );
+    buffer[length-1] = 0;
+    return 1;
+}
 
 /* Data is a list of entries, one entry per line.
  */
@@ -134,7 +158,7 @@ struct entry {
 
     char * filename;
         /* Filename may not contain \0 or \n and may
-	 * not be more than (MAX_LINE_SIZE-2)/2
+	 * not be more than MAX_LEXEME_SIZE.
 	 * characters long (so its quoted lexeme will
 	 * fit on one line).
 	 */
@@ -240,22 +264,12 @@ void put_lexeme ( char ** buffer, const char * lexeme )
  */
 void read_index ( FILE * f )
 {
-    char buffer [MAX_LINE_SIZE+2];
+    line_buffer buffer;
     int begin = 1;
     int even = 1;
     char * filename;
-    while ( fgets ( buffer, MAX_LINE_SIZE+2, f ) )
+    while ( get_line ( buffer, f ) )
     {
-        int length = strlen ( buffer );
-        if ( length == MAX_LINE_SIZE+1 )
-	{
-	    printf ( "ERROR: EFM-INDEX line too"
-	             " long\n" );
-	    exit ( 1 );
-	}
-	assert ( buffer[length-1] == '\n' );
-	buffer[length-1] = 0;
-
 	if ( begin && buffer[0] == '#' )
 	{
 	    struct comment * c =
@@ -359,7 +373,7 @@ void write_index ( FILE * f )
     for ( ; c; c = c->next )
         fprintf ( f, "%s\n", c->line );
     struct entry * e = first_entry;
-    char buffer [ MAX_LINE_SIZE + 1 ];
+    line_buffer buffer;
     for ( ; e; e = e->next )
     {
         char * b = buffer;
@@ -547,12 +561,66 @@ int crypt ( int decrypt,
 	return result;
 }
 
+/* Fetch argument from input stream into line_buffer.
+ * Return a pointer to the NUL terminated argument,
+ * or NULL if there is no argument.
+ */
+char * get_argument ( line_buffer buffer, FILE * in )
+{
+    if ( ! get_line ( buffer, in ) ) return NULL;
+    char * b = buffer;
+    char * r = get_lexeme ( & b );
+    char * j = get_lexeme ( & b );
+    if ( j != NULL )
+    {
+        printf ( "ERROR: junk at end of argument"
+	         " line:\n    %s\n", j );
+	exit ( 1 );
+    }
+    return r;
+}
+
+/* Execute one command.  Arguments are gotten from the
+ * input stream via get_argument, and results are writ-
+ * ten to stdout.  Return 1 to if kill command processed
+ * (do nothing else for kill), and 0 otherwise.
+ */
+int execute_command ( FILE * in )
+{
+    int result = 0;
+    line_buffer buffer;
+    char * arg = get_argument ( buffer, in );
+
+    if ( arg == NULL ) return 0;
+    else if ( strcmp ( arg, "start" ) == 0 )
+        /* Do Nothing */;
+    else if ( strcmp ( arg, "kill" ) == 0 )
+        result = 1;
+    else
+    {
+        printf ( "ERROR: bad command (ignored):"
+	         " %s\n", arg );
+	result = -1;
+    }
+
+    arg = get_argument ( buffer, in );
+    if ( arg != NULL && result != -1 )
+        printf ( "ERROR: extra argument (ignored):"
+	         " %s\n", arg );
+    else if ( result == -1 )
+        result = 0;
+    while ( arg != NULL )
+        arg = get_argument ( buffer, in );
+
+    return result;
+}
+
 char * password = NULL;
     /* Password read from user for EFM-INDEX.*. */
 
 int main ( int argc, char ** argv )
 {
-    char buffer [MAX_LINE_SIZE+2];
+    line_buffer buffer;
 
     if ( argc < 2 )
     {
@@ -606,26 +674,32 @@ int main ( int argc, char ** argv )
 	if ( childpid == 0 )
 	{
 	    close ( tofd );
-	    while ( 1 )
+
+	    /* Temporarily reroute stdout to error
+	     * descriptor.
+	     */
+	    fflush ( stdout );
+	    close ( 1 );
+	    dup2 ( 2, 1 );
+
+	    int done = 0;
+	    while ( ! done )
 	    {
 		int fromfd =
 		    accept ( listenfd, NULL, NULL );
 		if ( fromfd < 0 ) error ( errno );
-		/* To work the child needs two FILE's
-		 * for some reason.
+
+		/* Reroute stdout to new descriptor.
 		 */
+		assert ( fromfd != 1 );
+		fflush ( stdout );
+		close ( 1 );
+		dup2 ( fromfd, 1 );
+
 		FILE * inf = fdopen ( fromfd, "r" );
-		FILE * outf = fdopen ( fromfd, "w" );
-		if ( outf == NULL ) error ( errno );
-		while ( fgets ( buffer, MAX_LINE_SIZE+2,
-				inf ) )
-		{
-		    if ( buffer[0] == '\n' ) break;
-		    buffer[strlen(buffer)-1] = 0;
-		    fprintf ( outf, "[%s]\n", buffer );
-		}
-		fprintf ( outf, "%s\n", END_STRING );
-		fclose ( outf );
+		done = execute_command ( inf );
+		printf ( "%s\n", END_STRING );
+		fflush ( stdout );
 		fclose ( inf );
 		sleep ( 2 );
 	    }
@@ -661,11 +735,11 @@ int main ( int argc, char ** argv )
 	fprintf ( tof, "%s\n", buffer );
     }
     fprintf ( tof, "\n" );
-    while ( fgets ( buffer, MAX_LINE_SIZE+2, tof ) )
+    while ( get_line ( buffer, tof ) )
     {
-        if ( strcmp ( buffer, END_STRING "\n" ) == 0 )
+        if ( strcmp ( buffer, END_STRING ) == 0 )
 	    break;
-	printf ( "%s", buffer );
+	printf ( "%s\n", buffer );
     }
     fclose ( tof );
     sleep ( 2 );
