@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	Mon Aug  7 03:07:37 EDT 2006
-** Date:	Wed Aug  9 05:12:12 EDT 2006
+** Date:	Wed Aug  9 09:34:24 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/09 13:05:09 $
+**   $Date: 2006/08/09 16:03:36 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.14 $
+**   $Revision: 1.15 $
 */
 
 #include <stdio.h>
@@ -152,36 +152,35 @@ int get_line ( line_buffer buffer, FILE * in )
     return 1;
 }
 
-/* Data is a list of entries, one entry per line.
+/* Index is a circular list of entries.
  */
 struct entry {
 
     char * filename;
         /* Filename may not contain \0 or \n and may
-	 * not be more than MAX_LEXEME_SIZE.
-	 * characters long (so its quoted lexeme will
-	 * fit on one line).
+	 * not be more than MAX_LEXEME_SIZE characters
+	 * long (so its quoted lexeme will fit on one
+	 * line).
 	 */
 
-    char * md5sum;
     unsigned mode;
     time_t mtime;
+
+    char * md5sum;
     char * key;
 
-    struct entry * next;
+    struct entry * previous, * next;
 };
 struct entry * first_entry = NULL;
-struct entry * last_entry = NULL;
 
-/* Comment lines are just a list of lines.
+/* Comment lines are just a circular list of lines.
  */
 struct comment {
     char * line;
 
-    struct comment * next;
+    struct comment * previous, * next;
 };
 struct comment * first_comment = NULL;
-struct comment * last_comment = NULL;
 
 /* Given a pointer into the line buffer, scan the next
  * lexeme.  A lexeme is a sequence of non-whitespace
@@ -275,11 +274,16 @@ void read_index ( FILE * f )
 	        (struct comment *)
 		malloc ( sizeof ( struct comment ) );
 	    c->line = strdup ( buffer );
-	    c->next = NULL;
 	    if ( first_comment == NULL )
-		last_comment = first_comment = c;
+	        first_comment = c->previous
+		              = c->next = c;
 	    else
-		last_comment = last_comment->next = c;
+	    {
+		c->previous = first_comment->previous;
+		c->next = first_comment;
+		c->previous->next = c->next->previous
+		                  = c;
+	    }
 	    continue;
 	}
 	begin = 0;
@@ -370,11 +374,14 @@ void read_index ( FILE * f )
 	e->mtime = d;
 	e->md5sum = strdup ( md5sum );
 	e->key = strdup ( key );
-	e->next = NULL;
 	if ( first_entry == NULL )
-	    last_entry = first_entry = e;
+	    first_entry = e->previous = e->next = e;
 	else
-	    last_entry = last_entry->next = e;
+	{
+	    e->previous = first_entry->previous;
+	    e->next = first_entry;
+	    e->previous->next = e->next->previous = e;
+	}
     }
 }
 
@@ -383,11 +390,13 @@ void read_index ( FILE * f )
 void write_index ( FILE * f )
 {
     struct comment * c = first_comment;
-    for ( ; c; c = c->next )
+    if ( c ) do
+    {
         fprintf ( f, "%s\n", c->line );
-    struct entry * e = first_entry;
+    } while ( ( c = c->next ) != first_comment );
     line_buffer buffer;
-    for ( ; e; e = e->next )
+    struct entry * e = first_entry;
+    if ( e ) do
     {
         char * b = buffer;
 	put_lexeme ( & b, e->filename );
@@ -413,7 +422,7 @@ void write_index ( FILE * f )
 	put_lexeme ( & b, e->key );
 	* b = 0;
         fprintf ( f, "%s\n", buffer );
-    }
+    } while ( ( e = e->next ) != first_entry );
 }
 
 /* Check if index has existing file with given filename.
@@ -422,11 +431,11 @@ void write_index ( FILE * f )
 struct entry * find_filename ( const char * filename )
 {
     struct entry * e = first_entry;
-    for ( ; e; e = e->next )
+    if ( e ) do
     {
         if ( strcmp ( filename, e->filename ) == 0 )
 	    return e;
-    }
+    } while ( ( e = e->next ) != first_entry );
     return NULL;
 }
 
@@ -436,11 +445,11 @@ struct entry * find_filename ( const char * filename )
 struct entry * find_md5sum ( const char * md5sum )
 {
     struct entry * e = first_entry;
-    for ( ; e; e = e->next )
+    if ( e ) do
     {
         if ( strcmp ( md5sum, e->md5sum ) == 0 )
 	    return e;
-    }
+    } while ( ( e = e->next ) != first_entry );
     return NULL;
 }
 
@@ -734,11 +743,37 @@ int add ( const char * filename )
     e->mode =  s.st_mode & 07777;
     e->mtime = s.st_mtime;
     e->key = strdup ( key );
-    e->next = NULL;
     if ( first_entry == NULL )
-	last_entry = first_entry = e;
+	first_entry = e->previous = e->next = e;
     else
-	last_entry = last_entry->next = e;
+    {
+	e->previous = first_entry->previous;
+	e->next = first_entry;
+	e->previous->next = e->next->previous = e;
+    }
+    return 0;
+}
+
+/* Subtract file entry from index.  Return -1 on error,
+ * 0 on success.
+ */
+int sub ( const char * filename )
+{
+    struct entry * e = find_filename ( filename );
+    if ( e == NULL )
+    {
+        printf ( "ERROR: subtracting nonexistent file:"
+	         " %s\n", filename );
+	return -1;
+    }
+    e->next->previous = e->previous;
+    e->previous->next = e->next;
+    if ( first_entry == e ) first_entry = e->next;
+    if ( first_entry == e ) first_entry = NULL;
+    free ( e->filename );
+    free ( e->md5sum );
+    free ( e->key );
+    free ( e );
     return 0;
 }
 
@@ -798,6 +833,13 @@ int execute_command ( FILE * in )
         while ( arg = get_argument ( buffer, in ) )
 	{
 	    if ( add ( arg ) < 0 ) error_found = 1;
+	}
+    }
+    else if ( strcmp ( arg, "sub" ) == 0 )
+    {
+        while ( arg = get_argument ( buffer, in ) )
+	{
+	    if ( sub ( arg ) < 0 ) error_found = 1;
 	}
     }
     else
