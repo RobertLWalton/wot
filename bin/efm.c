@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/09 16:03:36 $
+**   $Date: 2006/08/09 17:09:53 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.15 $
+**   $Revision: 1.16 $
 */
 
 #include <stdio.h>
@@ -151,6 +151,11 @@ int get_line ( line_buffer buffer, FILE * in )
     buffer[length-1] = 0;
     return 1;
 }
+
+/* The following is set if the index is modified and
+ * needs to be rewritten.
+ */
+int index_modified;
 
 /* Index is a circular list of entries.
  */
@@ -382,6 +387,7 @@ void read_index ( FILE * f )
 	    e->next = first_entry;
 	    e->previous->next = e->next->previous = e;
 	}
+	index_modified = 1;
     }
 }
 
@@ -601,8 +607,8 @@ int crypt ( int decrypt,
 	                "--passphrase-fd", "3",
 		        "--batch", "-q",
 		        NULL ) :
-	       execlp ( "gpg", "gpg", "-c"
-		        "--cipher-alog", "BLOWFISH",
+	       execlp ( "gpg", "gpg", "-c",
+		        "--cipher-algo", "BLOWFISH",
 	                "--passphrase-fd", "3",
 		        "--batch", "-q",
 		        NULL )
@@ -751,6 +757,7 @@ int add ( const char * filename )
 	e->next = first_entry;
 	e->previous->next = e->next->previous = e;
     }
+    index_modified = 1;
     return 0;
 }
 
@@ -774,6 +781,7 @@ int sub ( const char * filename )
     free ( e->md5sum );
     free ( e->key );
     free ( e );
+    index_modified = 1;
     return 0;
 }
 
@@ -896,7 +904,9 @@ int main ( int argc, char ** argv )
 	int indexchild;
 	int indexfd =
 	    crypt ( 1, "EFM-INDEX.gpg", NULL,
-	            password, 3, & indexchild );
+	            password,
+		    strlen ( password ),
+		    & indexchild );
 	if ( indexfd < 0 ) exit ( 1 );
 	FILE * indexf = fdopen ( indexfd, "r" );
 	read_index ( indexf );
@@ -907,9 +917,6 @@ int main ( int argc, char ** argv )
 	             " EFM-INDEX.gpg\n" );
 	    exit ( 1 );
 	}
-
-	write_index ( stdout );
-
 	int listenfd = socket ( PF_UNIX, SOCK_STREAM, 0 );
 	if ( bind ( listenfd,
 		    (const struct sockaddr *) & sa,
@@ -942,9 +949,44 @@ int main ( int argc, char ** argv )
 		fflush ( stdout );
 		close ( 1 );
 		dup2 ( fromfd, 1 );
-
 		FILE * inf = fdopen ( fromfd, "r" );
+
+		index_modified = 0;
 		done = execute_command ( inf );
+		if ( index_modified )
+		{
+		    int indexchild;
+		    int indexfd =
+			crypt ( 0,
+				NULL, "EFM-INDEX.gpg+",
+				password,
+				strlen ( password ),
+				& indexchild );
+		    if ( indexfd < 0 ) exit ( 1 );
+		    FILE * indexf =
+		        fdopen ( indexfd, "w" );
+		    write_index ( indexf );
+		    fclose ( indexf );
+		    if ( cwait ( indexchild ) < 0 )
+		    {
+		        unlink ( "EFM-INDEX.gpg+" );
+			printf ( "ERROR: error encypting"
+				 " EFM-INDEX.gpg\n" );
+			exit ( 1 );
+		    }
+		    unlink ( "EFM-INDEX.gpg-" );
+		    if ( link ( "EFM-INDEX.gpg",
+		                "EFM-INDEX.gpg-" ) < 0
+			 &&
+			 errno != ENOENT )
+		        error ( errno );
+		    unlink ( "EFM-INDEX.gpg" );
+		    if ( link ( "EFM-INDEX.gpg+",
+		                "EFM-INDEX.gpg" ) < 0 )
+		        error ( errno );
+		    unlink ( "EFM-INDEX.gpg+" );
+		}
+
 		printf ( "%s\n", END_STRING );
 		fflush ( stdout );
 		fclose ( inf );
