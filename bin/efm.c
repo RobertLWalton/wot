@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Wed Aug  9 13:13:20 EDT 2006
+** Date:	Wed Aug  9 15:35:17 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/09 17:52:59 $
+**   $Date: 2006/08/09 19:35:06 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.17 $
+**   $Revision: 1.18 $
 */
 
 #include <stdio.h>
@@ -46,7 +46,7 @@ char documentation [] =
 "\n"
 "efm add file ...\n"
 "efm sub file ...\n"
-"efm delete source file ...\n"
+"efm del source file ...\n"
 "\n"
 "    Each file has an encrypted version in the target\n"
 "    directory or source directory.  The file can be\n"
@@ -130,10 +130,10 @@ char documentation [] =
 "    The \"add\" command creates a file entry without\n"
 "    encrypting or moving a file.  The \"sub\" com-\n"
 "    mand deletes a file entry without decrypting or\n"
-"    moving a file.  The \"delete\" command deletes\n"
-"    the encrypted file without removing the file\n"
-"    from the index.  All these commands can cause\n"
-"    this index to disagree with the set of existing\n"
+"    moving a file.  The \"del\" command deletes the\n"
+"    encrypted file without removing the file from\n"
+"    the index.  All these commands can cause this\n"
+"    index to disagree with the set of existing\n"
 "    encrypted files.  The \"list\" command actually\n"
 "    lists the index, which includes files that have\n"
 "    been deleted or added but have no actual encryp-\n"
@@ -740,6 +740,114 @@ int md5sum ( char * buffer,
     return cwait ( child ) < 0 ? -1 : e;
 }
 
+/* Copy file.  0 is returned on success, -1 on error.
+ * Error messages are written on stdout.  The mode
+ * and mtime of the file are preserved.  The filenames
+ * may have the format acceptable to scp.
+ */
+int copyfile
+	( const char * source, const char * target )
+{
+    fflush ( stdout );
+
+    int child = fork();
+    if ( child < 0 ) error ( errno );
+
+    if ( child == 0 )
+    {
+	/* Set fd's as follows:
+	 * 	0 -> /dev/null
+	 *	1 -> parent's 1
+	 *	2 -> parent's 1
+	 */
+	int newfd = open ( "/dev/null", O_RDONLY );
+	if ( newfd < 0 ) error ( errno );
+	close ( 0 );
+	if ( dup2 ( newfd, 0 ) < 0 ) error ( errno );
+	close ( newfd );
+	close ( 2 );
+	if ( dup2 ( 1, 2 ) < 0 ) error ( errno );
+	int d = getdtablesize();
+	while ( d > 2 ) close ( d -- );
+
+	if ( execlp ( "scp", "scp", "-p",
+	              source, target, NULL ) < 0 )
+	    error ( errno );
+    }
+
+    return cwait ( child );
+}
+
+/* Delete file.  0 is returned on success, -1 on error.
+ * Error messages are written on stdout.  The filename
+ * may have the format acceptable to scp, and must
+ * not be longer than MAX_LEXEME_SIZE.
+ */
+int delfile ( const char * filename )
+{
+    fflush ( stdout );
+    line_buffer buffer;
+    strcpy ( buffer, filename );
+    char * p = buffer;
+    int at_found = 0;
+    for ( ; * p; ++ p )
+    {
+        if ( * p == '@' )
+	{
+	    if ( at_found ) break;
+	    at_found = 1;
+	}
+	else if ( * p == ':' ) break;
+    }
+    if ( * p != ':' || ! at_found )
+    {
+        /* Not a remote file. */
+	if ( unlink ( filename ) < 0
+	     &&
+	     errno != ENOENT )
+	{
+	    printf ( "ERROR: could not delete %s\n",
+	             filename );
+	    return -1;
+	}
+	else
+	    return 0;
+    }
+
+    * p ++ = 0;
+
+    /* Now buffer points at account and p at file
+     * within account.
+     */
+
+    int child = fork();
+    if ( child < 0 ) error ( errno );
+
+    if ( child == 0 )
+    {
+	/* Set fd's as follows:
+	 * 	0 -> /dev/null
+	 *	1 -> parent's 1
+	 *	2 -> parent's 1
+	 */
+	int newfd = open ( "/dev/null", O_RDONLY );
+	if ( newfd < 0 ) error ( errno );
+	close ( 0 );
+	if ( dup2 ( newfd, 0 ) < 0 ) error ( errno );
+	close ( newfd );
+	close ( 2 );
+	if ( dup2 ( 1, 2 ) < 0 ) error ( errno );
+	int d = getdtablesize();
+	while ( d > 2 ) close ( d -- );
+
+	if ( execlp ( "ssh", "buffer", "rm", "-f",
+	              p, NULL ) < 0 )
+	    error ( errno );
+    }
+
+    return cwait ( child );
+}
+
 /* Add file entry to index.  Return -1 on error, 0 on
  * success.
  */
@@ -857,7 +965,7 @@ int execute_command ( FILE * in )
 {
     int result = 0;
     int error_found = 0;
-    line_buffer buffer;
+    line_buffer buffer, directory;
     eol_found = 0;
     char * arg = get_argument ( buffer, in );
 
@@ -880,6 +988,141 @@ int execute_command ( FILE * in )
         while ( arg = get_argument ( buffer, in ) )
 	{
 	    if ( sub ( arg ) < 0 ) error_found = 1;
+	}
+    }
+    else if (    strcmp ( arg, "copyto" ) == 0
+              || strcmp ( arg, "copyfrom" ) == 0
+              || strcmp ( arg, "moveto" ) == 0
+              || strcmp ( arg, "movefrom" ) == 0
+              || strcmp ( arg, "remove" ) == 0
+              || strcmp ( arg, "del" ) == 0 )
+    {
+        char op = arg[0];
+	char direction = ( ( op == 'd' || op == 'r' ) ?
+	                   'f' : arg[4] );
+	char * dbegin = get_argument ( directory, in );
+	if ( dbegin == NULL )
+	{
+	    printf ( "ERROR: missing directory" );
+	    error_found = 1;
+	}
+	else
+	{
+	    char * dend = dbegin + strlen ( dbegin );
+	    * dend ++ = '/';
+	    while ( arg = get_argument ( buffer, in ) )
+	    {
+	        /* Get valid index entry. */
+
+		struct entry * e =
+		    find_filename ( arg );
+		struct stat st;
+		if ( e == NULL )
+		{
+		    if ( direction != 't' )
+		    {
+		        printf ( "ERROR: no index entry"
+			         " exists for ", arg );
+			error_found = 1;
+			continue;
+		    }
+		    char sum [33];
+		    if ( add ( arg ) < 0 )
+		    {
+			error_found = 1;
+			continue;
+		    }
+		    e = find_filename ( arg );
+		    assert ( e != NULL );
+		}
+		else if ( stat ( arg, & st ) >= 0 )
+		{
+		    char sum [33];
+		    if ( md5sum ( sum, arg ) < 0 )
+		    {
+			error_found = 1;
+			continue;
+		    }
+		    if ( strcmp ( sum, e->md5sum )
+		         != 0 )
+		    {
+		        printf ( "ERROR: M5 sum %s\n"
+			         "    of existing file"
+				 " %s\n"
+				 "    does not match"
+				 " the MD5 sum %s in"
+				 " the index\n",
+				 sum, arg, e->md5sum );
+			error_found = 1;
+			continue;
+		    }
+		} else if ( direction == 't' ) {
+		    printf ( "ERROR: file not found:"
+		             " %s\n", arg );
+		    error_found = 1;
+		    continue;
+		}
+
+		/* Perform Copying */
+
+		char efile [40];
+		strcpy ( efile, e->md5sum );
+		strcpy ( efile + 32, ".gpg" );
+		pid_t child;
+		strcpy ( dend, arg );
+		if ( direction == 't' )
+		{
+		    unlink ( efile );
+		    if ( crypt ( 0, arg, efile,
+		                 e->key, 32,
+				 & child ) < 0 )
+		    {
+			error_found = 1;
+			continue;
+		    }
+		    delfile ( dbegin );
+		    if ( copyfile ( efile, dbegin )
+		         < 0 )
+		    {
+			error_found = 1;
+			continue;
+		    }
+		    unlink ( efile );
+		}
+		else if ( op == 'm' || op == 'c' )
+		{
+		    unlink ( efile );
+		    if ( copyfile ( dbegin, efile )
+		         < 0 )
+		    {
+			error_found = 1;
+			continue;
+		    }
+		    unlink ( arg );
+		    if ( crypt ( 1, efile, arg,
+		                 e->key, 32,
+				 & child ) < 0 )
+		    {
+			error_found = 1;
+			continue;
+		    }
+		    unlink ( efile );
+		}
+
+		/* Perform remote file deletion. */
+
+		if ( direction == 'f' && op != 'c' )
+		    delfile ( dbegin );
+
+		/* Delete entry if necessary. */
+
+		if ( direction == 'f'
+		     && op != 'c' && op != 'd' )
+		{
+		    int r = sub ( arg );
+		    assert ( r >= 0 );
+		}
+	    }
 	}
     }
     else
