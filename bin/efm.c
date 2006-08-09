@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/09 11:27:00 $
+**   $Date: 2006/08/09 13:05:09 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.13 $
+**   $Revision: 1.14 $
 */
 
 #include <stdio.h>
@@ -91,11 +91,11 @@ char documentation [] =
 "    ification time and mode of the file when it is\n"
 "    decrypted.  The MD5sum is used to check the in-\n"
 "    grity of the decryption.  The mode is 4 octal\n"
-"    digits and the MD5sum is 16 hexadecimal digits.\n"
+"    digits and the MD5sum is 32 hexadecimal digits.\n"
 "    The key is the symmetric encryption/decryption\n"
-"    key for the file, and is the uppercase 16 digit\n"
+"    key for the file, and is the uppercase 32 digit\n"
 "    hexadecimal representation of a 128 bit random\n"
-"    number.  However, it is this 16 character repre-\n"
+"    number.  However, it is this 32 character repre-\n"
 "    sentation, and NOT the number, that is the key.\n"
 "\n"
 "    You must create and encrypt an initial empty\n"
@@ -266,7 +266,6 @@ void read_index ( FILE * f )
 {
     line_buffer buffer;
     int begin = 1;
-    int even = 1;
     char * filename;
     while ( get_line ( buffer, f ) )
     {
@@ -284,41 +283,31 @@ void read_index ( FILE * f )
 	    continue;
 	}
 	begin = 0;
+
 	char * b = buffer;
-
-	if ( even )
-	{
-	    filename = strdup ( get_lexeme ( & b ) );
-	    if ( get_lexeme ( & b ) )
-	    {
-		printf ( "ERROR: stuff on line after"
-		         " filename for file %s\n",
-			 filename );
-		exit ( 1 );
-	    }
-	    even = 0;
-	    continue;
-	}
-	even = 1;
-
-	char * md5sum = get_lexeme ( & b );
-	char * mode = get_lexeme ( & b );
-	char * mtime = get_lexeme ( & b );
-	char * key = get_lexeme ( & b );
-
+	filename = strdup ( get_lexeme ( & b ) );
 	if ( get_lexeme ( & b ) )
 	{
 	    printf ( "ERROR: stuff on line after"
-		     " key for file %s\n",
+		     " filename for file %s\n",
 		     filename );
 	    exit ( 1 );
 	}
 
-	if ( strlen ( md5sum ) != 16 )
+	if ( ! get_line ( buffer, f ) )
 	{
-	    printf ( "ERROR: bad EFM-INDEX md5sum (%s)"
-	             " for file %s\n",
-		     md5sum, filename );
+	    printf ( "ERROR: premature end of entry"
+		     " for file %s\n", filename );
+	    exit ( 1 );
+	}
+	b = buffer;
+	char * mode = get_lexeme ( & b );
+	char * mtime = get_lexeme ( & b );
+	if ( get_lexeme ( & b ) )
+	{
+	    printf ( "ERROR: stuff on line after"
+		     " mode and mtime for file %s\n",
+		     filename );
 	    exit ( 1 );
 	}
 	char * q;
@@ -341,9 +330,33 @@ void read_index ( FILE * f )
 		     mtime, filename );
 	    exit ( 1 );
 	}
-	if ( strlen ( key ) != 16 )
+
+	if ( ! get_line ( buffer, f ) )
+	{
+	    printf ( "ERROR: premature end of entry"
+		     " for file %s\n", filename );
+	    exit ( 1 );
+	}
+	b = buffer;
+	char * md5sum = get_lexeme ( & b );
+	char * key = get_lexeme ( & b );
+	if ( get_lexeme ( & b ) )
+	{
+	    printf ( "ERROR: stuff on line after"
+		     " MD5 sum and key for file %s\n",
+		     filename );
+	    exit ( 1 );
+	}
+	if ( strlen ( md5sum ) != 32 )
 	{
 	    printf ( "ERROR: bad EFM-INDEX md5sum (%s)"
+	             " for file %s\n",
+		     md5sum, filename );
+	    exit ( 1 );
+	}
+	if ( strlen ( key ) != 32 )
+	{
+	    printf ( "ERROR: bad EFM-INDEX key (%s)"
 	             " for file %s\n",
 		     key, filename );
 	    exit ( 1 );
@@ -353,9 +366,9 @@ void read_index ( FILE * f )
 	    (struct entry * )
 	    malloc ( sizeof ( struct entry ) );
 	e->filename = filename;
-	e->md5sum = strdup ( md5sum );
 	e->mode = m;
 	e->mtime = d;
+	e->md5sum = strdup ( md5sum );
 	e->key = strdup ( key );
 	e->next = NULL;
 	if ( first_entry == NULL )
@@ -383,8 +396,6 @@ void write_index ( FILE * f )
 	b = buffer;
 	strcpy ( b, "    " );
 	b += 4;
-	put_lexeme ( & b, e->md5sum );
-	* b ++ = ' ';
 	sprintf ( b, "%04o", e->mode );
 	b += 4;
 	* b ++ = ' ';
@@ -392,6 +403,12 @@ void write_index ( FILE * f )
 	strftime ( tbuffer, 100, time_format, 
 	           gmtime ( & e->mtime ) );
 	put_lexeme ( & b, tbuffer );
+	* b = 0;
+        fprintf ( f, "%s\n", buffer );
+	b = buffer;
+	strcpy ( b, "    " );
+	b += 4;
+	put_lexeme ( & b, e->md5sum );
 	* b ++ = ' ';
 	put_lexeme ( & b, e->key );
 	* b = 0;
@@ -451,6 +468,27 @@ int cwait ( pid_t child )
         return 0;
     else
         return -1;
+}
+
+/* Create a random 32 hexadecimal digit key.  Buffer
+ * must be at least 33 characters to hold key and
+ * trailing NUL.
+ */
+void newkey ( char * buffer )
+{
+    int fd = open ( "/dev/random", O_RDONLY );
+    if ( fd < 0 ) error ( errno );
+    unsigned char b[16];
+    if ( read ( fd, b, 16 ) < 0 ) error ( errno );
+    close ( fd );
+
+    sprintf ( buffer,
+              "%02x%02x%02x%02x%02x%02x%02x%02x"
+              "%02x%02x%02x%02x%02x%02x%02x%02x",
+	      b[0], b[1], b[2], b[3],
+	      b[4], b[5], b[6], b[7],
+	      b[8], b[9], b[10], b[11],
+	      b[12], b[13], b[14], b[15] );
 }
 
 /* Encrypt/decrypt file.  If input file is NULL, return
@@ -577,9 +615,9 @@ int crypt ( int decrypt,
 	return result;
 }
 
-/* Compute the MD5 sum of a file.  The 16 character md5sum
+/* Compute the MD5 sum of a file.  The 32 character md5sum
  * followed by a NUL is returned in the buffer, which must
- * be at least 17 characters long.  0 is returned on
+ * be at least 33 characters long.  0 is returned on
  * success, -1 on error.  Error messages are written on
  * stdout.
  */
@@ -616,7 +654,8 @@ int md5sum ( char * buffer,
 	int d = getdtablesize();
 	while ( d > 2 ) close ( d -- );
 
-	if ( execlp ( "md5sum", filename, NULL ) < 0 )
+	if ( execlp ( "md5sum", "md5sum",
+	              filename, NULL ) < 0 )
 	    error ( errno );
     }
 
@@ -637,10 +676,10 @@ int md5sum ( char * buffer,
 	    if ( 'A' <= c && c <= 'F' ) continue;
 	    break;
         }
-	if ( p == line + 16 )
+	if ( p == line + 32 )
 	{
-	    strncp ( buffer, line, 16 );
-	    buffer[16] = 0;
+	    strncpy ( buffer, line, 32 );
+	    buffer[32] = 0;
 	    e = 0;
 	}
     }
@@ -666,7 +705,7 @@ int add ( const char * filename )
 	return -1;
     }
 
-    char sum [17];
+    char sum [33];
     if ( md5sum ( sum, filename ) < 0 ) return -1;
     struct entry * e = find_md5sum ( sum );
     if ( e != NULL )
@@ -685,29 +724,42 @@ int add ( const char * filename )
 	return -1;
     }
 
+    char key[33];
+    newkey ( key );
+
     e = (struct entry *)
         malloc ( sizeof ( struct entry ) );
     e->filename = strdup ( filename );
     e->md5sum = strdup ( sum );
     e->mode =  s.st_mode & 07777;
     e->mtime = s.st_mtime;
-    /* e->key = strdup ( key ); */
+    e->key = strdup ( key );
     e->next = NULL;
     if ( first_entry == NULL )
 	last_entry = first_entry = e;
     else
 	last_entry = last_entry->next = e;
-    
+    return 0;
 }
 
 
 /* Fetch argument from input stream into line_buffer.
  * Return a pointer to the NUL terminated argument,
  * or NULL if there is no argument.
+ *
+ * Eol_found must be set to 0 before getting first
+ * argument.  If more arguments are gotten than are
+ * available, NULL is returned repeatedly.
  */
+int eol_found;
 char * get_argument ( line_buffer buffer, FILE * in )
 {
-    if ( ! get_line ( buffer, in ) ) return NULL;
+    if ( eol_found ) return NULL;
+    if ( ! get_line ( buffer, in ) )
+    {
+        eol_found = 1;
+	return NULL;
+    }
     char * b = buffer;
     char * r = get_lexeme ( & b );
     char * j = get_lexeme ( & b );
@@ -717,6 +769,7 @@ char * get_argument ( line_buffer buffer, FILE * in )
 	         " line:\n    %s\n", j );
 	exit ( 1 );
     }
+    if ( r == NULL ) eol_found = 1;
     return r;
 }
 
@@ -728,7 +781,9 @@ char * get_argument ( line_buffer buffer, FILE * in )
 int execute_command ( FILE * in )
 {
     int result = 0;
+    int error_found = 0;
     line_buffer buffer;
+    eol_found = 0;
     char * arg = get_argument ( buffer, in );
 
     if ( arg == NULL ) return 0;
@@ -738,19 +793,27 @@ int execute_command ( FILE * in )
         result = 1;
     else if ( strcmp ( arg, "list" ) == 0 )
 	write_index ( stdout );
+    else if ( strcmp ( arg, "add" ) == 0 )
+    {
+        while ( arg = get_argument ( buffer, in ) )
+	{
+	    if ( add ( arg ) < 0 ) error_found = 1;
+	}
+    }
     else
     {
         printf ( "ERROR: bad command (ignored):"
 	         " %s\n", arg );
-	result = -1;
+	error_found = 1;
     }
 
     arg = get_argument ( buffer, in );
-    if ( arg != NULL && result != -1 )
-        printf ( "ERROR: extra argument (ignored):"
-	         " %s\n", arg );
+    if ( arg != NULL && ! error_found )
+	printf ( "ERROR: extra argument (ignored):"
+		 " %s\n", arg );
     else if ( result == -1 )
         result = 0;
+
     while ( arg != NULL )
         arg = get_argument ( buffer, in );
 
@@ -843,7 +906,8 @@ int main ( int argc, char ** argv )
 		printf ( "%s\n", END_STRING );
 		fflush ( stdout );
 		fclose ( inf );
-		sleep ( 2 );
+		close ( 1 );
+		dup2 ( 2, 1 );
 	    }
 
 	    unlink ( "EFM-INDEX.sock" );
@@ -886,7 +950,5 @@ int main ( int argc, char ** argv )
 	printf ( "%s\n", buffer );
     }
     fclose ( tof );
-    sleep ( 2 );
-    printf ( "PARENT DONE\n" );
     exit (0);
 }
