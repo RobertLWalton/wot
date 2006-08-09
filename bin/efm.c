@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	Mon Aug  7 03:07:37 EDT 2006
-** Date:	Wed Aug  9 03:44:03 EDT 2006
+** Date:	Wed Aug  9 05:12:12 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/09 08:52:49 $
+**   $Date: 2006/08/09 09:35:09 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.11 $
+**   $Revision: 1.12 $
 */
 
 #include <stdio.h>
@@ -505,6 +505,8 @@ int crypt ( int decrypt,
 	passwritefd = fd[1];
     }
 
+    fflush ( stdout );
+
     * child = fork();
     if ( * child < 0 ) error ( errno );
 
@@ -561,6 +563,58 @@ int crypt ( int decrypt,
 	return result;
 }
 
+/* Compute the MD5 sum of a file.  The 16 character md5sum
+ * followed by a NUL is returned in the buffer, which must
+ * be at least 17 characters long.  0 is returned on
+ * success, -1 on error.  Error messages are written on
+ * stdout.
+ */
+int md5sum ( char * buffer,
+             const char * filename )
+{
+    int infd, outfd;
+    int fd[2];
+    if ( pipe ( fd ) < 0 ) error ( errno );
+    fflush ( stdout );
+
+    int child = fork();
+    if ( child < 0 ) error ( errno );
+
+    if ( child == 0 )
+    {
+        close ( fd[0] );
+
+	/* Set fd's as follows:
+	 * 	0 -> /dev/null
+	 *	1 -> fd[1]
+	 *	2 -> parent's 1
+	 */
+	int newfd = open ( "/dev/null", O_RDONLY );
+	if ( newfd < 0 ) error ( errno );
+	close ( 0 );
+	if ( dup2 ( newfd, 0 ) < 0 ) error ( errno );
+	close ( newfd );
+	close ( 2 );
+	if ( dup2 ( 1, 2 ) < 0 ) error ( errno );
+	close ( 1 );
+	if ( dup2 ( fd[1], 1 ) < 0 ) error ( errno );
+	close ( fd[1] );
+	int fd = getdtablesize();
+	while ( fd > 2 ) close ( fd -- );
+
+	if ( execlp ( "md5sum", filename, NULL ) < 0 )
+	    error ( errno );
+    }
+
+    close ( fd[1] );
+
+    line_buffer line;
+
+    /* TBD */
+
+    return cwait ( child );
+}
+
 /* Fetch argument from input stream into line_buffer.
  * Return a pointer to the NUL terminated argument,
  * or NULL if there is no argument.
@@ -596,6 +650,8 @@ int execute_command ( FILE * in )
         /* Do Nothing */;
     else if ( strcmp ( arg, "kill" ) == 0 )
         result = 1;
+    else if ( strcmp ( arg, "list" ) == 0 )
+	write_index ( stdout );
     else
     {
         printf ( "ERROR: bad command (ignored):"
@@ -703,6 +759,8 @@ int main ( int argc, char ** argv )
 		fclose ( inf );
 		sleep ( 2 );
 	    }
+
+	    unlink ( "EFM-INDEX.sock" );
 	    exit ( 0 );
 	}
 	if ( connect ( tofd,
@@ -711,7 +769,7 @@ int main ( int argc, char ** argv )
 	    error ( errno );
     }
 
-    /* To work the parend needs one a+ FILE for some
+    /* To work the parent needs one a+ FILE for some
      * reason.
      */
     FILE * tof = fdopen ( tofd, "a+" );
