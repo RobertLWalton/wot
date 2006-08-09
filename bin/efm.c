@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/09 09:35:09 $
+**   $Date: 2006/08/09 11:27:00 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.12 $
+**   $Revision: 1.13 $
 */
 
 #include <stdio.h>
@@ -67,13 +67,13 @@ char documentation [] =
 "    the form:\n"
 "\n"
 "	 filename\n"
-"            MD5sum mode date key\n"
+"            MD5sum mode mtime key\n"
 "\n"
 "    where the first line is not indented and the\n"
 "    second line is.  The filename may be quoted\n"
 "    with \"'s if it contains special characters,\n"
 "    and a quote in such a filename is represented\n"
-"    by a pair of quotes (\"\").  The date will\n"
+"    by a pair of quotes (\"\").  The mtime will\n"
 "    always be quoted.\n"
 "\n"
 "    Lines at the beginning of the file whose first\n"
@@ -87,8 +87,8 @@ char documentation [] =
 "    ted until it has been removed.  No two files\n"
 "    are allowed to have the same MD5sum.\n"
 "\n"
-"    The date and mode are used to set the file modi-\n"
-"    fication date and mode of the file when it is\n"
+"    The mtime and mode are used to set the file mod-\n"
+"    ification time and mode of the file when it is\n"
 "    decrypted.  The MD5sum is used to check the in-\n"
 "    grity of the decryption.  The mode is 4 octal\n"
 "    digits and the MD5sum is 16 hexadecimal digits.\n"
@@ -165,7 +165,7 @@ struct entry {
 
     char * md5sum;
     unsigned mode;
-    time_t date;
+    time_t mtime;
     char * key;
 
     struct entry * next;
@@ -303,7 +303,7 @@ void read_index ( FILE * f )
 
 	char * md5sum = get_lexeme ( & b );
 	char * mode = get_lexeme ( & b );
-	char * date = get_lexeme ( & b );
+	char * mtime = get_lexeme ( & b );
 	char * key = get_lexeme ( & b );
 
 	if ( get_lexeme ( & b ) )
@@ -331,14 +331,14 @@ void read_index ( FILE * f )
 	    exit ( 1 );
 	}
 	struct tm td;
-	char * ts = strptime ( date, time_format, & td );
+	char * ts = strptime ( mtime, time_format, & td );
 	time_t d = ( ts == NULL || * ts != 0 ) ? -1 :
 	           mktime ( & td );
 	if ( d == -1 )
 	{
-	    printf ( "ERROR: bad EFM-INDEX date (%s)"
+	    printf ( "ERROR: bad EFM-INDEX mtime (%s)"
 	             " for file %s\n",
-		     date, filename );
+		     mtime, filename );
 	    exit ( 1 );
 	}
 	if ( strlen ( key ) != 16 )
@@ -355,7 +355,7 @@ void read_index ( FILE * f )
 	e->filename = filename;
 	e->md5sum = strdup ( md5sum );
 	e->mode = m;
-	e->date = d;
+	e->mtime = d;
 	e->key = strdup ( key );
 	e->next = NULL;
 	if ( first_entry == NULL )
@@ -390,13 +390,27 @@ void write_index ( FILE * f )
 	* b ++ = ' ';
 	char tbuffer [100];
 	strftime ( tbuffer, 100, time_format, 
-	           gmtime ( & e->date ) );
+	           gmtime ( & e->mtime ) );
 	put_lexeme ( & b, tbuffer );
 	* b ++ = ' ';
 	put_lexeme ( & b, e->key );
 	* b = 0;
         fprintf ( f, "%s\n", buffer );
     }
+}
+
+/* Check if index has existing file with given filename.
+ * Return entry if yes, NULL if no.
+ */
+struct entry * find_filename ( const char * filename )
+{
+    struct entry * e = first_entry;
+    for ( ; e; e = e->next )
+    {
+        if ( strcmp ( filename, e->filename ) == 0 )
+	    return e;
+    }
+    return NULL;
 }
 
 /* Check if index has existing file with given MD5sum.
@@ -572,9 +586,9 @@ int crypt ( int decrypt,
 int md5sum ( char * buffer,
              const char * filename )
 {
-    int infd, outfd;
     int fd[2];
     if ( pipe ( fd ) < 0 ) error ( errno );
+
     fflush ( stdout );
 
     int child = fork();
@@ -599,21 +613,93 @@ int md5sum ( char * buffer,
 	close ( 1 );
 	if ( dup2 ( fd[1], 1 ) < 0 ) error ( errno );
 	close ( fd[1] );
-	int fd = getdtablesize();
-	while ( fd > 2 ) close ( fd -- );
+	int d = getdtablesize();
+	while ( d > 2 ) close ( d -- );
 
 	if ( execlp ( "md5sum", filename, NULL ) < 0 )
 	    error ( errno );
     }
 
     close ( fd[1] );
+    FILE * inf = fdopen ( fd[0], "r" );
 
     line_buffer line;
+    int e = -1;
 
-    /* TBD */
+    if ( fgets ( line, sizeof ( line ), inf ) )
+    {
+        char * p = line;
+	for ( ; * p; ++ p )
+	{
+	    char c = * p;
+	    if ( '0' <= c && c <= '9' ) continue;
+	    if ( 'a' <= c && c <= 'f' ) continue;
+	    if ( 'A' <= c && c <= 'F' ) continue;
+	    break;
+        }
+	if ( p == line + 16 )
+	{
+	    strncp ( buffer, line, 16 );
+	    buffer[16] = 0;
+	    e = 0;
+	}
+    }
+    fclose ( inf );
+    if ( e < 0 )
+    {
+        printf ( "ERROR: cannot compute MD5 sum of"
+	         " %s\n", filename );
+    }
 
-    return cwait ( child );
+    return cwait ( child ) < 0 ? -1 : e;
 }
+
+/* Add file entry to index.  Return -1 on error, 0 on
+ * success.
+ */
+int add ( const char * filename )
+{
+    if ( find_filename ( filename ) )
+    {
+        printf ( "ERROR: index entry already exists"
+	         " for %s\n", filename );
+	return -1;
+    }
+
+    char sum [17];
+    if ( md5sum ( sum, filename ) < 0 ) return -1;
+    struct entry * e = find_md5sum ( sum );
+    if ( e != NULL )
+    {
+        printf ( "ERROR: cannot make index entry for"
+	         " %s\n    as it has the same MD5 sum"
+		 " as existing entry for %s\n",
+		 filename, e->filename );
+	return -1;
+    }
+
+    struct stat s;
+    if ( stat ( filename, & s ) < 0 )
+    {
+        printf ( "ERROR: cannot stat %s\n", filename );
+	return -1;
+    }
+
+    e = (struct entry *)
+        malloc ( sizeof ( struct entry ) );
+    e->filename = strdup ( filename );
+    e->md5sum = strdup ( sum );
+    e->mode =  s.st_mode & 07777;
+    e->mtime = s.st_mtime;
+    /* e->key = strdup ( key ); */
+    e->next = NULL;
+    if ( first_entry == NULL )
+	last_entry = first_entry = e;
+    else
+	last_entry = last_entry->next = e;
+    
+}
+
 
 /* Fetch argument from input stream into line_buffer.
  * Return a pointer to the NUL terminated argument,
