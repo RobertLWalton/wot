@@ -1,8 +1,8 @@
 /* Encrypted File Management (EFM) Program.
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
-** File:	Mon Aug  7 03:07:37 EDT 2006
-** Date:	Wed Aug  9 09:34:24 EDT 2006
+** File:	efm.c
+** Date:	Wed Aug  9 13:13:20 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/09 17:09:53 $
+**   $Date: 2006/08/09 17:52:59 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.16 $
+**   $Revision: 1.17 $
 */
 
 #include <stdio.h>
@@ -37,9 +37,16 @@ char documentation [] =
 "efm movefrom source file ...\n"
 "efm copyto target file ...\n"
 "efm copyfrom source file ...\n"
-"efm remove source file ...\n"
 "efm check source file ...\n"
+"efm remove target file ...\n"
 "efm list\n"
+"\n"
+"efm start\n"
+"efm kill\n"
+"\n"
+"efm add file ...\n"
+"efm sub file ...\n"
+"efm delete source file ...\n"
 "\n"
 "    Each file has an encrypted version in the target\n"
 "    directory or source directory.  The file can be\n"
@@ -62,25 +69,47 @@ char documentation [] =
 "    tory names acceptable to scp.\n"
 "\n"
 "    The current directory must contain an encrypted\n"
-"    index file named \"EFM-INDEX.gpg\".  When de-\n"
-"    crypted the lines of this file are in pairs of\n"
+"    index file named \"EFM-INDEX.gpg\" that is main-\n"
+"    tained by efm.  You must create and encrypt an\n"
+"    initial empty EFM-INDEX.gpg file by using the\n"
+"    gpg program.  You choose the password that pro-\n"
+"    tects this index when you create it using gpg.\n"
+"\n"
+"    The efm program asks for a password to decrypt\n"
+"    the index only the first time it is run during\n"
+"    a login session.  It then sets up a background\n"
+"    program holding the password that is accessible\n"
+"    through the socket \"EFM-INDEX.sock\".  This\n"
+"    background program dies on a hangup signal when\n"
+"    you log out, and may be killed at any time.\n"
+"    The \"kill\" command may be use to kill the\n"
+"    background process.  The \"start\" command just\n"
+"    starts the background process if it is not\n"
+"    already running, but this is also done by other\n"
+"    commands implicitly.\n"
+"\n"
+"    The index file contains three line entries of\n"
 "    the form:\n"
 "\n"
 "	 filename\n"
-"            MD5sum mode mtime key\n"
+"            mode mtime\n"
+"            MD5sum key\n"
 "\n"
-"    where the first line is not indented and the\n"
-"    second line is.  The filename may be quoted\n"
+"    where the first entry line is not indented and\n"
+"    the other lines are.  The filename may be quoted\n"
 "    with \"'s if it contains special characters,\n"
 "    and a quote in such a filename is represented\n"
 "    by a pair of quotes (\"\").  The mtime will\n"
 "    always be quoted.\n"
 "\n"
-"    Lines at the beginning of the file whose first\n"
-"    character is # are comment lines, and are\n"
-"    preserved.  Blank lines are forbidden.\n"
+"    Lines at the beginning of the index file whose\n"
+"    first character is # are comment lines, and are\n"
+"    preserved.  Blank lines are forbidden.  Comment\n"
+"    lines must be inserted in the initial file made\n"
+"    with gpg, or changed by using gpg to decrypt\n"
+"    and re-encrypt the file.\n"
 "\n"
-"    A line for a file is created when the file is\n"
+"    An entry for a file is created when the file is\n"
 "    encrypted and deleted when the encrypted file\n"
 "    is deleted by \"movefrom\" or \"remove\".  If\n"
 "    a file value is changed it may not be reencryp-\n"
@@ -98,8 +127,19 @@ char documentation [] =
 "    number.  However, it is this 32 character repre-\n"
 "    sentation, and NOT the number, that is the key.\n"
 "\n"
-"    You must create and encrypt an initial empty\n"
-"    EFM-INDEX.gpg file by using the gpg program.\n"
+"    The \"add\" command creates a file entry without\n"
+"    encrypting or moving a file.  The \"sub\" com-\n"
+"    mand deletes a file entry without decrypting or\n"
+"    moving a file.  The \"delete\" command deletes\n"
+"    the encrypted file without removing the file\n"
+"    from the index.  All these commands can cause\n"
+"    this index to disagree with the set of existing\n"
+"    encrypted files.  The \"list\" command actually\n"
+"    lists the index, which includes files that have\n"
+"    been deleted or added but have no actual encryp-\n"
+"    ted file, and does not include files that have\n"
+"    been subtracted from the index without deleting\n"
+"    the encrypted file.\n"
 "\n"
 "    An external program is used to encrypt/decrypt\n"
 "    files.  By default this is gpg.  The encrypted\n"
@@ -113,14 +153,6 @@ char documentation [] =
 "\n"
 "    Currently only gpg is supported as an encryp-\n"
 "    ing program.\n"
-"\n"
-"    The efm program asks for a password to decrypt\n"
-"    the index only the first time it is run during\n"
-"    a login session.  It then sets up a background\n"
-"    program holding the password that is accessible\n"
-"    through the socket \"EFM-INDEX.sock\".  This\n"
-"    background program dies on a hangup signal when\n"
-"    you log out, and may be killed at any time.\n"
 ;
 
 #define MAX_LEXEME_SIZE 2000
