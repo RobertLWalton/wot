@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Thu Aug 10 10:45:19 EDT 2006
+** Date:	Thu Aug 10 10:51:37 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/10 14:45:19 $
+**   $Date: 2006/08/10 14:52:02 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.28 $
+**   $Revision: 1.29 $
 */
 
 #include <stdio.h>
@@ -65,10 +65,10 @@ char documentation [] =
 "    MD5sums, modification times, and protection\n"
 "    modes.\n"
 "\n"
-"    File names must be relative to the current direc-\n"
-"    tory.  Source and target names can be any direc-\n"
-"    tory names acceptable to scp.  Efm makes tempor-\n"
-"    ary files in the current directory whose base\n"
+"    File names must be relative to the current di-\n"
+"    rectory.  Source and target names can be any di-\n"
+"    rectory names acceptable to scp.  Efm makes tem-\n"
+"    porary files in the current directory whose base\n"
 "    names are the 32 character MD5 sums of the files\n"
 "    begin encrypted or decrypted.\n"
 "\n"
@@ -173,7 +173,8 @@ const char * time_format = "%Y/%m/%d %H:%M:%S";
  */
 char * ofilter[] = {
     "gpg: WARNING: using insecure memory!",
-    "gpg: please see http://www.gnupg.org/faq.html for more information",
+    "gpg: please see http://www.gnupg.org/faq.html"
+    " for more information",
     "gpg: BLOWFISH encrypted data",
     "gpg: WARNING: message was not integrity protected",
     NULL };
@@ -703,11 +704,11 @@ int crypt ( int decrypt,
 	return result;
 }
 
-/* Compute the MD5 sum of a file.  The 32 character md5sum
- * followed by a NUL is returned in the buffer, which must
- * be at least 33 characters long.  0 is returned on
- * success, -1 on error.  Error messages are written on
- * stdout.
+/* Compute the MD5 sum of a file.  The 32 character
+ * md5sum followed by a NUL is returned in the buffer,
+ * which must be at least 33 characters long.  0 is
+ * returned on success, -1 on error.  Error messages
+ * are written on stdout.
  */
 int md5sum ( char * buffer,
              const char * filename )
@@ -1225,9 +1226,11 @@ int execute_command ( FILE * in )
 			    error_found = 1;
 			    continue;
 			}
-			if ( chmod ( arg, e->mode ) < 0 )
-			    printf ( "ERROR: cannot chmod"
-				     " %s\n", arg );
+			if ( chmod ( arg, e->mode )
+			     < 0 )
+			    printf ( "ERROR: cannot"
+			             " chmod %s\n",
+				     arg );
 			struct utimbuf ut;
 			ut.actime = time ( NULL );
 			ut.modtime = e->mtime;
@@ -1339,7 +1342,8 @@ int main ( int argc, char ** argv )
 	             " EFM-INDEX.gpg\n" );
 	    exit ( 1 );
 	}
-	int listenfd = socket ( PF_UNIX, SOCK_STREAM, 0 );
+	int listenfd =
+	    socket ( PF_UNIX, SOCK_STREAM, 0 );
 	if ( bind ( listenfd,
 		    (const struct sockaddr *) & sa,
 		    sizeof ( sa ) ) < 0 )
@@ -1392,7 +1396,8 @@ int main ( int argc, char ** argv )
 		    if ( cwait ( indexchild ) < 0 )
 		    {
 		        unlink ( "EFM-INDEX.gpg+" );
-			printf ( "ERROR: error encypting"
+			printf ( "ERROR: error"
+			         " encypting"
 				 " EFM-INDEX.gpg\n" );
 			exit ( 1 );
 		    }
