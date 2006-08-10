@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Thu Aug 10 07:50:34 EDT 2006
+** Date:	Thu Aug 10 10:45:19 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/10 12:14:30 $
+**   $Date: 2006/08/10 14:45:19 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.27 $
+**   $Revision: 1.28 $
 */
 
 #include <stdio.h>
@@ -392,7 +392,9 @@ void read_index ( FILE * f )
 	    exit ( 1 );
 	}
 	struct tm td;
-	char * ts = strptime ( mtime, time_format, & td );
+	const char * ts =
+	    (const char *)
+	    strptime ( mtime, time_format, & td );
 	time_t d = ( ts == NULL || * ts != 0 ) ? -1 :
 	           mktime ( & td );
 	if ( d == -1 )
