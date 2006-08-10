@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Thu Aug 10 07:13:35 EDT 2006
+** Date:	Thu Aug 10 07:37:39 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/10 11:34:47 $
+**   $Date: 2006/08/10 11:37:33 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.24 $
+**   $Revision: 1.25 $
 */
 
 #include <stdio.h>
@@ -1164,7 +1164,9 @@ int execute_command ( FILE * in )
 				 & child ) < 0 )
 		    {
 			printf ( "ERROR: could not"
-				 " decrypt %s\n", arg );
+				 " decrypt %s\n"
+				 "    for %s\n",
+				 efile, arg );
 			error_found = 1;
 			continue;
 		    }
