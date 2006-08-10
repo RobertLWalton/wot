@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Thu Aug 10 05:18:06 EDT 2006
+** Date:	Thu Aug 10 05:30:13 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/10 09:24:46 $
+**   $Date: 2006/08/10 09:30:00 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.20 $
+**   $Revision: 1.21 $
 */
 
 #include <stdio.h>
@@ -100,7 +100,8 @@ char documentation [] =
 "    with \"'s if it contains special characters,\n"
 "    and a quote in such a filename is represented\n"
 "    by a pair of quotes (\"\").  The mtime will\n"
-"    always be quoted.\n"
+"    always be quoted, and is Greenwich Mean Time\n"
+"    (GMT).\n"
 "\n"
 "    Lines at the beginning of the index file whose\n"
 "    first character is # are comment lines, and are\n"
