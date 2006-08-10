@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Wed Aug  9 15:35:17 EDT 2006
+** Date:	Thu Aug 10 04:26:10 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/09 19:35:06 $
+**   $Date: 2006/08/10 08:52:04 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.18 $
+**   $Revision: 1.19 $
 */
 
 #include <stdio.h>
@@ -995,11 +995,13 @@ int execute_command ( FILE * in )
               || strcmp ( arg, "moveto" ) == 0
               || strcmp ( arg, "movefrom" ) == 0
               || strcmp ( arg, "remove" ) == 0
+              || strcmp ( arg, "check" ) == 0
               || strcmp ( arg, "del" ) == 0 )
     {
-        char op = arg[0];
-	char direction = ( ( op == 'd' || op == 'r' ) ?
-	                   'f' : arg[4] );
+        char op = ( arg[0] == 'c' && arg[1] == 'h' ?
+	            'k' : arg[0] );
+	char direction = ( ( op == 'm' || op == 'c' ) ?
+	                   arg[4] : 'f' );
 	char * dbegin = get_argument ( directory, in );
 	if ( dbegin == NULL )
 	{
@@ -1026,7 +1028,6 @@ int execute_command ( FILE * in )
 			error_found = 1;
 			continue;
 		    }
-		    char sum [33];
 		    if ( add ( arg ) < 0 )
 		    {
 			error_found = 1;
@@ -1080,7 +1081,18 @@ int execute_command ( FILE * in )
 			error_found = 1;
 			continue;
 		    }
-		    delfile ( dbegin );
+		    if ( chmod ( arg, S_IRUSR ) < 0 )
+		    {
+		        printf ( "ERROR: cannot chmod"
+			         " %s\n", arg );
+			error_found = 1;
+			continue;
+		    }
+		    if ( delfile ( dbegin ) < 0 )
+		    {
+			error_found = 1;
+			continue;
+		    }
 		    if ( copyfile ( efile, dbegin )
 		         < 0 )
 		    {
@@ -1089,7 +1101,8 @@ int execute_command ( FILE * in )
 		    }
 		    unlink ( efile );
 		}
-		else if ( op == 'm' || op == 'c' )
+		else if ( op == 'm' || op == 'c'
+		                    || op == 'k' )
 		{
 		    unlink ( efile );
 		    if ( copyfile ( dbegin, efile )
@@ -1098,8 +1111,8 @@ int execute_command ( FILE * in )
 			error_found = 1;
 			continue;
 		    }
-		    unlink ( arg );
-		    if ( crypt ( 1, efile, arg,
+		    unlink ( e->md5sum );
+		    if ( crypt ( 1, efile, e->md5sum,
 		                 e->key, 32,
 				 & child ) < 0 )
 		    {
@@ -1107,17 +1120,61 @@ int execute_command ( FILE * in )
 			continue;
 		    }
 		    unlink ( efile );
+		    char sum [33];
+		    if ( md5sum ( sum, e->md5sum ) < 0 )
+		    {
+		        printf ( "ERROR: cannot compute"
+			         " MD5 sum of %s\n    "
+				 "which is the"
+				 " retrieval of %s\n",
+				 e->md5sum, arg );
+			error_found = 1;
+			continue;
+		    }
+		    if ( strcmp ( sum, e->md5sum )
+		         != 0 )
+		    {
+		        printf ( "ERROR: MD5 sum of %s"
+			         " is %s\n    "
+				 "bad retrieval of"
+				 " %s\n", e->md5sum,
+				 sum, arg );
+			error_found = 1;
+			continue;
+		    }
+		    if ( op != 'k' )
+		    {
+		        unlink ( arg );
+			if ( link ( e->md5sum, arg )
+			     < 0 )
+			{
+			    printf ( "ERROR: cannot"
+			             " rename %s to"
+				     " %s\n",
+				     e->md5sum, arg );
+			    error_found = 1;
+			    continue;
+			}
+		    }
+		    unlink ( e->md5sum );
 		}
 
 		/* Perform remote file deletion. */
 
-		if ( direction == 'f' && op != 'c' )
-		    delfile ( dbegin );
+		if ( ( op == 'm' && direction == 'f' )
+		     || op == 'r' || op == 'd' )
+		{
+		    if ( delfile ( dbegin ) < 0 )
+		    {
+			error_found = 1;
+			continue;
+		    }
+		}
 
 		/* Delete entry if necessary. */
 
-		if ( direction == 'f'
-		     && op != 'c' && op != 'd' )
+		if ( ( op == 'm' && direction == 'f' )
+		     || op == 'r' )
 		{
 		    int r = sub ( arg );
 		    assert ( r >= 0 );
