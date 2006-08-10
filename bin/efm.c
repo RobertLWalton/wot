@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/10 11:19:49 $
+**   $Date: 2006/08/10 11:34:47 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.23 $
+**   $Revision: 1.24 $
 */
 
 #include <stdio.h>
@@ -1038,6 +1038,8 @@ int execute_command ( FILE * in )
 	}
 	else
 	{
+	    int current_directory =
+	        ( strcmp ( dbegin, "." ) == 0 );
 	    char * dend = dbegin + strlen ( dbegin );
 	    * dend ++ = '/';
 	    while ( arg = get_argument ( buffer, in ) )
@@ -1118,40 +1120,58 @@ int execute_command ( FILE * in )
 			error_found = 1;
 			continue;
 		    }
-		    if ( delfile ( dbegin ) < 0 )
+		    if ( ! current_directory )
 		    {
-			error_found = 1;
-			continue;
+			if ( delfile ( dbegin ) < 0 )
+			{
+			    error_found = 1;
+			    continue;
+			}
+			if ( copyfile ( efile, dbegin )
+			     < 0 )
+			{
+			    error_found = 1;
+			    continue;
+			}
+			unlink ( efile );
 		    }
-		    if ( copyfile ( efile, dbegin )
-		         < 0 )
-		    {
-			error_found = 1;
-			continue;
-		    }
-		    unlink ( efile );
 		}
 		else if ( op == 'm' || op == 'c'
 		                    || op == 'k' )
 		{
-		    unlink ( efile );
-		    if ( copyfile ( dbegin, efile )
-		         < 0 )
+		    if ( ! current_directory )
 		    {
+			unlink ( efile );
+			if ( copyfile ( dbegin, efile )
+			     < 0 )
+			{
+			    error_found = 1;
+			    continue;
+			}
+		    }
+		    else if ( stat ( efile, & st ) < 0 )
+		    {
+		        printf ( "ERROR: encrypted %s\n"
+			         "    (%s) does not"
+				 " exist\n",
+				 arg, efile );
 			error_found = 1;
 			continue;
 		    }
 		    unlink ( e->md5sum );
 		    if ( crypt ( 1, efile, e->md5sum,
-		                 e->key, 32,
+				 e->key, 32,
 				 & child ) < 0 )
 		    {
-		        printf ( "ERROR: could not"
-			         " decrypt %s\n", arg );
+			printf ( "ERROR: could not"
+				 " decrypt %s\n", arg );
 			error_found = 1;
 			continue;
 		    }
-		    unlink ( efile );
+
+		    if ( ! current_directory )
+			unlink ( efile );
+
 		    char sum [33];
 		    if ( md5sum ( sum, e->md5sum ) < 0 )
 		    {
@@ -1191,7 +1211,7 @@ int execute_command ( FILE * in )
 		    unlink ( e->md5sum );
 		}
 
-		/* Perform remote file deletion. */
+		/* Perform source file deletion. */
 
 		if ( ( op == 'm' && direction == 'f' )
 		     || op == 'r' || op == 'd' )
