@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Thu Aug 10 07:06:13 EDT 2006
+** Date:	Thu Aug 10 07:13:35 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/10 11:07:21 $
+**   $Date: 2006/08/10 11:19:49 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.22 $
+**   $Revision: 1.23 $
 */
 
 #include <stdio.h>
@@ -662,13 +662,13 @@ int crypt ( int decrypt,
 	if ( ( decrypt ?
 	       execlp ( "gpg", "gpg",
 	                "--passphrase-fd", "3",
-		        "--batch", "-q",
+		        "--batch", "-q", "--no-tty",
 		        NULL ) :
-	       execlp ( "gpg", "gpg", "-c",
+	       execlp ( "gpg", "gpg",
 		        "--cipher-algo", "BLOWFISH",
 	                "--passphrase-fd", "3",
-		        "--batch", "-q",
-		        NULL )
+		        "--batch", "-q", "--no-tty",
+			"-c", NULL )
 	     ) < 0 )
 	    error ( errno );
     }
@@ -1106,6 +1106,8 @@ int execute_command ( FILE * in )
 		                 e->key, 32,
 				 & child ) < 0 )
 		    {
+		        printf ( "ERROR: could not"
+			         " encrypt %s\n", arg );
 			error_found = 1;
 			continue;
 		    }
@@ -1144,6 +1146,8 @@ int execute_command ( FILE * in )
 		                 e->key, 32,
 				 & child ) < 0 )
 		    {
+		        printf ( "ERROR: could not"
+			         " decrypt %s\n", arg );
 			error_found = 1;
 			continue;
 		    }
