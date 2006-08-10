@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Thu Aug 10 05:30:13 EDT 2006
+** Date:	Thu Aug 10 07:06:13 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/10 09:30:00 $
+**   $Date: 2006/08/10 11:07:21 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.21 $
+**   $Revision: 1.22 $
 */
 
 #include <stdio.h>
@@ -998,7 +998,10 @@ int execute_command ( FILE * in )
     else if ( strcmp ( arg, "start" ) == 0 )
         /* Do Nothing */;
     else if ( strcmp ( arg, "kill" ) == 0 )
+    {
+	printf ( "efm killed\n" );
         result = 1;
+    }
     else if ( strcmp ( arg, "list" ) == 0 )
 	write_index ( stdout );
     else if ( strcmp ( arg, "add" ) == 0 )
@@ -1095,7 +1098,7 @@ int execute_command ( FILE * in )
 		strcpy ( efile, e->md5sum );
 		strcpy ( efile + 32, ".gpg" );
 		pid_t child;
-		strcpy ( dend, arg );
+		strcpy ( dend, efile );
 		if ( direction == 't' )
 		{
 		    unlink ( efile );
@@ -1190,6 +1193,15 @@ int execute_command ( FILE * in )
 		     || op == 'r' || op == 'd' )
 		{
 		    if ( delfile ( dbegin ) < 0 )
+		    {
+			error_found = 1;
+			continue;
+		    }
+		}
+		else if (    op == 'm'
+		          && direction == 't' )
+		{
+		    if ( delfile ( arg ) < 0 )
 		    {
 			error_found = 1;
 			continue;
