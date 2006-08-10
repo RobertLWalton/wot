@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Thu Aug 10 07:37:39 EDT 2006
+** Date:	Thu Aug 10 07:45:01 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/10 11:37:33 $
+**   $Date: 2006/08/10 11:47:55 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.25 $
+**   $Revision: 1.26 $
 */
 
 #include <stdio.h>
@@ -163,6 +163,16 @@ typedef char line_buffer[MAX_LINE_SIZE+2];
 
 const char * time_format = "%Y/%m/%d %H:%M:%S";
 #define END_STRING "\001\002\003\004"
+
+/* The following lines are filtered out of the output
+ * (we could find no other way to keep gpg quiet).
+ */
+char * ofilter[] = {
+    "gpg: WARNING: using insecure memory!",
+    "gpg: please see http://www.gnupg.org/faq.html for more information",
+    "gpg: BLOWFISH encrypted data",
+    "gpg: WARNING: message was not integrity protected",
+    NULL };
 
 /* Get Line from input stream into line buffer.
  * Delete any \n from end of line.  Signal error if
@@ -1426,7 +1436,15 @@ int main ( int argc, char ** argv )
     {
         if ( strcmp ( buffer, END_STRING ) == 0 )
 	    break;
-	printf ( "%s\n", buffer );
+
+	/* Filter out unwanted missives from gpg. */
+
+	char ** fp = ofilter;
+	for ( ; * fp; ++ fp )
+	{
+	    if ( strcmp ( * fp, buffer ) == 0 ) break;
+	}
+	if ( * fp == NULL ) printf ( "%s\n", buffer );
     }
     fclose ( tof );
     exit (0);
