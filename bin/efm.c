@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Thu Aug 10 07:45:01 EDT 2006
+** Date:	Thu Aug 10 07:50:34 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/10 11:47:55 $
+**   $Date: 2006/08/10 12:14:30 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.26 $
+**   $Revision: 1.27 $
 */
 
 #include <stdio.h>
@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <utime.h>
 #include <string.h>
 #include <assert.h>
 #include <sys/types.h>
@@ -66,7 +67,10 @@ char documentation [] =
 "\n"
 "    File names must be relative to the current direc-\n"
 "    tory.  Source and target names can be any direc-\n"
-"    tory names acceptable to scp.\n"
+"    tory names acceptable to scp.  Efm makes tempor-\n"
+"    ary files in the current directory whose base\n"
+"    names are the 32 character MD5 sums of the files\n"
+"    begin encrypted or decrypted.\n"
 "\n"
 "    The current directory must contain an encrypted\n"
 "    index file named \"EFM-INDEX.gpg\" that is main-\n"
@@ -1123,10 +1127,10 @@ int execute_command ( FILE * in )
 			error_found = 1;
 			continue;
 		    }
-		    if ( chmod ( arg, S_IRUSR ) < 0 )
+		    if ( chmod ( efile, S_IRUSR ) < 0 )
 		    {
 		        printf ( "ERROR: cannot chmod"
-			         " %s\n", arg );
+			         " %s\n", efile );
 			error_found = 1;
 			continue;
 		    }
@@ -1219,6 +1223,17 @@ int execute_command ( FILE * in )
 			    error_found = 1;
 			    continue;
 			}
+			if ( chmod ( arg, e->mode ) < 0 )
+			    printf ( "ERROR: cannot chmod"
+				     " %s\n", arg );
+			struct utimbuf ut;
+			ut.actime = time ( NULL );
+			ut.modtime = e->mtime;
+			if ( utime ( arg, & ut ) < 0 )
+			    printf ( "ERROR: cannot set"
+				     " modification"
+				     " time of %s\n",
+				     arg );
 		    }
 		    unlink ( e->md5sum );
 		}
