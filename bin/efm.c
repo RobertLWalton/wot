@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Thu Aug 10 04:26:10 EDT 2006
+** Date:	Thu Aug 10 05:18:06 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/10 08:52:04 $
+**   $Date: 2006/08/10 09:24:46 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.19 $
+**   $Revision: 1.20 $
 */
 
 #include <stdio.h>
@@ -326,6 +326,14 @@ void read_index ( FILE * f )
 	begin = 0;
 
 	char * b = buffer;
+	if ( * b == 0 || isspace ( * b ) )
+	{
+	    printf ( "ERROR: index entry first line"
+	             " begins with space, or there"
+		     " is a blank line in"
+		     " index\n    %s\n", buffer );
+	    exit ( 1 );
+	}
 	filename = strdup ( get_lexeme ( & b ) );
 	if ( get_lexeme ( & b ) )
 	{
@@ -342,6 +350,14 @@ void read_index ( FILE * f )
 	    exit ( 1 );
 	}
 	b = buffer;
+	if ( ! isspace ( * b ) )
+	{
+	    printf ( "ERROR: index entry non-first line"
+	             " does not begin with"
+		     " space,\n    for %s entry",
+		     filename );
+	    exit ( 1 );
+	}
 	char * mode = get_lexeme ( & b );
 	char * mtime = get_lexeme ( & b );
 	if ( get_lexeme ( & b ) )
@@ -379,6 +395,14 @@ void read_index ( FILE * f )
 	    exit ( 1 );
 	}
 	b = buffer;
+	if ( ! isspace ( * b ) )
+	{
+	    printf ( "ERROR: index entry non-first line"
+	             " does not begin with"
+		     " space,\n    for %s entry",
+		     filename );
+	    exit ( 1 );
+	}
 	char * md5sum = get_lexeme ( & b );
 	char * key = get_lexeme ( & b );
 	if ( get_lexeme ( & b ) )
