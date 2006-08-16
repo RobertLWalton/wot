@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Thu Aug 10 10:51:37 EDT 2006
+** Date:	Wed Aug 16 13:27:34 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/10 14:52:02 $
+**   $Date: 2006/08/16 17:45:05 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.29 $
+**   $Revision: 1.30 $
 */
 
 #include <stdio.h>
@@ -34,6 +34,8 @@
 #include <time.h>
 
 char documentation [] =
+"efm -doc\n"
+"\n"
 "efm moveto target file ...\n"
 "efm movefrom source file ...\n"
 "efm copyto target file ...\n"
@@ -49,28 +51,34 @@ char documentation [] =
 "efm sub file ...\n"
 "efm del source file ...\n"
 "\n"
-"    Each file has an encrypted version in the target\n"
-"    directory or source directory.  The file can be\n"
-"    moved or copied to/from that directory.  It is\n"
-"    encrypted when moved or copied to the target di-\n"
-"    rectory, and decrypted when moved or copied from\n"
-"    the directory.  The directory may be \".\" to\n"
-"    encrypt or decrypt in place.\n"
+"efm trace on\n"
+"efm trace off\n"
+"\n"
+"    Each file may have an encrypted version in the\n"
+"    target/source directory.  The file can be moved\n"
+"    or copied to/from that directory.  It is encryp-\n"
+"    ted when moved or copied to the target direc-\n"
+"    tory, and decrypted when moved or copied from\n"
+"    the source directory.  The directory may be"
+                                            " \".\"\n"
+"    to encrypt or decrypt in place.\n"
 "\n"
 "    The \"remove\" command is like \"movefrom\" fol-\n"
 "    lowed by discarding the decrypted file.  The\n"
 "    \"check\" command is like \"copyfrom\" followed\n"
-"    by discarding the decrypted file.  The \"list\"\n"
-"    command lists all encrypted files and their\n"
-"    MD5sums, modification times, and protection\n"
-"    modes.\n"
+"    by discarding the decrypted file.  Neither of\n"
+"    these two commands affects the decrypted file.\n"
+"\n"
+"    The \"list\" command lists all encrypted files\n"
+"    and for each its MD5sum, modification time, and\n"
+"    protection mode.\n"
 "\n"
 "    File names must be relative to the current di-\n"
 "    rectory.  Source and target names can be any di-\n"
 "    rectory names acceptable to scp.  Efm makes tem-\n"
 "    porary files in the current directory whose base\n"
-"    names are the 32 character MD5 sums of the files\n"
-"    begin encrypted or decrypted.\n"
+"    names are the 32 character MD5 sums of the de-\n"
+"    crypted files.\n"
 "\n"
 "    The current directory must contain an encrypted\n"
 "    index file named \"EFM-INDEX.gpg\" that is main-\n"
@@ -91,6 +99,10 @@ char documentation [] =
 "    starts the background process if it is not\n"
 "    already running, but this is also done by other\n"
 "    commands implicitly.\n"
+"\n"
+"    The \"trace\" commands turn tracing on/off.\n"
+"    When on, actions are annotated on the standard\n"
+"    output by lines beginning with \"* \".\n"
 "\n"
 "    The index file contains three line entries of\n"
 "    the form:\n"
@@ -118,19 +130,21 @@ char documentation [] =
 "    encrypted and deleted when the encrypted file\n"
 "    is deleted by \"movefrom\" or \"remove\".  If\n"
 "    a file value is changed it may not be reencryp-\n"
-"    ted until it has been removed.  No two files\n"
-"    are allowed to have the same MD5sum.\n"
+"    ted until it has been removed.  No two files in\n"
+"    the index are allowed to have the same MD5sum.\n"
 "\n"
 "    The mtime and mode are used to set the file mod-\n"
 "    ification time and mode of the file when it is\n"
-"    decrypted.  The MD5sum is used to check the in-\n"
-"    grity of the decryption.  The mode is 4 octal\n"
-"    digits and the MD5sum is 32 hexadecimal digits.\n"
-"    The key is the symmetric encryption/decryption\n"
-"    key for the file, and is the uppercase 32 digit\n"
-"    hexadecimal representation of a 128 bit random\n"
-"    number.  However, it is this 32 character repre-\n"
-"    sentation, and NOT the number, that is the key.\n"
+"    decrypted.  The MD5sum is the MD5 sum of the de-\n"
+"    crypted file, and is used to check the integri-\n"
+"    ty of the encryption/decryption process.  The\n"
+"    mode is 4 octal digits and the MD5sum is 32\n"
+"    hexadecimal digits.  The key is the symmetric\n"
+"    encryption/decryption password for the file, and\n"
+"    is the uppercase 32 digit hexadecimal represen-\n"
+"    tation of a 128 bit random number.  However, it\n"
+"    is this 32 character representation, and NOT\n"
+"    the number, that is the key.\n"
 "\n"
 "    The \"add\" command creates a file entry without\n"
 "    encrypting or moving a file.  The \"sub\" com-\n"
@@ -1302,7 +1316,9 @@ int main ( int argc, char ** argv )
 {
     line_buffer buffer;
 
-    if ( argc < 2 )
+    if ( argc < 2
+         ||
+	 strncmp ( argv[1], "-doc", 4 ) == 0 )
     {
 	printf ( documentation );
 	exit (1);
