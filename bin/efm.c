@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Wed Aug 16 13:27:34 EDT 2006
+** Date:	Sat Aug 19 16:09:04 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/16 17:45:05 $
+**   $Date: 2006/08/19 21:01:03 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.30 $
+**   $Revision: 1.31 $
 */
 
 #include <stdio.h>
@@ -173,6 +173,8 @@ char documentation [] =
 "    Currently only gpg is supported as an encryp-\n"
 "    ing program.\n"
 ;
+
+int trace = 0;		/* 1 if trace on, 0 if off. */
 
 #define MAX_LEXEME_SIZE 2000
 #define MAX_LINE_SIZE ( 2 * MAX_LEXEME_SIZE + 10 )
@@ -479,6 +481,39 @@ void read_index ( FILE * f )
     }
 }
 
+/* Write index entry into file stream.
+ */
+void write_index_entry
+	( FILE * f, struct entry * e,
+	  const char * prefix )
+{
+    line_buffer buffer;
+    char * b = buffer;
+    put_lexeme ( & b, e->filename );
+    * b = 0;
+    fprintf ( f, "%s%s\n", prefix, buffer );
+    b = buffer;
+    strcpy ( b, "    " );
+    b += 4;
+    sprintf ( b, "%04o", e->mode );
+    b += 4;
+    * b ++ = ' ';
+    char tbuffer [100];
+    strftime ( tbuffer, 100, time_format, 
+	       gmtime ( & e->mtime ) );
+    put_lexeme ( & b, tbuffer );
+    * b = 0;
+    fprintf ( f, "%s%s\n", prefix, buffer );
+    b = buffer;
+    strcpy ( b, "    " );
+    b += 4;
+    put_lexeme ( & b, e->md5sum );
+    * b ++ = ' ';
+    put_lexeme ( & b, e->key );
+    * b = 0;
+    fprintf ( f, "%s%s\n", prefix, buffer );
+}
+
 /* Write index into file stream.
  */
 void write_index ( FILE * f )
@@ -488,35 +523,9 @@ void write_index ( FILE * f )
     {
         fprintf ( f, "%s\n", c->line );
     } while ( ( c = c->next ) != first_comment );
-    line_buffer buffer;
     struct entry * e = first_entry;
-    if ( e ) do
-    {
-        char * b = buffer;
-	put_lexeme ( & b, e->filename );
-	* b = 0;
-        fprintf ( f, "%s\n", buffer );
-	b = buffer;
-	strcpy ( b, "    " );
-	b += 4;
-	sprintf ( b, "%04o", e->mode );
-	b += 4;
-	* b ++ = ' ';
-	char tbuffer [100];
-	strftime ( tbuffer, 100, time_format, 
-	           gmtime ( & e->mtime ) );
-	put_lexeme ( & b, tbuffer );
-	* b = 0;
-        fprintf ( f, "%s\n", buffer );
-	b = buffer;
-	strcpy ( b, "    " );
-	b += 4;
-	put_lexeme ( & b, e->md5sum );
-	* b ++ = ' ';
-	put_lexeme ( & b, e->key );
-	* b = 0;
-        fprintf ( f, "%s\n", buffer );
-    } while ( ( e = e->next ) != first_entry );
+    if ( e ) do write_index_entry ( f, e, "" );
+    while ( ( e = e->next ) != first_entry );
 }
 
 /* Check if index has existing file with given filename.
@@ -954,6 +963,11 @@ int add ( const char * filename )
 	e->previous->next = e->next->previous = e;
     }
     index_modified = 1;
+    if ( trace )
+    {
+        printf ( "* added index entry:\n" );
+	write_index_entry ( stdout, e, "* " );
+    }
     return 0;
 }
 
@@ -968,6 +982,11 @@ int sub ( const char * filename )
         printf ( "ERROR: subtracting nonexistent file:"
 	         " %s\n", filename );
 	return -1;
+    }
+    if ( trace )
+    {
+        printf ( "* removing index entry:\n" );
+	write_index_entry ( stdout, e, "* " );
     }
     e->next->previous = e->previous;
     e->previous->next = e->next;
@@ -1134,6 +1153,10 @@ int execute_command ( FILE * in )
 		strcpy ( dend, efile );
 		if ( direction == 't' )
 		{
+		    if ( trace )
+		        printf ( "* encrypting %s to"
+			         " make %s\n",
+				 arg, efile );
 		    unlink ( efile );
 		    if ( crypt ( 0, arg, efile,
 		                 e->key, 32,
@@ -1144,6 +1167,11 @@ int execute_command ( FILE * in )
 			error_found = 1;
 			continue;
 		    }
+		    if ( trace )
+		        printf ( "* changing mode of %s"
+			         " to user-only"
+				 " read-only\n",
+				 efile );
 		    if ( chmod ( efile, S_IRUSR ) < 0 )
 		    {
 		        printf ( "ERROR: cannot chmod"
@@ -1153,17 +1181,27 @@ int execute_command ( FILE * in )
 		    }
 		    if ( ! current_directory )
 		    {
+			if ( trace )
+			    printf ( "* deleting %s\n",
+			             dbegin );
 			if ( delfile ( dbegin ) < 0 )
 			{
 			    error_found = 1;
 			    continue;
 			}
+			if ( trace )
+			    printf ( "* copying %s to"
+			             " %s\n",
+			             efile, dbegin );
 			if ( copyfile ( efile, dbegin )
 			     < 0 )
 			{
 			    error_found = 1;
 			    continue;
 			}
+			if ( trace )
+			    printf ( "* deleting %s\n",
+			             efile );
 			unlink ( efile );
 		    }
 		}
@@ -1172,6 +1210,10 @@ int execute_command ( FILE * in )
 		{
 		    if ( ! current_directory )
 		    {
+			if ( trace )
+			    printf ( "* copying %s to"
+			             " %s\n",
+			             dbegin, efile );
 			unlink ( efile );
 			if ( copyfile ( dbegin, efile )
 			     < 0 )
@@ -1189,6 +1231,10 @@ int execute_command ( FILE * in )
 			error_found = 1;
 			continue;
 		    }
+		    if ( trace )
+		        printf ( "* decrypting %s to"
+			         " make %s\n",
+				 efile, e->md5sum );
 		    unlink ( e->md5sum );
 		    if ( crypt ( 1, efile, e->md5sum,
 				 e->key, 32,
@@ -1203,8 +1249,16 @@ int execute_command ( FILE * in )
 		    }
 
 		    if ( ! current_directory )
+		    {
+			if ( trace )
+			    printf ( "* deleting %s\n",
+				     efile );
 			unlink ( efile );
+		    }
 
+		    if ( trace )
+		        printf ( "* checking MD5 sum of"
+			         " %s\n", e->md5sum );
 		    char sum [33];
 		    if ( md5sum ( sum, e->md5sum ) < 0 )
 		    {
@@ -1229,6 +1283,11 @@ int execute_command ( FILE * in )
 		    }
 		    if ( op != 'k' )
 		    {
+			if ( trace )
+			    printf
+				( "* linking %s to"
+				  " %s\n",
+				  e->md5sum, arg );
 		        unlink ( arg );
 			if ( link ( e->md5sum, arg )
 			     < 0 )
@@ -1240,6 +1299,11 @@ int execute_command ( FILE * in )
 			    error_found = 1;
 			    continue;
 			}
+			if ( trace )
+			    printf
+				( "* changing mode and"
+				  " modification time"
+				  " of %s\n", arg );
 			if ( chmod ( arg, e->mode )
 			     < 0 )
 			    printf ( "ERROR: cannot"
@@ -1254,6 +1318,10 @@ int execute_command ( FILE * in )
 				     " time of %s\n",
 				     arg );
 		    }
+		    if ( trace )
+			printf
+			    ( "* removing %s\n",
+			      e->md5sum );
 		    unlink ( e->md5sum );
 		}
 
@@ -1262,6 +1330,10 @@ int execute_command ( FILE * in )
 		if ( ( op == 'm' && direction == 'f' )
 		     || op == 'r' || op == 'd' )
 		{
+		    if ( trace )
+			printf
+			    ( "* removing %s\n",
+			      dbegin );
 		    if ( delfile ( dbegin ) < 0 )
 		    {
 			error_found = 1;
@@ -1271,6 +1343,9 @@ int execute_command ( FILE * in )
 		else if (    op == 'm'
 		          && direction == 't' )
 		{
+		    if ( trace )
+			printf
+			    ( "* removing %s\n", arg );
 		    if ( delfile ( arg ) < 0 )
 		    {
 			error_found = 1;
@@ -1289,6 +1364,31 @@ int execute_command ( FILE * in )
 	    }
 	}
     }
+    else if ( strcmp ( arg, "trace" ) == 0 )
+    {
+	arg = get_argument ( buffer, in );
+	if ( arg == NULL )
+	{
+	    printf ( "* efm trace %s\n",
+	             trace ? "on" : "off" );
+	}
+	else if ( strcmp ( arg, "on" ) == 0 )
+	{
+	    trace = 1;
+	    printf ( "* efm trace on\n" );
+	}
+	else if ( strcmp ( arg, "off" ) == 0 )
+	{
+	    if ( trace ) printf ( "* efm trace off\n" );
+	    trace = 0;
+	}
+	else
+	{
+	    printf ( "ERROR: bad argument to trace:"
+	             " %s\n", arg );
+	    error_found = 1;
+	}
+    }
     else
     {
         printf ( "ERROR: bad command (ignored):"
@@ -1300,8 +1400,6 @@ int execute_command ( FILE * in )
     if ( arg != NULL && ! error_found )
 	printf ( "ERROR: extra argument (ignored):"
 		 " %s\n", arg );
-    else if ( result == -1 )
-        result = 0;
 
     while ( arg != NULL )
         arg = get_argument ( buffer, in );
@@ -1369,6 +1467,7 @@ int main ( int argc, char ** argv )
 	if ( childpid < 0 ) error ( errno );
 	if ( childpid == 0 )
 	{
+	    struct stat st;
 	    close ( tofd );
 
 	    /* Temporarily reroute stdout to error
@@ -1407,23 +1506,52 @@ int main ( int argc, char ** argv )
 		    if ( indexfd < 0 ) exit ( 1 );
 		    FILE * indexf =
 		        fdopen ( indexfd, "w" );
+		    if ( trace )
+		        printf ( "* writing"
+			         " EFM-INDEX.gpg+\n" );
 		    write_index ( indexf );
 		    fclose ( indexf );
 		    if ( cwait ( indexchild ) < 0 )
 		    {
+			if ( trace )
+			    printf
+			        ( "* removing"
+			          " EFM-INDEX.gpg+\n" );
 		        unlink ( "EFM-INDEX.gpg+" );
 			printf ( "ERROR: error"
 			         " encypting"
 				 " EFM-INDEX.gpg\n" );
 			exit ( 1 );
 		    }
-		    unlink ( "EFM-INDEX.gpg-" );
+
+		    if ( stat ( "EFM-INDEX.gpg-", & st )
+		         >= 0 )
+		    {
+			if ( trace )
+			    printf
+				( "* removing"
+				  " EFM-INDEX.gpg-\n"
+			        );
+			unlink ( "EFM-INDEX.gpg-" );
+		    }
+		    if ( trace )
+			printf
+			    ( "* renaming"
+			      " EFM-INDEX.gpg to"
+			      " EFM-INDEX.gpg-\n"
+			    );
 		    if ( link ( "EFM-INDEX.gpg",
 		                "EFM-INDEX.gpg-" ) < 0
 			 &&
 			 errno != ENOENT )
 		        error ( errno );
 		    unlink ( "EFM-INDEX.gpg" );
+		    if ( trace )
+			printf
+			    ( "* renaming"
+			      " EFM-INDEX.gpg+ to"
+			      " EFM-INDEX.gpg\n"
+			    );
 		    if ( link ( "EFM-INDEX.gpg+",
 		                "EFM-INDEX.gpg" ) < 0 )
 		        error ( errno );
