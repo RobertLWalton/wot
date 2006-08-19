@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Sat Aug 19 16:09:04 EDT 2006
+** Date:	Sat Aug 19 17:09:26 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/19 21:01:03 $
+**   $Date: 2006/08/19 21:24:52 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.31 $
+**   $Revision: 1.32 $
 */
 
 #include <stdio.h>
@@ -259,6 +259,9 @@ struct comment * first_comment = NULL;
  * must be separated by whitespace.  This function
  * modifies the buffer pointer to point to the next
  * lexeme.  If there are no lexemes, NULL is returned.
+ *
+ * This function modifies the lexeme in the buffer to
+ * produce its result.
  */
 char * get_lexeme ( char ** buffer )
 {
@@ -304,7 +307,7 @@ void put_lexeme ( char ** buffer, const char * lexeme )
     while ( * p && ! quote )
     {
         char c = * p ++;
-	quote = ( c <= ' ' || c >= 0177 || c == '"'
+	quote = ( c <= ' ' || c == 0177 || c == '"'
 				        || c == '#' );
     }
     if ( ! quote )
@@ -391,7 +394,21 @@ void read_index ( FILE * f )
 	    exit ( 1 );
 	}
 	char * mode = get_lexeme ( & b );
+	if ( mode == NULL )
+	{
+	    printf ( "ERROR: index entry mode missing"
+		     "\n    for %s entry",
+		     filename );
+	    exit ( 1 );
+	}
 	char * mtime = get_lexeme ( & b );
+	if ( mtime == NULL )
+	{
+	    printf ( "ERROR: index entry modification"
+	             "time missing\n    for %s entry",
+		     filename );
+	    exit ( 1 );
+	}
 	if ( get_lexeme ( & b ) )
 	{
 	    printf ( "ERROR: stuff on line after"
@@ -438,7 +455,21 @@ void read_index ( FILE * f )
 	    exit ( 1 );
 	}
 	char * md5sum = get_lexeme ( & b );
+	if ( md5sum == NULL )
+	{
+	    printf ( "ERROR: index entry MD5 sum"
+	             " missing\n    for %s entry",
+		     filename );
+	    exit ( 1 );
+	}
 	char * key = get_lexeme ( & b );
+	if ( key == NULL )
+	{
+	    printf ( "ERROR: index entry key"
+	             " missing\n    for %s entry",
+		     filename );
+	    exit ( 1 );
+	}
 	if ( get_lexeme ( & b ) )
 	{
 	    printf ( "ERROR: stuff on line after"
@@ -591,7 +622,9 @@ void newkey ( char * buffer )
     int fd = open ( "/dev/random", O_RDONLY );
     if ( fd < 0 ) error ( errno );
     unsigned char b[16];
-    if ( read ( fd, b, 16 ) < 0 ) error ( errno );
+    int size = read ( fd, b, 16 );
+    if ( size < 0 ) error ( errno );
+    assert ( size == 16 );
     close ( fd );
 
     sprintf ( buffer,
@@ -613,7 +646,8 @@ void newkey ( char * buffer )
  *
  * Output files are created, truncated if they exist,
  * and given user only read/write mode.  Password is
- * plength string of bytes.  If error, return -1.
+ * plength string of bytes.  If error, returns -1
+ * and writes error messages to stdout.
  */
 int crypt ( int decrypt,
             const char * input,
@@ -692,6 +726,7 @@ int crypt ( int decrypt,
 	close ( outfd );
 	if ( passfd != 3 )
 	{
+	    close ( 3 );
 	    if ( dup2 ( passfd, 3 ) < 0 )
 		error ( errno );
 	    close ( passfd );
@@ -777,7 +812,7 @@ int md5sum ( char * buffer,
     line_buffer line;
     int e = -1;
 
-    if ( fgets ( line, sizeof ( line ), inf ) )
+    if ( get_line ( line, inf ) )
     {
         char * p = line;
 	for ( ; * p; ++ p )
@@ -808,7 +843,7 @@ int md5sum ( char * buffer,
 /* Copy file.  0 is returned on success, -1 on error.
  * Error messages are written on stdout.  The mode
  * and mtime of the file are preserved.  The filenames
- * may have the format acceptable to scp.
+ * may have any format acceptable to scp.
  */
 int copyfile
 	( const char * source, const char * target )
@@ -850,7 +885,6 @@ int copyfile
  */
 int delfile ( const char * filename )
 {
-    fflush ( stdout );
     line_buffer buffer;
     strcpy ( buffer, filename );
     char * p = buffer;
@@ -885,6 +919,7 @@ int delfile ( const char * filename )
      * within account.
      */
 
+    fflush ( stdout );
     int child = fork();
     if ( child < 0 ) error ( errno );
 
@@ -925,6 +960,13 @@ int add ( const char * filename )
 	return -1;
     }
 
+    struct stat s;
+    if ( stat ( filename, & s ) < 0 )
+    {
+        printf ( "ERROR: cannot stat %s\n", filename );
+	return -1;
+    }
+
     char sum [33];
     if ( md5sum ( sum, filename ) < 0 ) return -1;
     struct entry * e = find_md5sum ( sum );
@@ -934,13 +976,6 @@ int add ( const char * filename )
 	         " %s\n    as it has the same MD5 sum"
 		 " as existing entry for %s\n",
 		 filename, e->filename );
-	return -1;
-    }
-
-    struct stat s;
-    if ( stat ( filename, & s ) < 0 )
-    {
-        printf ( "ERROR: cannot stat %s\n", filename );
 	return -1;
     }
 
@@ -1592,6 +1627,17 @@ int main ( int argc, char ** argv )
 	    printf ( "ERROR: program argument too long:"
 	             " %s\n", * argp );
 	    exit ( 1 );
+	}
+	const char * p = * argp;
+	while ( * p )
+	{
+	    if ( * p ++ == '\n')
+	    {
+		printf ( "ERROR: program argument"
+		         " contains line feed: %s\n",
+			 * argp );
+		exit ( 1 );
+	    }
 	}
 	put_lexeme ( & b , * argp );
 	* b ++ = 0;
