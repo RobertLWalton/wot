@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Sat Aug 19 17:09:26 EDT 2006
+** Date:	Sun Aug 20 02:45:09 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/19 21:24:52 $
+**   $Date: 2006/08/20 07:26:10 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.32 $
+**   $Revision: 1.33 $
 */
 
 #include <stdio.h>
@@ -42,7 +42,10 @@ char documentation [] =
 "efm copyfrom source file ...\n"
 "efm check source file ...\n"
 "efm remove target file ...\n"
+"\n"
 "efm list\n"
+"efm listed file ...\n"
+"efm md5check file ...\n"
 "\n"
 "efm start\n"
 "efm kill\n"
@@ -53,6 +56,7 @@ char documentation [] =
 "\n"
 "efm trace on\n"
 "efm trace off\n"
+"efm trace\n"
 "\n"
 "    Each file may have an encrypted version in the\n"
 "    target/source directory.  The file can be moved\n"
@@ -72,6 +76,20 @@ char documentation [] =
 "    The \"list\" command lists all encrypted files\n"
 "    and for each its MD5sum, modification time, and\n"
 "    protection mode.\n"
+"\n"
+"    The \"listed\" command returns true (exit\n"
+"    status 0) if every file is in the index, or\n"
+"    false (exit status 1) otherwise.  Nothing is\n"
+"    printed.\n"
+"\n"
+"    The \"md5check\" command checks that every file\n"
+"    exists, is in the index, and has an md5sum that\n"
+"    matches that in the index.\n"
+"\n"
+"    This program returns exit status 0 if there is\n"
+"    no error and if there is an error, returns exit\n"
+"    status 1 and prints the error message to the\n"
+"    standard output.\n"
 "\n"
 "    File names must be relative to the current di-\n"
 "    rectory.  Source and target names can be any di-\n"
@@ -102,7 +120,9 @@ char documentation [] =
 "\n"
 "    The \"trace\" commands turn tracing on/off.\n"
 "    When on, actions are annotated on the standard\n"
-"    output by lines beginning with \"* \".\n"
+"    output by lines beginning with \"* \".  The\n"
+"    \"trace\" command without any \"on\" or \"off\"\n"
+"    argument just prints the current trace status.\n"
 "\n"
 "    The index file contains three line entries of\n"
 "    the form:\n"
@@ -331,7 +351,8 @@ void put_lexeme ( char ** buffer, const char * lexeme )
     }
 }
 
-/* Read index from file stream.
+/* Read index from file stream.  On error prints error
+ * message to stdout and does exit ( 1 );
  */
 void read_index ( FILE * f )
 {
@@ -1068,13 +1089,18 @@ char * get_argument ( line_buffer buffer, FILE * in )
 
 /* Execute one command.  Arguments are gotten from the
  * input stream via get_argument, and results are writ-
- * ten to stdout.  Return 1 to if kill command processed
- * (do nothing else for kill), and 0 otherwise.
+ * ten to stdout.  Return 1 to if kill command proces-
+ * sed (do nothing else for kill), 0 if command proces-
+ * sed without error, and -1 if command processed with
+ * error.
  */
 int execute_command ( FILE * in )
 {
     int result = 0;
-    int error_found = 0;
+        /* Special value: -2 to return -1 but without
+	 * there being any actual error.
+	 */
+
     line_buffer buffer, directory;
     eol_found = 0;
     char * arg = get_argument ( buffer, in );
@@ -1089,18 +1115,66 @@ int execute_command ( FILE * in )
     }
     else if ( strcmp ( arg, "list" ) == 0 )
 	write_index ( stdout );
+    else if ( strcmp ( arg, "listed" ) == 0 )
+    {
+        while ( arg = get_argument ( buffer, in ) )
+	{
+	    if ( find_filename ( arg ) == NULL )
+	        result = -2;
+	}
+    }
+    else if ( strcmp ( arg, "md5check" ) == 0 )
+    {
+        while ( arg = get_argument ( buffer, in ) )
+	{
+	    struct entry * e = find_filename ( arg );
+	    if ( e == NULL )
+	    {
+	        printf ( "ERROR: %s is not in"
+		         " index\n", arg );
+		result = -1;
+		continue;
+	    }
+	    struct stat st;
+	    if ( stat ( arg, & st ) < 0 )
+	    {
+	        printf ( "ERROR: %s does not"
+		         " exist\n", arg );
+		result = -1;
+		continue;
+	    }
+	    char sum [33];
+	    if ( md5sum ( sum, arg ) < 0 )
+	    {
+		result = -1;
+		continue;
+	    }
+	    if ( strcmp ( sum, e->md5sum ) != 0 )
+	    {
+		printf ( "ERROR: MD5 sum %s\n"
+			 "    of existing file"
+			 " %s\n"
+			 "    does not match"
+			 " the MD5 sum %s in"
+			 " the index\n",
+			 sum, arg, e->md5sum );
+		result = -1;
+		continue;
+	    }
+	}
+    }
     else if ( strcmp ( arg, "add" ) == 0 )
     {
         while ( arg = get_argument ( buffer, in ) )
 	{
-	    if ( add ( arg ) < 0 ) error_found = 1;
+	    if ( add ( arg ) < 0 ) result = -1;
 	}
     }
     else if ( strcmp ( arg, "sub" ) == 0 )
     {
         while ( arg = get_argument ( buffer, in ) )
 	{
-	    if ( sub ( arg ) < 0 ) error_found = 1;
+	    if ( sub ( arg ) < 0 ) result = -1;
 	}
     }
     else if (    strcmp ( arg, "copyto" ) == 0
@@ -1119,7 +1193,7 @@ int execute_command ( FILE * in )
 	if ( dbegin == NULL )
 	{
 	    printf ( "ERROR: missing directory" );
-	    error_found = 1;
+	    result = -1;
 	}
 	else
 	{
@@ -1140,12 +1214,12 @@ int execute_command ( FILE * in )
 		    {
 		        printf ( "ERROR: no index entry"
 			         " exists for ", arg );
-			error_found = 1;
+			result = -1;
 			continue;
 		    }
 		    if ( add ( arg ) < 0 )
 		    {
-			error_found = 1;
+			result = -1;
 			continue;
 		    }
 		    e = find_filename ( arg );
@@ -1156,26 +1230,26 @@ int execute_command ( FILE * in )
 		    char sum [33];
 		    if ( md5sum ( sum, arg ) < 0 )
 		    {
-			error_found = 1;
+			result = -1;
 			continue;
 		    }
 		    if ( strcmp ( sum, e->md5sum )
 		         != 0 )
 		    {
-		        printf ( "ERROR: M5 sum %s\n"
+		        printf ( "ERROR: MD5 sum %s\n"
 			         "    of existing file"
 				 " %s\n"
 				 "    does not match"
 				 " the MD5 sum %s in"
 				 " the index\n",
 				 sum, arg, e->md5sum );
-			error_found = 1;
+			result = -1;
 			continue;
 		    }
 		} else if ( direction == 't' ) {
 		    printf ( "ERROR: file not found:"
 		             " %s\n", arg );
-		    error_found = 1;
+		    result = -1;
 		    continue;
 		}
 
@@ -1199,7 +1273,7 @@ int execute_command ( FILE * in )
 		    {
 		        printf ( "ERROR: could not"
 			         " encrypt %s\n", arg );
-			error_found = 1;
+			result = -1;
 			continue;
 		    }
 		    if ( trace )
@@ -1211,7 +1285,7 @@ int execute_command ( FILE * in )
 		    {
 		        printf ( "ERROR: cannot chmod"
 			         " %s\n", efile );
-			error_found = 1;
+			result = -1;
 			continue;
 		    }
 		    if ( ! current_directory )
@@ -1221,7 +1295,7 @@ int execute_command ( FILE * in )
 			             dbegin );
 			if ( delfile ( dbegin ) < 0 )
 			{
-			    error_found = 1;
+			    result = -1;
 			    continue;
 			}
 			if ( trace )
@@ -1231,7 +1305,7 @@ int execute_command ( FILE * in )
 			if ( copyfile ( efile, dbegin )
 			     < 0 )
 			{
-			    error_found = 1;
+			    result = -1;
 			    continue;
 			}
 			if ( trace )
@@ -1253,7 +1327,7 @@ int execute_command ( FILE * in )
 			if ( copyfile ( dbegin, efile )
 			     < 0 )
 			{
-			    error_found = 1;
+			    result = -1;
 			    continue;
 			}
 		    }
@@ -1263,7 +1337,7 @@ int execute_command ( FILE * in )
 			         "    (%s) does not"
 				 " exist\n",
 				 arg, efile );
-			error_found = 1;
+			result = -1;
 			continue;
 		    }
 		    if ( trace )
@@ -1279,7 +1353,7 @@ int execute_command ( FILE * in )
 				 " decrypt %s\n"
 				 "    for %s\n",
 				 efile, arg );
-			error_found = 1;
+			result = -1;
 			continue;
 		    }
 
@@ -1302,7 +1376,7 @@ int execute_command ( FILE * in )
 				 "which is the"
 				 " retrieval of %s\n",
 				 e->md5sum, arg );
-			error_found = 1;
+			result = -1;
 			continue;
 		    }
 		    if ( strcmp ( sum, e->md5sum )
@@ -1313,7 +1387,7 @@ int execute_command ( FILE * in )
 				 "bad retrieval of"
 				 " %s\n", e->md5sum,
 				 sum, arg );
-			error_found = 1;
+			result = -1;
 			continue;
 		    }
 		    if ( op != 'k' )
@@ -1331,7 +1405,7 @@ int execute_command ( FILE * in )
 			             " rename %s to"
 				     " %s\n",
 				     e->md5sum, arg );
-			    error_found = 1;
+			    result = -1;
 			    continue;
 			}
 			if ( trace )
@@ -1341,17 +1415,23 @@ int execute_command ( FILE * in )
 				  " of %s\n", arg );
 			if ( chmod ( arg, e->mode )
 			     < 0 )
+			{
 			    printf ( "ERROR: cannot"
 			             " chmod %s\n",
 				     arg );
+			    result = -1;
+			}
 			struct utimbuf ut;
 			ut.actime = time ( NULL );
 			ut.modtime = e->mtime;
 			if ( utime ( arg, & ut ) < 0 )
+			{
 			    printf ( "ERROR: cannot set"
 				     " modification"
 				     " time of %s\n",
 				     arg );
+			    result = -1;
+			}
 		    }
 		    if ( trace )
 			printf
@@ -1371,7 +1451,7 @@ int execute_command ( FILE * in )
 			      dbegin );
 		    if ( delfile ( dbegin ) < 0 )
 		    {
-			error_found = 1;
+			result = -1;
 			continue;
 		    }
 		}
@@ -1383,7 +1463,7 @@ int execute_command ( FILE * in )
 			    ( "* removing %s\n", arg );
 		    if ( delfile ( arg ) < 0 )
 		    {
-			error_found = 1;
+			result = -1;
 			continue;
 		    }
 		}
@@ -1421,25 +1501,28 @@ int execute_command ( FILE * in )
 	{
 	    printf ( "ERROR: bad argument to trace:"
 	             " %s\n", arg );
-	    error_found = 1;
+	    result = -1;
 	}
     }
     else
     {
         printf ( "ERROR: bad command (ignored):"
 	         " %s\n", arg );
-	error_found = 1;
+	result = -1;
     }
 
     arg = get_argument ( buffer, in );
-    if ( arg != NULL && ! error_found )
+    if ( arg != NULL && result != -1 )
+    {
 	printf ( "ERROR: extra argument (ignored):"
 		 " %s\n", arg );
+	result = -1;
+    }
 
     while ( arg != NULL )
         arg = get_argument ( buffer, in );
 
-    return result;
+    return result == -2 ? -1 : result;
 }
 
 char * password = NULL;
@@ -1512,8 +1595,12 @@ int main ( int argc, char ** argv )
 	    close ( 1 );
 	    dup2 ( 2, 1 );
 
-	    int done = 0;
-	    while ( ! done )
+	    int done = 0;  /* Res
+	        /* 0 if done without error.
+		   -1 if done with error.
+		   1 to kill (without error).
+		 */
+	    while ( done != 1 )
 	    {
 		int fromfd =
 		    accept ( listenfd, NULL, NULL );
@@ -1593,7 +1680,8 @@ int main ( int argc, char ** argv )
 		    unlink ( "EFM-INDEX.gpg+" );
 		}
 
-		printf ( "%s\n", END_STRING );
+		printf ( "%s%d\n", END_STRING,
+		         done == 1 ? 0 : - done );
 		fflush ( stdout );
 		fclose ( inf );
 		close ( 1 );
@@ -1646,7 +1734,8 @@ int main ( int argc, char ** argv )
     fprintf ( tof, "\n" );
     while ( get_line ( buffer, tof ) )
     {
-        if ( strcmp ( buffer, END_STRING ) == 0 )
+        if ( strncmp ( buffer, END_STRING,
+		       strlen ( END_STRING) ) == 0 )
 	    break;
 
 	/* Filter out unwanted missives from gpg. */
@@ -1659,5 +1748,5 @@ int main ( int argc, char ** argv )
 	if ( * fp == NULL ) printf ( "%s\n", buffer );
     }
     fclose ( tof );
-    exit (0);
+    exit ( atoi ( buffer + strlen ( END_STRING ) ) );
 }
