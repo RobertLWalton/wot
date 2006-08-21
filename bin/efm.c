@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Mon Aug 21 06:02:34 EDT 2006
+** Date:	Mon Aug 21 06:24:08 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/21 10:23:10 $
+**   $Date: 2006/08/21 10:43:22 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.34 $
+**   $Revision: 1.35 $
 */
 
 #include <stdio.h>
@@ -398,15 +398,15 @@ void read_index ( FILE * f )
 	if ( get_lexeme ( & b ) )
 	{
 	    printf ( "ERROR: stuff on line after"
-		     " filename for file %s\n",
+		     " filename,\n    for file %s\n",
 		     filename );
 	    exit ( 1 );
 	}
 
 	if ( ! get_line ( buffer, f ) )
 	{
-	    printf ( "ERROR: premature end of entry"
-		     " for file %s\n", filename );
+	    printf ( "ERROR: premature end of entry,\n"
+		     "    for file %s\n", filename );
 	    exit ( 1 );
 	}
 	b = buffer;
@@ -414,7 +414,7 @@ void read_index ( FILE * f )
 	{
 	    printf ( "ERROR: index entry non-first line"
 	             " does not begin with"
-		     " space,\n    for %s entry",
+		     " space,\n    for file %s",
 		     filename );
 	    exit ( 1 );
 	}
@@ -422,7 +422,7 @@ void read_index ( FILE * f )
 	if ( mode == NULL )
 	{
 	    printf ( "ERROR: index entry mode missing"
-		     "\n    for %s entry",
+		     "\n    for file %s",
 		     filename );
 	    exit ( 1 );
 	}
@@ -430,14 +430,15 @@ void read_index ( FILE * f )
 	if ( mtime == NULL )
 	{
 	    printf ( "ERROR: index entry modification"
-	             "time missing\n    for %s entry",
+	             "time missing\n    for file %s",
 		     filename );
 	    exit ( 1 );
 	}
 	if ( get_lexeme ( & b ) )
 	{
 	    printf ( "ERROR: stuff on line after"
-		     " mode and mtime for file %s\n",
+		     " mode and mtime,\n"
+		     "    for file %s\n",
 		     filename );
 	    exit ( 1 );
 	}
@@ -445,8 +446,8 @@ void read_index ( FILE * f )
 	unsigned long m = strtoul ( mode, & q, 8 );
 	if ( * q || m >= ( 1 << 16 ) )
 	{
-	    printf ( "ERROR: bad EFM-INDEX mode (%s)"
-	             " for file %s\n",
+	    printf ( "ERROR: bad EFM-INDEX mode (%s),\n"
+	             "    for file %s\n",
 		     mode, filename );
 	    exit ( 1 );
 	}
@@ -458,16 +459,16 @@ void read_index ( FILE * f )
 	           mktime ( & td );
 	if ( d == -1 )
 	{
-	    printf ( "ERROR: bad EFM-INDEX mtime (%s)"
-	             " for file %s\n",
+	    printf ( "ERROR: bad EFM-INDEX mtime"
+	             " (%s),\n    for file %s\n",
 		     mtime, filename );
 	    exit ( 1 );
 	}
 
 	if ( ! get_line ( buffer, f ) )
 	{
-	    printf ( "ERROR: premature end of entry"
-		     " for file %s\n", filename );
+	    printf ( "ERROR: premature end of entry,\n"
+		     "    for file %s\n", filename );
 	    exit ( 1 );
 	}
 	b = buffer;
@@ -475,7 +476,7 @@ void read_index ( FILE * f )
 	{
 	    printf ( "ERROR: index entry non-first line"
 	             " does not begin with"
-		     " space,\n    for %s entry",
+		     " space,\n    for file %s",
 		     filename );
 	    exit ( 1 );
 	}
@@ -483,7 +484,7 @@ void read_index ( FILE * f )
 	if ( md5sum == NULL )
 	{
 	    printf ( "ERROR: index entry MD5 sum"
-	             " missing\n    for %s entry",
+	             " missing\n    for file %s",
 		     filename );
 	    exit ( 1 );
 	}
@@ -491,28 +492,29 @@ void read_index ( FILE * f )
 	if ( key == NULL )
 	{
 	    printf ( "ERROR: index entry key"
-	             " missing\n    for %s entry",
+	             " missing\n    for file %s",
 		     filename );
 	    exit ( 1 );
 	}
 	if ( get_lexeme ( & b ) )
 	{
 	    printf ( "ERROR: stuff on line after"
-		     " MD5 sum and key for file %s\n",
+		     " MD5 sum and key,\n"
+		     "    for file %s\n",
 		     filename );
 	    exit ( 1 );
 	}
 	if ( strlen ( md5sum ) != 32 )
 	{
-	    printf ( "ERROR: bad EFM-INDEX md5sum (%s)"
-	             " for file %s\n",
+	    printf ( "ERROR: bad EFM-INDEX md5sum (%s),"
+	             "\n    for file %s\n",
 		     md5sum, filename );
 	    exit ( 1 );
 	}
 	if ( strlen ( key ) != 32 )
 	{
-	    printf ( "ERROR: bad EFM-INDEX key (%s)"
-	             " for file %s\n",
+	    printf ( "ERROR: bad EFM-INDEX key (%s),\n"
+	             "    for file %s\n",
 		     key, filename );
 	    exit ( 1 );
 	}
@@ -801,11 +803,13 @@ int crypt ( int decrypt,
 	return result;
 }
 
-/* Compute the MD5 sum of a file.  The 32 character
- * md5sum followed by a NUL is returned in the buffer,
- * which must be at least 33 characters long.  0 is
- * returned on success, -1 on error.  Error messages
- * are written on stdout.
+/* Compute the MD5 sum of a file.  The filename may have
+ * any format acceptable to scp, and must not be longer
+ * than MAX_LEXEME_SIZE.  The 32 character md5sum
+ * followed by a NUL is returned in the buffer, which
+ * must be at least 33 characters long.  0 is returned
+ * on success, -1 on error.  Error messages are written
+ * on stdout.
  */
 int md5sum ( char * buffer,
              const char * filename )
@@ -840,9 +844,38 @@ int md5sum ( char * buffer,
 	int d = getdtablesize();
 	while ( d > 2 ) close ( d -- );
 
-	if ( execlp ( "md5sum", "md5sum",
-	              filename, NULL ) < 0 )
-	    error ( errno );
+	line_buffer buffer;
+	strcpy ( buffer, filename );
+	char * p = buffer;
+	int at_found = 0;
+	for ( ; * p; ++ p )
+	{
+	    if ( * p == '@' )
+	    {
+		if ( at_found ) break;
+		at_found = 1;
+	    }
+	    else if ( * p == ':' ) break;
+	}
+
+	if ( * p != ':' || ! at_found )
+	{
+	    /* Not a remote file. */
+
+	    if ( execlp ( "md5sum", "md5sum",
+			  filename, NULL ) < 0 )
+		error ( errno );
+	}
+	else
+	{
+	    /* Remote file. */
+
+	    * p ++ = 0;
+
+	    if ( execlp ( "ssh", "buffer", "md5sum",
+			  p, NULL ) < 0 )
+		error ( errno );
+	}
     }
 
     close ( fd[1] );
@@ -1235,7 +1268,8 @@ int execute_command ( FILE * in )
 		    if ( direction != 't' )
 		    {
 		        printf ( "ERROR: no index entry"
-			         " exists for ", arg );
+			         " exists for %s\n",
+				 arg );
 			result = -1;
 			continue;
 		    }
@@ -1285,8 +1319,8 @@ int execute_command ( FILE * in )
 		if ( direction == 't' )
 		{
 		    if ( trace )
-		        printf ( "* encrypting %s to"
-			         " make %s\n",
+		        printf ( "* encrypting %s\n"
+			         "    to make %s\n",
 				 arg, efile );
 		    unlink ( efile );
 		    if ( crypt ( 0, arg, efile,
@@ -1299,8 +1333,9 @@ int execute_command ( FILE * in )
 			continue;
 		    }
 		    if ( trace )
-		        printf ( "* changing mode of %s"
-			         " to user-only"
+		        printf ( "* changing mode of"
+			         " %s\n"
+			         "    to user-only"
 				 " read-only\n",
 				 efile );
 		    if ( chmod ( efile, S_IRUSR ) < 0 )
@@ -1321,8 +1356,8 @@ int execute_command ( FILE * in )
 			    continue;
 			}
 			if ( trace )
-			    printf ( "* copying %s to"
-			             " %s\n",
+			    printf ( "* copying %s\n"
+			             "    to %s\n",
 			             efile, dbegin );
 			if ( copyfile ( efile, dbegin )
 			     < 0 )
@@ -1342,8 +1377,8 @@ int execute_command ( FILE * in )
 		    if ( ! current_directory )
 		    {
 			if ( trace )
-			    printf ( "* copying %s to"
-			             " %s\n",
+			    printf ( "* copying %s\n"
+			             "    to %s\n",
 			             dbegin, efile );
 			unlink ( efile );
 			if ( copyfile ( dbegin, efile )
@@ -1363,8 +1398,8 @@ int execute_command ( FILE * in )
 			continue;
 		    }
 		    if ( trace )
-		        printf ( "* decrypting %s to"
-			         " make %s\n",
+		        printf ( "* decrypting %s\n"
+			         "    to make %s\n",
 				 efile, e->md5sum );
 		    unlink ( e->md5sum );
 		    if ( crypt ( 1, efile, e->md5sum,
@@ -1416,16 +1451,16 @@ int execute_command ( FILE * in )
 		    {
 			if ( trace )
 			    printf
-				( "* linking %s to"
-				  " %s\n",
+				( "* linking %s\n"
+				  "    to %s\n",
 				  e->md5sum, arg );
 		        unlink ( arg );
 			if ( link ( e->md5sum, arg )
 			     < 0 )
 			{
 			    printf ( "ERROR: cannot"
-			             " rename %s to"
-				     " %s\n",
+			             " rename %s\n"
+				     "    to %s\n",
 				     e->md5sum, arg );
 			    result = -1;
 			    continue;
