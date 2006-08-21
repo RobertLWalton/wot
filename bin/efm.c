@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Sun Aug 20 02:45:09 EDT 2006
+** Date:	Mon Aug 21 06:02:34 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/20 07:26:10 $
+**   $Date: 2006/08/21 10:23:10 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.33 $
+**   $Revision: 1.34 $
 */
 
 #include <stdio.h>
@@ -44,6 +44,8 @@ char documentation [] =
 "efm remove target file ...\n"
 "\n"
 "efm list\n"
+"efm listkeys\n"
+"efm listfiles\n"
 "efm listed file ...\n"
 "efm md5check file ...\n"
 "\n"
@@ -75,7 +77,9 @@ char documentation [] =
 "\n"
 "    The \"list\" command lists all encrypted files\n"
 "    and for each its MD5sum, modification time, and\n"
-"    protection mode.\n"
+"    protection mode.  The \"listkeys\" command does\n"
+"    the same but includes the file encryption key.\n"
+"    The \"listfiles\" command only lists file names.\n"
 "\n"
 "    The \"listed\" command returns true (exit\n"
 "    status 0) if every file is in the index, or\n"
@@ -534,9 +538,12 @@ void read_index ( FILE * f )
 }
 
 /* Write index entry into file stream.
+ * Mode is 0 to list only file names, 1 to list
+ * everything but keys, and 2 to list everything.
+ * Prefix is prefixed to each line output.
  */
 void write_index_entry
-	( FILE * f, struct entry * e,
+	( FILE * f, struct entry * e, int mode,
 	  const char * prefix )
 {
     line_buffer buffer;
@@ -544,6 +551,8 @@ void write_index_entry
     put_lexeme ( & b, e->filename );
     * b = 0;
     fprintf ( f, "%s%s\n", prefix, buffer );
+    if ( mode == 0 ) return;
+
     b = buffer;
     strcpy ( b, "    " );
     b += 4;
@@ -560,23 +569,32 @@ void write_index_entry
     strcpy ( b, "    " );
     b += 4;
     put_lexeme ( & b, e->md5sum );
-    * b ++ = ' ';
-    put_lexeme ( & b, e->key );
+    if ( mode == 2 )
+    {
+	* b ++ = ' ';
+	put_lexeme ( & b, e->key );
+    }
     * b = 0;
     fprintf ( f, "%s%s\n", prefix, buffer );
 }
 
-/* Write index into file stream.
+/* Write index into file stream.  Mode is as per
+ * write_index_entry.  Comments are not listed if
+ * mode == 0.
  */
-void write_index ( FILE * f )
+void write_index ( FILE * f, int mode )
 {
-    struct comment * c = first_comment;
-    if ( c ) do
+    if ( mode != 0 )
     {
-        fprintf ( f, "%s\n", c->line );
-    } while ( ( c = c->next ) != first_comment );
+	struct comment * c = first_comment;
+	if ( c ) do
+	{
+	    fprintf ( f, "%s\n", c->line );
+	} while ( ( c = c->next ) != first_comment );
+    }
+
     struct entry * e = first_entry;
-    if ( e ) do write_index_entry ( f, e, "" );
+    if ( e ) do write_index_entry ( f, e, mode, "" );
     while ( ( e = e->next ) != first_entry );
 }
 
@@ -1022,7 +1040,7 @@ int add ( const char * filename )
     if ( trace )
     {
         printf ( "* added index entry:\n" );
-	write_index_entry ( stdout, e, "* " );
+	write_index_entry ( stdout, e, 2, "* " );
     }
     return 0;
 }
@@ -1042,7 +1060,7 @@ int sub ( const char * filename )
     if ( trace )
     {
         printf ( "* removing index entry:\n" );
-	write_index_entry ( stdout, e, "* " );
+	write_index_entry ( stdout, e, 2, "* " );
     }
     e->next->previous = e->previous;
     e->previous->next = e->next;
@@ -1113,8 +1131,12 @@ int execute_command ( FILE * in )
 	printf ( "efm killed\n" );
         result = 1;
     }
+    else if ( strcmp ( arg, "listfiles" ) == 0 )
+	write_index ( stdout, 0 );
     else if ( strcmp ( arg, "list" ) == 0 )
-	write_index ( stdout );
+	write_index ( stdout, 1 );
+    else if ( strcmp ( arg, "listkeys" ) == 0 )
+	write_index ( stdout, 2 );
     else if ( strcmp ( arg, "listed" ) == 0 )
     {
         while ( arg = get_argument ( buffer, in ) )
@@ -1631,7 +1653,7 @@ int main ( int argc, char ** argv )
 		    if ( trace )
 		        printf ( "* writing"
 			         " EFM-INDEX.gpg+\n" );
-		    write_index ( indexf );
+		    write_index ( indexf, 2 );
 		    fclose ( indexf );
 		    if ( cwait ( indexchild ) < 0 )
 		    {
