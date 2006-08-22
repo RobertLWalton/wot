@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Tue Aug 22 01:13:02 EDT 2006
+** Date:	Tue Aug 22 08:05:33 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/22 05:12:35 $
+**   $Date: 2006/08/22 12:06:48 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.37 $
+**   $Revision: 1.38 $
 */
 
 #include <stdio.h>
@@ -74,7 +74,7 @@ char documentation [] =
 "    \"check\" command is like \"copyfrom\" followed\n"
 "    by discarding the decrypted file.  Neither of\n"
 "    these two commands affects the decrypted file.\n"
-"\n"
+"\f\n"
 "    The \"list\" command lists all encrypted files\n"
 "    and for each its MD5sum, modification time, and\n"
 "    protection mode.  The \"listkeys\" command does\n"
@@ -108,7 +108,7 @@ char documentation [] =
 "    initial empty EFM-INDEX.gpg file by using the\n"
 "    gpg program.  You choose the password that pro-\n"
 "    tects this index when you create it using gpg.\n"
-"\n"
+"\f\n"
 "    The efm program asks for a password to decrypt\n"
 "    the index only the first time it is run during\n"
 "    a login session.  It then sets up a background\n"
@@ -142,7 +142,7 @@ char documentation [] =
 "    by a pair of quotes (\"\").  The mtime will\n"
 "    always be quoted, and is Greenwich Mean Time\n"
 "    (GMT).\n"
-"\n"
+"\f\n"
 "    Lines at the beginning of the index file whose\n"
 "    first character is # are comment lines, and are\n"
 "    preserved.  Blank lines are forbidden.  Comment\n"
@@ -169,7 +169,7 @@ char documentation [] =
 "    tation of a 128 bit random number.  However, it\n"
 "    is this 32 character representation, and NOT\n"
 "    the number, that is the key.\n"
-"\n"
+"\f\n"
 "    The \"add\" command creates a file entry without\n"
 "    encrypting or moving a file.  The \"sub\" com-\n"
 "    mand deletes a file entry without decrypting or\n"
@@ -1396,7 +1396,8 @@ int execute_command ( FILE * in )
 				     " match that of %s"
 				     " (%s)\n",
 			             efile, efile_sum,
-				     dbegin, dbegin_sum );
+				     dbegin,
+				     dbegin_sum );
 			    result = -1;
 			    continue;
 			}
