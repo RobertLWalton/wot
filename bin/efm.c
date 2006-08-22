@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Tue Aug 22 00:26:37 EDT 2006
+** Date:	Tue Aug 22 01:13:02 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/22 05:05:28 $
+**   $Date: 2006/08/22 05:12:35 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.36 $
+**   $Revision: 1.37 $
 */
 
 #include <stdio.h>
@@ -872,8 +872,8 @@ int md5sum ( char * buffer,
 
 	    * p ++ = 0;
 
-	    if ( execlp ( "ssh", "buffer", "md5sum",
-			  p, NULL ) < 0 )
+	    if ( execlp ( "ssh", "ssh", buffer,
+	                  "md5sum", p, NULL ) < 0 )
 		error ( errno );
 	}
     }
@@ -1012,8 +1012,8 @@ int delfile ( const char * filename )
 	int d = getdtablesize();
 	while ( d > 2 ) close ( d -- );
 
-	if ( execlp ( "ssh", "buffer", "rm", "-f",
-	              p, NULL ) < 0 )
+	if ( execlp ( "ssh", "ssh", buffer,
+	              "rm", "-f", p, NULL ) < 0 )
 	    error ( errno );
     }
 
