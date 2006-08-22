@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Mon Aug 21 06:24:08 EDT 2006
+** Date:	Tue Aug 22 00:26:37 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/21 10:43:22 $
+**   $Date: 2006/08/22 05:05:28 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.35 $
+**   $Revision: 1.36 $
 */
 
 #include <stdio.h>
@@ -1320,7 +1320,7 @@ int execute_command ( FILE * in )
 		{
 		    if ( trace )
 		        printf ( "* encrypting %s\n"
-			         "    to make %s\n",
+			         "*     to make %s\n",
 				 arg, efile );
 		    unlink ( efile );
 		    if ( crypt ( 0, arg, efile,
@@ -1335,7 +1335,7 @@ int execute_command ( FILE * in )
 		    if ( trace )
 		        printf ( "* changing mode of"
 			         " %s\n"
-			         "    to user-only"
+			         "*     to user-only"
 				 " read-only\n",
 				 efile );
 		    if ( chmod ( efile, S_IRUSR ) < 0 )
@@ -1357,11 +1357,46 @@ int execute_command ( FILE * in )
 			}
 			if ( trace )
 			    printf ( "* copying %s\n"
-			             "    to %s\n",
+			             "*     to %s\n",
 			             efile, dbegin );
 			if ( copyfile ( efile, dbegin )
 			     < 0 )
 			{
+			    result = -1;
+			    continue;
+			}
+			if ( trace )
+			    printf ( "* comparing MD5"
+			             " sums of %s\n"
+				     "*     and %s\n",
+			             efile, dbegin );
+			char efile_sum[33];
+			char dbegin_sum[33];
+			if ( md5sum ( efile_sum,
+			              efile )
+			     < 0 )
+			{
+			    result = -1;
+			    continue;
+			}
+			if ( md5sum ( dbegin_sum,
+				      dbegin )
+			     < 0 )
+			{
+			    result = -1;
+			    continue;
+			}
+			if ( strcmp ( efile_sum,
+				      dbegin_sum )
+			     != 0 )
+			{
+			    printf ( "ERROR: MD5 sum of"
+			             " %s (%s)\n"
+				     "    does not"
+				     " match that of %s"
+				     " (%s)\n",
+			             efile, efile_sum,
+				     dbegin, dbegin_sum );
 			    result = -1;
 			    continue;
 			}
@@ -1378,7 +1413,7 @@ int execute_command ( FILE * in )
 		    {
 			if ( trace )
 			    printf ( "* copying %s\n"
-			             "    to %s\n",
+			             "*     to %s\n",
 			             dbegin, efile );
 			unlink ( efile );
 			if ( copyfile ( dbegin, efile )
@@ -1399,7 +1434,7 @@ int execute_command ( FILE * in )
 		    }
 		    if ( trace )
 		        printf ( "* decrypting %s\n"
-			         "    to make %s\n",
+			         "*     to make %s\n",
 				 efile, e->md5sum );
 		    unlink ( e->md5sum );
 		    if ( crypt ( 1, efile, e->md5sum,
@@ -1452,7 +1487,7 @@ int execute_command ( FILE * in )
 			if ( trace )
 			    printf
 				( "* linking %s\n"
-				  "    to %s\n",
+				  "*     to %s\n",
 				  e->md5sum, arg );
 		        unlink ( arg );
 			if ( link ( e->md5sum, arg )
