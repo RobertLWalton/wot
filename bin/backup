@@ -1,10 +1,10 @@
-#!/bin/csh -f
+#!/bin/sh
 
-# Backup a directory on a remote machine using scp/ssh.
+# Backup directories.
 #
 # File:		backup
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Wed May 31 04:13:40 EDT 2006
+# Date:		Tue Aug 22 08:24:05 EDT 2006
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,64 +13,271 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2006/05/31 08:12:11 $
+#   $Date: 2006/08/22 16:59:28 $
 #   $RCSfile: backup,v $
-#   $Revision: 1.6 $
+#   $Revision: 1.7 $
 
-switch ("$1")
-case -doc*:
-	echo "\
-backup DIRECTORY\
-\
-    Creates the files BACKUPDIR/THISHOST-DIRECTORY-DATE.tar\
-    and BACKUPDIR/THISHOST-DIRECTORY-DATE.tar.gpg.  Deletes\
-    previous versions of these files first.  Then scp's the\
-    files to ACCOUNT:ACCOUNTDIR.  In the file names, replaces\
-    any '/'s in DIRECTORY by '-'s.\
-\
-    Excludes files listed in DIRECTORY/.backup-ignore from the\
-    backup (this file is passed as the --exclude-from argument\
-    to tar).\
-\
-    Ends with\
-\
-	ssh ACCOUNT ls -ogtr \\
-	    ACCOUNTDIR/THISHOST-DIRECTORY-[0-9]*.tar*\
-\
-    BACKUPDIR, THISHOST, etc. are defined in '~/.backup.rc'."
+case "$1" in
+-doc* )
+	echo "
+backup [-tgz] [-move] [-raw] [-burn] [-check] [-clean]\
+NAME ...
+
+    Backs up the NAME'd items which are defined in
+    the file BACKUP.rc of the current directory.
+    This file contains lines of the form:
+
+    	NAME_directories="DIRECTORY ..."
+
+    to define each name.  The file must also contain
+    a line of the form
+
+    	host=THISHOST
+
+    to define THISHOST.
+
+    For each DIRECTORY creates the file THISHOST-
+    DIRECTORY-DATE.tgz in the current directory.  In
+    the name of this file, \`/'s are deleted from the
+    beginning and end of DIRECTORY and changed to \`-/'s
+    elsewhere in DIRECTORY.  Deletes any old version of
+    this file.  Excludes files listed in DIRECTORY/
+    .backup-ignore from the .tgz (.backup-ignore is
+    passed as the --exclude-from argument to tar).
+
+    Then proceeds according to the settings of the
+    BACKUP.rc.
+    
+    If BACKUP.rc file contains
+
+    	NAME_remote_directory=REMOTE_DIRECTORY
+
+    this program executes for each DIRECTORY:
+
+    	efm moveto REMOTE_DIRECTORY \\
+	    THISHOST-DIRECTORY-DATE.tgz
+
+    The REMOTE_DIRECTORY name must be acceptable to scp.
+    At the end of this program,
+
+    	efm list DIRECTORY ...
+
+    is executed listing all DIRECTORIES moved by efm.
+
+    If for a given NAME, BACKUP.rc contains
+
+    	name_make_cd=1
+
+    this program creates the file:
+
+    	THISHOST-NAME-DATE.raw
+
+    containing the raw CD image.  It then executes
+
+    	cdrecord -v [-raw] THISHOST-NAME-DATE.raw
+	eject /dev/cdrom
+
+    using the -raw option if
+
+    	use_cd_raw=1
+
+    is defined in BACKUP.rc.  The -raw option should be
+    used if your CD driver has bad firmware so the check
+    below does not work.
+
+    Lastly this program tests the CD by executing
+
+	cmp /dev/cdrom THISHOST-NAME-DATE.raw
+    	eject /dev/cdrom
+	echo THISHOST-NAME-DATE burned!
+
+    Lastly cleans up by executing
+
+    	rm THISHOST-DIRECTORY-DATE.tgz ... \\
+	   THISHOST-NAME-DATE.raw
+
+    If several CD's are made, this program pauses between
+    CD's to permit manual change of CDs.
+
+    The -tgz option suppresses the making of .tgz files,
+    which must already exist.  -move suppresses using
+    \`efm moveto' for the .tgz file.  -raw suppresses
+    making .raw files, -burn suppresses burning CD's,
+    -check suppresses checking CD's, and -clean suppres-
+    ses .tgz and .raw file removal for CD's, and changes
+    \`efm moveto' to \`efm copyto' so .tgz files are not
+    deleted by efm.
+"
     exit 1
-endsw
+    ;;
+esac
 
-source ~/.backup.rc
+source BACKUP.rc
 
-set d = `date +%Y-%m-%d`
-set n = "$1"
-while ( $n:q =~ /* )
-    set n = ` expr $n:q : '/\(.*\)$' `
-end
-while ( $n:q =~ */ )
-    set n = ` expr $n:q : '\(.*\)/$' `
-end
-set n = `echo $n | tr / -`
+tgz=1
+move=1
+raw=1
+burn=1
+check=1
+clean=1
+while test x = x
+do
+    case "$1" in
+    -tgz )	tgz=0;;
+    -move )	move=0;;
+    -raw )	raw=0;;
+    -burn )	burn=0;;
+    -check )	check=0;;
+    -clean )	clean=0;;
+    * ) break;;
+    esac
+    shift
+done
 
-set opt = ( )
-if ( -r "$1/.backup-ignore" ) then
-    set opt = ( --exclude-from "$1/.backup-ignore" )
-endif
+d=`date +%Y-%m-%d`
+efms=""
+while test "$1" != ""
+do
+    name="$1"
+    shift
+    directories=${name}_directories
+    remote=${name}_remote_directory
+    make_cd=${name}_make_cd
+    r=${host}-${name}-$d.raw
 
-echo tar cf ${BACKUPDIR}/${THISHOST}-$n-$d.tar $opt:q "$1"
-rm -f ${BACKUPDIR}/${THISHOST}-$n-$d.tar
-tar cf ${BACKUPDIR}/${THISHOST}-$n-$d.tar $opt:q "$1"
-chmod 400 ${BACKUPDIR}/${THISHOST}-$n-$d.tar
+    # Make .tgz files.
 
-echo gpg -c ${BACKUPDIR}/${THISHOST}-$n-$d.tar
-rm -f ${BACKUPDIR}/${THISHOST}-$n-$d.tar.gpg
-gpg -c ${BACKUPDIR}/${THISHOST}-$n-$d.tar
-chmod 400 ${BACKUPDIR}/${THISHOST}-$n-$d.tar.gpg
+    tgzs=""
+    for dir in ${!directories}
+    do
+	if test ! -d $dir
+	then
+	    echo "ERROR: $dir is not a directory"
+	    continue
+	fi
 
-echo ssh ${ACCOUNT} rm -f ${ACCOUNTDIR}/${THISHOST}-$n-$d.tar.gpg
-ssh ${ACCOUNT} rm -f ${ACCOUNTDIR}/${THISHOST}-$n-$d.tar.gpg
-echo scp ${BACKUPDIR}/${THISHOST}-$n-$d.tar.gpg ${ACCOUNT}:${ACCOUNTDIR}
-scp ${BACKUPDIR}/${THISHOST}-$n-$d.tar.gpg ${ACCOUNT}:${ACCOUNTDIR}
+	n="$dir"
+	while test x = x
+	do
+	    case "$n" in
+	    /*) n=` expr "$n" : '/\(.*\)$' `;;
+	    */) n=` expr "$n" : '\(.*\)/$' `;;
+	    *) break;;
+	    esac
+	done
+	n=`echo "$n" | tr / -`
 
-ssh ${ACCOUNT} ls -ogtr ${ACCOUNTDIR}/${THISHOST}-$n-'[0-9]*'.tar.gpg
+	t=${host}-$n-$d.tgz
+
+	if test $tgz -eq 1
+	then
+	    opt=""
+	    if test -r $dir/.backup-ignore
+	    then
+		opt="--exclude-from $dir/.backup-ignore"
+	    fi
+	    echo tar zcf $t $opt $dir
+	    rm -f $t
+	    tar zcf $t $opt $dir
+	    if test $? -ne 0
+	    then
+	        echo "ERROR executing tar"
+		exit 1
+	    fi
+	    chmod 400 $t
+	    if test $? -ne 0
+	    then
+	        echo "ERROR executing chmod"
+		exit 1
+	    fi
+	fi
+
+	tgzs="$tgzs $t"
+    done
+
+    # Invoke efm.
+
+    if test "${!remote}" != "" -a $move -eq 1
+    then
+        m="moveto"
+	if test $clean -eq 0 -o "${!make_cd}" == "1"
+	then
+	    m="copyto"
+	fi
+        for t in $tgzs
+	do
+	    echo efm $m "${!remote}" $t
+	    efm $m "${!remote}" $t
+	    if test $? -ne 0
+	    then
+	        echo "ERROR executing efm"
+		exit 1
+	    fi
+	    efms="$efms $t"
+	done
+    fi
+
+    # Make .raw.
+
+    if test $raw -eq 1 -a "${!make_cd}" == "1"
+    then
+	rm -f $r
+	echo mkisofs -RT -v -o $r $tgzs
+	mkisofs -RT -v -o $r $tgzs 2>&1 \
+	    | grep -v '^Writing:' \
+	    | grep -v '^Done with:' \
+	    | grep -v 'done, estinated finish'
+	if test $? -ne 0
+	then
+	    echo "ERROR executing mkisofs"
+	    exit 1
+	fi
+    fi
+
+    # Burn.
+
+    if test "${!make_cd}" == "1" -a $raw -eq 1
+    then
+        opt=""
+	if test "$use_cd_raw" == "1"
+	then
+	    opt="-raw"
+	fi
+	echo cdrecord -v $raw $r
+	cdrecord -v $raw $r
+	if test $? -ne 0
+	then
+	    echo "ERROR executing cdrecord"
+	    exit 1
+	fi
+	echo eject /dev/cdrom
+	eject /dev/cdrom
+    fi
+
+    # Check.
+
+    if test "${!make_cd}" == "1" -a $check -eq 1
+    then
+	echo cmp /dev/cdrom $r
+	cmp /dev/cdrom $r
+	if test $? -ne 0
+	then
+	    echo "ERROR executing cmp"
+	    exit 1
+	fi
+	echo eject /dev/cdrom
+	eject /dev/cdrom
+    fi
+
+    # Clean.
+
+    if test "${!make_cd}" == "1" -a $clean -eq 1
+    then
+	rm -f $r $tgzs
+    fi
+
+
+done
+
+# efm list
+exit 0
