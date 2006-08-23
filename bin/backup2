@@ -4,7 +4,7 @@
 #
 # File:		backup
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Wed Aug 23 04:27:36 EDT 2006
+# Date:		Wed Aug 23 04:43:04 EDT 2006
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2006/08/23 08:27:12 $
+#   $Date: 2006/08/23 08:43:13 $
 #   $RCSfile: backup2,v $
-#   $Revision: 1.10 $
+#   $Revision: 1.11 $
 
 case "$1" in
 -doc* )
@@ -99,8 +99,8 @@ NAME ...
     	rm THISHOST-DIRECTORY-DATE.tgz ... \\
 	   THISHOST-NAME-DATE.raw
 
-    If several CD's are made, this program pauses between
-    CD's to permit manual change of CDs.
+    If several CD's are made, this program pauses be-
+    tween CD's to permit manual change of CDs.
 
     The -tgz option suppresses the making of .tgz files,
     which must already exist.  -move suppresses using
@@ -143,10 +143,12 @@ while test "$1" != ""
 do
     name="$1"
     shift
+    next_name="$1"
     directories=${name}_directories
     remote=${name}_remote_directory
     make_cd=${name}_make_cd
-    r=${host}-${name}-$d.raw
+    cd=${host}-${name}-$d
+    r=${cd}.raw
 
     # Make .tgz files.
 
@@ -294,6 +296,24 @@ do
     if test "${!make_cd}" == "1" -a $clean -eq 1
     then
 	rm -f $r $tgzs
+    fi
+
+    # Handle CD labeling announcement and pause.
+    #
+    if test "${!make_cd}" == "1" -a $burn$check -ne 0
+    then
+        echo "CD $cd ejected; it contains:"
+	for t in $tgzs
+	do
+	    echo "    $t"
+	done
+	echo ""
+    fi
+
+    if test "$next_name" != ""
+    then
+        echo "Type ENTER to continue"
+	read -r
     fi
 
 done
