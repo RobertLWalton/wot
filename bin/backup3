@@ -4,7 +4,7 @@
 #
 # File:		backup
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Wed Aug 23 04:43:04 EDT 2006
+# Date:		Wed Aug 23 05:17:45 EDT 2006
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2006/08/23 08:43:13 $
+#   $Date: 2006/08/23 09:18:27 $
 #   $RCSfile: backup3,v $
-#   $Revision: 1.11 $
+#   $Revision: 1.12 $
 
 case "$1" in
 -doc* )
@@ -187,6 +187,12 @@ do
 		then
 		    echo efm remove "${!remote}" $t
 		    efm remove "${!remote}" $t
+		    if test $? -ne 0
+		    then
+			echo "ERROR executing" \
+			     "efm remove"
+			exit 1
+		    fi
 		    echo ""
 		fi
 	    fi
@@ -233,7 +239,7 @@ do
 	    efm $m "${!remote}" $t
 	    if test $? -ne 0
 	    then
-	        echo "ERROR executing efm"
+	        echo "ERROR executing efm $m"
 		exit 1
 	    fi
 	    echo ""
