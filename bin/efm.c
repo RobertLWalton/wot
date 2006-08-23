@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Tue Aug 22 08:05:33 EDT 2006
+** Date:	Tue Aug 22 20:08:10 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/22 12:06:48 $
+**   $Date: 2006/08/23 00:19:25 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.38 $
+**   $Revision: 1.39 $
 */
 
 #include <stdio.h>
@@ -43,9 +43,9 @@ char documentation [] =
 "efm check source file ...\n"
 "efm remove target file ...\n"
 "\n"
-"efm list\n"
-"efm listkeys\n"
-"efm listfiles\n"
+"efm list [file ...]\n"
+"efm listkeys [file ...]\n"
+"efm listfiles [file ...]\n"
 "efm listed file ...\n"
 "efm md5check file ...\n"
 "\n"
@@ -75,11 +75,13 @@ char documentation [] =
 "    by discarding the decrypted file.  Neither of\n"
 "    these two commands affects the decrypted file.\n"
 "\f\n"
-"    The \"list\" command lists all encrypted files\n"
-"    and for each its MD5sum, modification time, and\n"
-"    protection mode.  The \"listkeys\" command does\n"
-"    the same but includes the file encryption key.\n"
-"    The \"listfiles\" command only lists file names.\n"
+"    The \"list\" command lists encrypted files and\n"
+"    for each its MD5sum, modification time, and pro-\n"
+"    tection mode.  The \"listkeys\" command does the\n"
+"    same but includes the file encryption key.  The\n"
+"    \"listfiles\" command only lists file names.  If\n"
+"    no file arguments are given to these commands,\n"
+"    all files are listed.\n"
 "\n"
 "    The \"listed\" command returns true (exit\n"
 "    status 0) if every file is in the index, or\n"
@@ -1164,12 +1166,32 @@ int execute_command ( FILE * in )
 	printf ( "efm killed\n" );
         result = 1;
     }
-    else if ( strcmp ( arg, "listfiles" ) == 0 )
-	write_index ( stdout, 0 );
-    else if ( strcmp ( arg, "list" ) == 0 )
-	write_index ( stdout, 1 );
-    else if ( strcmp ( arg, "listkeys" ) == 0 )
-	write_index ( stdout, 2 );
+    else if ( strcmp ( arg, "listfiles" ) == 0
+              ||
+	      strcmp ( arg, "list" ) == 0
+              ||
+	      strcmp ( arg, "listkeys" ) == 0 )
+    {
+	int mode = ( strcmp ( arg, "listfiles" ) == 0 ?
+		     0 :
+		     strcmp ( arg, "list" ) == 0 ?
+		     1 : 2 );
+	arg = get_argument ( buffer, in );
+	if ( arg == NULL )
+	    write_index ( stdout, mode );
+	else do
+	{
+	    struct entry * e = find_filename ( arg );
+	    if ( e == NULL )
+	    {
+	        printf ( "ERROR: %s not in index\n",
+		         arg );
+		result = -1;
+	    }
+	    else write_index_entry
+	    		( stdout, e, mode, "" );
+	} while ( arg = get_argument ( buffer, in ) );
+    }
     else if ( strcmp ( arg, "listed" ) == 0 )
     {
         while ( arg = get_argument ( buffer, in ) )
