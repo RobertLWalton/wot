@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Tue Aug 22 20:08:10 EDT 2006
+** Date:	Wed Aug 23 15:04:30 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/23 00:19:25 $
+**   $Date: 2006/08/23 19:14:13 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.39 $
+**   $Revision: 1.40 $
 */
 
 #include <stdio.h>
@@ -115,14 +115,19 @@ char documentation [] =
 "    the index only the first time it is run during\n"
 "    a login session.  It then sets up a background\n"
 "    program holding the password that is accessible\n"
-"    through the socket \"EFM-INDEX.sock\".  This\n"
-"    background program dies on a hangup signal when\n"
-"    you log out, and may be killed at any time.\n"
-"    The \"kill\" command may be use to kill the\n"
-"    background process.  The \"start\" command just\n"
-"    starts the background process if it is not\n"
-"    already running, but this is also done by other\n"
-"    commands implicitly.\n"
+"    through the socket \"EFM-INDEX.sock\".  The\n"
+"    \"kill\" command may be use to kill the back-\n"
+"    ground process if it exists.  The \"start\" com-\n"
+"    mand just starts the background process if it is\n"
+"    not already running, but this is also done by\n"
+"    other commands implicitly.\n"
+"\n"
+"    It is recommended that you put\n"
+"\n"
+"            ( cd backup-directory; efm kill )\n"
+"\n"
+"    in your .logout or .bash_logout file to kill any\n"
+"    background process on logout.\n"
 "\n"
 "    The \"trace\" commands turn tracing on/off.\n"
 "    When on, actions are annotated on the standard\n"
@@ -1665,8 +1670,28 @@ int main ( int argc, char ** argv )
 		   sizeof ( sa ) ) < 0 )
     {
 	if ( errno == ECONNREFUSED )
+	{
 	    unlink ( sa.sun_path );
-	else if ( errno != ENOENT )
+	    if ( strcmp ( argv[1], "kill" ) == 0
+	         &&
+		 argc == 2 )
+	    {
+	        printf ( "efm background process"
+		         " has died on its own\n" );
+		exit ( 0 );
+	    }
+	}
+	else if ( errno == ENOENT )
+	{
+	    if ( strcmp ( argv[1], "kill" ) == 0
+	         &&
+		 argc == 2 )
+	    {
+	        printf ( "efm not running\n" );
+		exit ( 0 );
+	    }
+	}
+	else
 	    error ( errno );
 
 	const char * pass = getpass( "Password: " );
