@@ -4,7 +4,7 @@
 #
 # File:		backup
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Tue Aug 22 20:32:11 EDT 2006
+# Date:		Wed Aug 23 04:27:36 EDT 2006
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2006/08/23 00:32:08 $
+#   $Date: 2006/08/23 08:27:12 $
 #   $RCSfile: backup2,v $
-#   $Revision: 1.9 $
+#   $Revision: 1.10 $
 
 case "$1" in
 -doc* )
@@ -174,13 +174,30 @@ do
 
 	if test $tgz -eq 1
 	then
+
+	    # Clean up efm index if necessary.
+	    # We must do this before remaking existing
+	    # .tgz files or efm will not work.
+
+	    if test "${!remote}" != ""
+	    then
+		if efm listed $t
+		then
+		    echo efm remove "${!remote}" $t
+		    efm remove "${!remote}" $t
+		    echo ""
+		fi
+	    fi
+
+	    # Make .tgz file.
+
 	    opt=""
 	    if test -r $dir/.backup-ignore
 	    then
 		opt="--exclude-from $dir/.backup-ignore"
 	    fi
-	    echo tar zcf $t $opt $dir
 	    rm -f $t
+	    echo tar zcf $t $opt $dir
 	    tar zcf $t $opt $dir
 	    if test $? -ne 0
 	    then
