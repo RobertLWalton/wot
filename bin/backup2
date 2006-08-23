@@ -4,7 +4,7 @@
 #
 # File:		backup
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Tue Aug 22 13:01:12 EDT 2006
+# Date:		Tue Aug 22 20:32:11 EDT 2006
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2006/08/22 17:01:23 $
+#   $Date: 2006/08/23 00:32:08 $
 #   $RCSfile: backup2,v $
-#   $Revision: 1.8 $
+#   $Revision: 1.9 $
 
 case "$1" in
 -doc* )
@@ -74,16 +74,20 @@ NAME ...
 
     containing the raw CD image.  It then executes
 
-    	cdrecord -v [-raw] THISHOST-NAME-DATE.raw
+    	cdrecord -v CD-OPTIONS THISHOST-NAME-DATE.raw
 	eject /dev/cdrom
 
-    using the -raw option if
+    where CD-OPTIONS if it exists is defined by the
+    BACKUP.rc line
 
-    	use_cd_raw=1
+    	cd_options="CD-OPTIONS"
 
-    is defined in BACKUP.rc.  The -raw option should be
-    used if your CD driver has bad firmware so the check
-    below does not work.
+    In particular, the line
+
+    	cd_options="-raw"
+
+    option should be used if your CD driver has bad
+    firmware so the check below often does not work.
 
     Lastly this program tests the CD by executing
 
@@ -189,6 +193,7 @@ do
 	        echo "ERROR executing chmod"
 		exit 1
 	    fi
+	    echo ""
 	fi
 
 	tgzs="$tgzs $t"
@@ -212,6 +217,7 @@ do
 	        echo "ERROR executing efm"
 		exit 1
 	    fi
+	    echo ""
 	    efms="$efms $t"
 	done
     fi
@@ -231,19 +237,15 @@ do
 	    echo "ERROR executing mkisofs"
 	    exit 1
 	fi
+	echo ""
     fi
 
     # Burn.
 
     if test "${!make_cd}" == "1" -a $burn -eq 1
     then
-        opt=""
-	if test "$use_cd_raw" == "1"
-	then
-	    opt="-raw"
-	fi
-	echo cdrecord -v $raw $r
-	cdrecord -v $raw $r
+	echo cdrecord -v $cd_options $r
+	cdrecord -v $cd_options $r
 	if test $? -ne 0
 	then
 	    echo "ERROR executing cdrecord"
@@ -251,6 +253,7 @@ do
 	fi
 	echo eject /dev/cdrom
 	eject /dev/cdrom
+	echo ""
     fi
 
     # Check.
@@ -266,6 +269,7 @@ do
 	fi
 	echo eject /dev/cdrom
 	eject /dev/cdrom
+	echo ""
     fi
 
     # Clean.
@@ -275,8 +279,13 @@ do
 	rm -f $r $tgzs
     fi
 
-
 done
 
-# efm list
+# List efms.
+
+if test "$efms" != ""
+then
+    efm list $efms
+fi
+
 exit 0
