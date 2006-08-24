@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Thu Aug 24 05:31:24 EDT 2006
+** Date:	Thu Aug 24 06:10:12 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/24 10:05:43 $
+**   $Date: 2006/08/24 10:09:41 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.41 $
+**   $Revision: 1.42 $
 */
 
 #include <stdio.h>
@@ -1117,7 +1117,7 @@ int add ( const char * filename )
     if ( trace )
     {
         printf ( "* added index entry:\n" );
-	write_index_entry ( stdout, e, 2, "* " );
+	write_index_entry ( stdout, e, 3, "* " );
     }
     return 0;
 }
@@ -1137,7 +1137,7 @@ int sub ( const char * filename )
     if ( trace )
     {
         printf ( "* removing index entry:\n" );
-	write_index_entry ( stdout, e, 2, "* " );
+	write_index_entry ( stdout, e, 3, "* " );
     }
     e->next->previous = e->previous;
     e->previous->next = e->next;
