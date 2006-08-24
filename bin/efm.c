@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Thu Aug 24 06:10:12 EDT 2006
+** Date:	Thu Aug 24 06:12:23 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/24 10:09:41 $
+**   $Date: 2006/08/24 10:12:05 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.42 $
+**   $Revision: 1.43 $
 */
 
 #include <stdio.h>
@@ -1838,7 +1838,7 @@ int main ( int argc, char ** argv )
 		    if ( trace )
 		        printf ( "* writing"
 			         " EFM-INDEX.gpg+\n" );
-		    write_index ( indexf, 2 );
+		    write_index ( indexf, 3 );
 		    fclose ( indexf );
 		    if ( cwait ( indexchild ) < 0 )
 		    {
