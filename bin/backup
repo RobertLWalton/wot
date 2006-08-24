@@ -4,7 +4,7 @@
 #
 # File:		backup
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Thu Aug 24 10:08:02 EDT 2006
+# Date:		Thu Aug 24 14:02:25 EDT 2006
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2006/08/24 14:11:02 $
+#   $Date: 2006/08/24 18:02:31 $
 #   $RCSfile: backup,v $
-#   $Revision: 1.14 $
+#   $Revision: 1.15 $
 
 case "$1" in
 -doc* )
@@ -325,12 +325,12 @@ do
 	    echo "    $t"
 	done
 	echo ""
-    fi
 
-    if test "$next_name" != ""
-    then
-        echo "Type ENTER to continue"
-	read -r
+	if test "$next_name" != ""
+	then
+	    echo "Type ENTER to continue"
+	    read -r
+	fi
     fi
 
 done
