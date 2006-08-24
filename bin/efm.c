@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Wed Aug 23 15:04:30 EDT 2006
+** Date:	Thu Aug 24 05:31:24 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/23 19:14:13 $
+**   $Date: 2006/08/24 10:05:43 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.40 $
+**   $Revision: 1.41 $
 */
 
 #include <stdio.h>
@@ -256,6 +256,9 @@ int index_modified;
  */
 struct entry {
 
+    int current;
+        /* 1 if current, 0 if obsolete. */
+
     char * filename;
         /* Filename may not contain \0 or \n and may
 	 * not be more than MAX_LEXEME_SIZE characters
@@ -401,7 +404,25 @@ void read_index ( FILE * f )
 		     " index\n    %s\n", buffer );
 	    exit ( 1 );
 	}
-	filename = strdup ( get_lexeme ( & b ) );
+	char * current = get_lexeme ( & b );
+	if ( current == NULL
+	     ||
+	     ( strcmp ( current, "+" ) != 0
+	       &&
+	       strcmp ( current, "-" ) != 0 ) )
+	{
+	    printf ( "ERROR: index entry begins badly"
+		     "\n    %s\n", buffer );
+	    exit ( 1 );
+	}
+	char * fn = get_lexeme ( & b );
+	if ( fn == NULL )
+	{
+	    printf ( "ERROR: index entry begins badly"
+		     "\n    %s\n", buffer );
+	    exit ( 1 );
+	}
+	filename = strdup ( fn );
 	if ( get_lexeme ( & b ) )
 	{
 	    printf ( "ERROR: stuff on line after"
@@ -529,6 +550,7 @@ void read_index ( FILE * f )
 	struct entry * e =
 	    (struct entry * )
 	    malloc ( sizeof ( struct entry ) );
+	e->current == ( current[1] == '+' );
 	e->filename = filename;
 	e->mode = m;
 	e->mtime = d;
@@ -548,7 +570,10 @@ void read_index ( FILE * f )
 
 /* Write index entry into file stream.
  * Mode is 0 to list only file names, 1 to list
- * everything but keys, and 2 to list everything.
+ * everything but keys and current/obsolete indicator,
+ * 2 to list everything but current/obsolete indicator,
+ * and 3 to list everything.
+ *
  * Prefix is prefixed to each line output.
  */
 void write_index_entry
@@ -557,6 +582,11 @@ void write_index_entry
 {
     line_buffer buffer;
     char * b = buffer;
+    if ( mode == 3 )
+    {
+        * b ++ = ( e->current ? '+' : '-' );
+	* b ++ = ' ';
+    }
     put_lexeme ( & b, e->filename );
     * b = 0;
     fprintf ( f, "%s%s\n", prefix, buffer );
@@ -578,7 +608,7 @@ void write_index_entry
     strcpy ( b, "    " );
     b += 4;
     put_lexeme ( & b, e->md5sum );
-    if ( mode == 2 )
+    if ( mode >= 2 )
     {
 	* b ++ = ' ';
 	put_lexeme ( & b, e->key );
@@ -589,7 +619,8 @@ void write_index_entry
 
 /* Write index into file stream.  Mode is as per
  * write_index_entry.  Comments are not listed if
- * mode == 0.
+ * mode == 0.  Only current entries are listed
+ * unless mode == 3.
  */
 void write_index ( FILE * f, int mode )
 {
@@ -603,11 +634,15 @@ void write_index ( FILE * f, int mode )
     }
 
     struct entry * e = first_entry;
-    if ( e ) do write_index_entry ( f, e, mode, "" );
+    if ( e ) do
+    {
+        if ( mode == 3 || e->current )
+	    write_index_entry ( f, e, mode, "" );
+    }
     while ( ( e = e->next ) != first_entry );
 }
 
-/* Check if index has existing file with given filename.
+/* Check if index has entry with given filename.
  * Return entry if yes, NULL if no.
  */
 struct entry * find_filename ( const char * filename )
@@ -621,7 +656,7 @@ struct entry * find_filename ( const char * filename )
     return NULL;
 }
 
-/* Check if index has existing file with given MD5sum.
+/* Check if index has current entry with given MD5sum.
  * Return entry if yes, NULL if no.
  */
 struct entry * find_md5sum ( const char * md5sum )
@@ -629,6 +664,7 @@ struct entry * find_md5sum ( const char * md5sum )
     struct entry * e = first_entry;
     if ( e ) do
     {
+        if ( ! e->current ) continue;
         if ( strcmp ( md5sum, e->md5sum ) == 0 )
 	    return e;
     } while ( ( e = e->next ) != first_entry );
@@ -1063,6 +1099,7 @@ int add ( const char * filename )
 
     e = (struct entry *)
         malloc ( sizeof ( struct entry ) );
+    e->current = 1;
     e->filename = strdup ( filename );
     e->md5sum = strdup ( sum );
     e->mode =  s.st_mode & 07777;
@@ -1175,12 +1212,16 @@ int execute_command ( FILE * in )
               ||
 	      strcmp ( arg, "list" ) == 0
               ||
-	      strcmp ( arg, "listkeys" ) == 0 )
+	      strcmp ( arg, "listkeys" ) == 0
+              ||
+	      strcmp ( arg, "listall" ) == 0 )
     {
 	int mode = ( strcmp ( arg, "listfiles" ) == 0 ?
 		     0 :
 		     strcmp ( arg, "list" ) == 0 ?
-		     1 : 2 );
+		     1 :
+		     strcmp ( arg, "listkeys" ) == 0 ?
+		     2 : 3 );
 	arg = get_argument ( buffer, in );
 	if ( arg == NULL )
 	    write_index ( stdout, mode );
@@ -1201,7 +1242,8 @@ int execute_command ( FILE * in )
     {
         while ( arg = get_argument ( buffer, in ) )
 	{
-	    if ( find_filename ( arg ) == NULL )
+	    struct entry * e = find_filename ( arg );
+	    if ( e == NULL || ! e->current )
 	        result = -2;
 	}
     }
@@ -1290,6 +1332,34 @@ int execute_command ( FILE * in )
 		struct entry * e =
 		    find_filename ( arg );
 		struct stat st;
+
+		/* On copyto or moveto with an obsolete
+		 * entry, delete the entry here so it
+		 * can be recomputed below.  Be sure
+		 * file exists and can have its MD5 sum
+		 * computed before deleting entry.
+		 */
+		if ( e != NULL && ! e->current
+		     && direction == 't' )
+		{
+		    if ( stat ( arg, & st ) < 0 )
+		    {
+		        printf ( "ERROR: file %s does"
+			         " not exist\n", arg );
+			result = -1;
+			continue;
+		    }
+		    char sum [33];
+		    if ( md5sum ( sum, arg ) < 0 )
+		    {
+			result = -1;
+			continue;
+		    }
+
+		    sub ( arg );
+		    e = NULL;
+		}
+
 		if ( e == NULL )
 		{
 		    if ( direction != 't' )
@@ -1592,10 +1662,7 @@ int execute_command ( FILE * in )
 
 		if ( ( op == 'm' && direction == 'f' )
 		     || op == 'r' )
-		{
-		    int r = sub ( arg );
-		    assert ( r >= 0 );
-		}
+		    e->current = 0;
 	    }
 	}
     }
