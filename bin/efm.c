@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Thu Aug 24 10:11:31 EDT 2006
+** Date:	Thu Aug 24 13:44:50 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/24 14:11:02 $
+**   $Date: 2006/08/24 17:52:03 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.47 $
+**   $Revision: 1.48 $
 */
 
 #include <stdio.h>
@@ -701,15 +701,18 @@ struct entry * find_filename ( const char * filename )
     return NULL;
 }
 
-/* Check if index has current entry with given MD5sum.
+/* Check if index has entry with given MD5sum.
  * Return entry if yes, NULL if no.
+ *
+ * If current_only is 1, ignore obsolete entries.
  */
-struct entry * find_md5sum ( const char * md5sum )
+struct entry * find_md5sum
+	( const char * md5sum, int current_only )
 {
     struct entry * e = first_entry;
     if ( e ) do
     {
-        if ( ! e->current ) continue;
+        if ( current_only && ! e->current ) continue;
         if ( strcmp ( md5sum, e->md5sum ) == 0 )
 	    return e;
     } while ( ( e = e->next ) != first_entry );
@@ -1145,7 +1148,7 @@ int add ( const char * filename )
 
     char sum [33];
     if ( md5sum ( sum, filename ) < 0 ) return -1;
-    struct entry * e = find_md5sum ( sum );
+    struct entry * e = find_md5sum ( sum, 1 );
     if ( e != NULL )
     {
         printf ( "ERROR: cannot make index entry for"
@@ -1156,7 +1159,12 @@ int add ( const char * filename )
     }
 
     char key[33];
-    newkey ( key );
+
+    e = find_md5sum ( sum, 0 );
+    if ( e != NULL )
+        strcpy ( key, e->key );
+    else
+	newkey ( key );
 
     e = (struct entry *)
         malloc ( sizeof ( struct entry ) );
@@ -1401,6 +1409,48 @@ int execute_command ( FILE * in )
 	    }
 	}
     }
+    else if ( strcmp ( arg, "obs" ) == 0
+              ||
+	      strcmp ( arg, "cur" ) == 0 )
+    {
+        int current =
+	    ( strcmp ( arg, "obs" ) == 0 ? 0 : 1 );
+
+        while ( arg = get_argument ( buffer, in ) )
+	{
+	    struct entry * e = find_filename ( arg );
+	    if ( e == NULL )
+	    {
+		printf ( "ERROR: index entry for %s"
+		         " does not exist\n", arg );
+		result = -1;
+		continue;
+	    }
+	    if ( e->current == current ) continue;
+
+	    if ( ! e->current )
+	    {
+		struct entry * e2 =
+		    find_md5sum ( e->md5sum, 1 );
+		if ( e2 != NULL )
+		{
+		    printf ( "ERROR: cannot make the"
+		             " index entry\n"
+			     "    for %s\n"
+			     "    current as it has the"
+			     " same MD5 sum as the"
+			     " existing current entry"
+			     "\n    for %s\n",
+			     arg, e2->filename );
+		    result = -1;
+		    continue;
+		}
+	    }
+
+	    e->current = current;
+	    index_modified = 1;
+	}
+    }
     else if ( strcmp ( arg, "add" ) == 0 )
     {
         while ( arg = get_argument ( buffer, in ) )
@@ -1468,6 +1518,20 @@ int execute_command ( FILE * in )
 		    {
 			result = -1;
 			continue;
+		    }
+
+		    e = find_md5sum ( sum, 1 );
+		    if ( e != NULL )
+		    {
+			printf ( "ERROR: cannot remake"
+			         " index entry for %s\n"
+				 "    as it would have"
+				 " the same MD5 sum as"
+				 " the existing current"
+				 " entry\n"
+				 "    for %s\n",
+				 arg, e->filename );
+			return -1;
 		    }
 
 		    sub ( arg );
