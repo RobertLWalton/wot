@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Thu Aug 24 09:00:00 EDT 2006
+** Date:	Thu Aug 24 10:06:39 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/24 14:02:17 $
+**   $Date: 2006/08/24 14:06:25 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.45 $
+**   $Revision: 1.46 $
 */
 
 #include <stdio.h>
@@ -487,7 +487,7 @@ void read_index ( FILE * f )
 	{
 	    printf ( "ERROR: index entry non-first line"
 	             " does not begin with"
-		     " space,\n    for file %s",
+		     " space,\n    for file %s\n",
 		     filename );
 	    exit ( 1 );
 	}
@@ -495,7 +495,7 @@ void read_index ( FILE * f )
 	if ( mode == NULL )
 	{
 	    printf ( "ERROR: index entry mode missing"
-		     "\n    for file %s",
+		     "\n    for file %s\n",
 		     filename );
 	    exit ( 1 );
 	}
@@ -503,7 +503,7 @@ void read_index ( FILE * f )
 	if ( mtime == NULL )
 	{
 	    printf ( "ERROR: index entry modification"
-	             "time missing\n    for file %s",
+	             "time missing\n    for file %s\n",
 		     filename );
 	    exit ( 1 );
 	}
@@ -549,7 +549,7 @@ void read_index ( FILE * f )
 	{
 	    printf ( "ERROR: index entry non-first line"
 	             " does not begin with"
-		     " space,\n    for file %s",
+		     " space,\n    for file %s\n",
 		     filename );
 	    exit ( 1 );
 	}
@@ -557,7 +557,7 @@ void read_index ( FILE * f )
 	if ( md5sum == NULL )
 	{
 	    printf ( "ERROR: index entry MD5 sum"
-	             " missing\n    for file %s",
+	             " missing\n    for file %s\n",
 		     filename );
 	    exit ( 1 );
 	}
@@ -565,7 +565,7 @@ void read_index ( FILE * f )
 	if ( key == NULL )
 	{
 	    printf ( "ERROR: index entry key"
-	             " missing\n    for file %s",
+	             " missing\n    for file %s\n",
 		     filename );
 	    exit ( 1 );
 	}
