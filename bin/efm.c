@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Thu Aug 24 08:21:32 EDT 2006
+** Date:	Thu Aug 24 09:00:00 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/24 12:20:56 $
+**   $Date: 2006/08/24 14:02:17 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.44 $
+**   $Revision: 1.45 $
 */
 
 #include <stdio.h>
@@ -595,7 +595,7 @@ void read_index ( FILE * f )
 	struct entry * e =
 	    (struct entry * )
 	    malloc ( sizeof ( struct entry ) );
-	e->current == ( current[1] == '+' );
+	e->current = ( current[0] == '+' ? 1 : 0 );
 	e->filename = filename;
 	e->mode = m;
 	e->mtime = d;
@@ -664,10 +664,10 @@ void write_index_entry
 
 /* Write index into file stream.  Mode is as per
  * write_index_entry.  Comments are not listed if
- * mode == 0.  Only current entries are listed
- * unless mode == 3.
+ * mode == 0.  Entry current must match the current
+ * argument, unless that is -1.
  */
-void write_index ( FILE * f, int mode )
+void write_index ( FILE * f, int mode, int current )
 {
     if ( mode != 0 )
     {
@@ -681,7 +681,7 @@ void write_index ( FILE * f, int mode )
     struct entry * e = first_entry;
     if ( e ) do
     {
-        if ( mode == 3 || e->current )
+        if ( current == -1 || e->current == current )
 	    write_index_entry ( f, e, mode, "" );
     }
     while ( ( e = e->next ) != first_entry );
@@ -1275,28 +1275,81 @@ int execute_command ( FILE * in )
               ||
 	      strcmp ( arg, "listkeys" ) == 0
               ||
-	      strcmp ( arg, "listall" ) == 0 )
+	      strcmp ( arg, "listall" ) == 0
+              ||
+	      strcmp ( arg, "listcur" ) == 0
+              ||
+	      strcmp ( arg, "listobs" ) == 0
+              ||
+	      strcmp ( arg, "listind" ) == 0 )
     {
-	int mode = ( strcmp ( arg, "listfiles" ) == 0 ?
-		     0 :
-		     strcmp ( arg, "list" ) == 0 ?
-		     1 :
-		     strcmp ( arg, "listkeys" ) == 0 ?
-		     2 : 3 );
+	int mode =
+	    ( strcmp ( arg, "listall" ) == 0  ? 3 :
+	      strcmp ( arg, "listkeys" ) == 0 ? 2 :
+	      strcmp ( arg, "list" ) == 0     ? 1 :
+	      					0 );
+	int current =
+	    ( mode == 3 ? -1 :
+	      mode == 2 ?  1 :
+	      mode == 1 ?  1 :
+	      strcmp ( arg, "listfiles" ) == 0 ?  1 :
+	      strcmp ( arg, "listcur" ) == 0   ?  1 :
+	      strcmp ( arg, "listobs" ) == 0   ?  0 :
+	      				         -1 );
+
 	arg = get_argument ( buffer, in );
 	if ( arg == NULL )
-	    write_index ( stdout, mode );
+	    write_index ( stdout, mode, current );
 	else do
 	{
+	    int printed = 0;
 	    struct entry * e = find_filename ( arg );
-	    if ( e == NULL )
+	    if ( e != NULL )
 	    {
-	        printf ( "ERROR: %s not in index\n",
-		         arg );
+		if ( current == -1
+		     ||
+		     current == e->current )
+		{
+		    write_index_entry
+			( stdout, e, mode, "" );
+		    printed = 1;
+		}
+	    }
+	    else
+	    {
+	        /* Try for encrypted file name. */
+
+	        int len = strlen ( arg );
+		if ( len == 32 + 4
+		     &&
+		     strcmp ( arg + 32, ".gpg" ) == 0 )
+		{
+		    struct entry * e = first_entry;
+		    if ( e != NULL ) do
+		    {
+		        if ( strncmp
+			         ( arg, e->md5sum, 32 )
+			     != 0 )
+			    continue;
+			if ( current == -1
+			     ||
+			     current == e->current )
+			{
+			    write_index_entry
+				( stdout, e, mode, "" );
+			    printed = 1;
+			}
+		    } while ( ( e = e->next )
+		    	      != first_entry );
+		}
+	    }
+
+	    if ( mode != 0 && printed == 0 )
+	    {
+		printf ( "ERROR: %s not in index\n",
+			 arg );
 		result = -1;
 	    }
-	    else write_index_entry
-	    		( stdout, e, mode, "" );
 	} while ( arg = get_argument ( buffer, in ) );
     }
     else if ( strcmp ( arg, "listed" ) == 0 )
@@ -1899,7 +1952,7 @@ int main ( int argc, char ** argv )
 		    if ( trace )
 		        printf ( "* writing"
 			         " EFM-INDEX.gpg+\n" );
-		    write_index ( indexf, 3 );
+		    write_index ( indexf, 3, -1 );
 		    fclose ( indexf );
 		    if ( cwait ( indexchild ) < 0 )
 		    {
