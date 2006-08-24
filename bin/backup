@@ -4,7 +4,7 @@
 #
 # File:		backup
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Wed Aug 23 05:24:34 EDT 2006
+# Date:		Thu Aug 24 10:08:02 EDT 2006
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2006/08/23 09:24:37 $
+#   $Date: 2006/08/24 14:11:02 $
 #   $RCSfile: backup,v $
-#   $Revision: 1.13 $
+#   $Revision: 1.14 $
 
 case "$1" in
 -doc* )
@@ -194,7 +194,7 @@ do
 		    exit 1
 		fi
 
-		if efm listed $t
+		if test "`efm listfiles $t`" == $t
 		then
 		    echo efm remove "${!remote}" $t
 		    efm remove "${!remote}" $t
