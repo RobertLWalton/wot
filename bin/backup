@@ -4,7 +4,7 @@
 #
 # File:		backup
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Sat Aug 26 06:49:36 EDT 2006
+# Date:		Sat Aug 26 07:11:45 EDT 2006
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2006/08/26 11:09:36 $
+#   $Date: 2006/08/26 11:17:01 $
 #   $RCSfile: backup,v $
-#   $Revision: 1.16 $
+#   $Revision: 1.17 $
 
 case "$1" in
 -doc* )
@@ -220,7 +220,7 @@ do
 		      efm_used=1
 		      if test "$efm_trace" != ""
 		      then
-		        set efm_old_trace="`efm trace`"
+		        efm_old_trace="`efm trace`"
 		        efm trace $efm_trace
 		      fi
 		    fi
@@ -279,7 +279,7 @@ do
 		efm_used=1
 		if test "$efm_trace" != ""
 		then
-		    set efm_old_trace="`efm trace`"
+		    efm_old_trace="`efm trace`"
 		    efm trace $efm_trace
 		fi
 	    fi
@@ -376,11 +376,14 @@ done
 
 if test $efm_used -ne 0
 then
-    mv -f EFM-INDEX.listall EFM-INDEX.listall-
+    if test -e EFM-INDEX.listall
+    then
+	mv -f EFM-INDEX.listall EFM-INDEX.listall-
+    fi
     efm listall > EFM-INDEX.listall
     case "$efm_old_trace" in
-        *off)	efm trace off;;
-	*on)	efm trace on;;
+        *off*)	efm trace off;;
+	*on*)	efm trace on;;
     esac
 fi
 
