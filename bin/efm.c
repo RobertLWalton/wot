@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Thu Aug 24 15:31:44 EDT 2006
+** Date:	Sat Aug 26 06:21:13 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/26 09:52:49 $
+**   $Date: 2006/08/26 10:27:46 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.49 $
+**   $Revision: 1.50 $
 */
 
 #include <stdio.h>
@@ -56,9 +56,10 @@ char documentation [] =
 "efm trace\n"
 "\n"
 "efm listall [file ...]\n"
-"efm listcur [file ...]\n"
-"efm listobs [file ...]\n"
-"efm listind [file ...]\n"
+"efm listallkeys [file ...]\n"
+"efm listcurfiles [file ...]\n"
+"efm listobsfiles [file ...]\n"
+"efm listallfiles [file ...]\n"
 "\n"
 "efm cur file ...\n"
 "efm obs file ...\n"
@@ -211,16 +212,19 @@ char documentation [] =
 "    have the same MD5 sum.  Two files with the same\n"
 "    MD5 sum will have the same key.\n"
 "\n"
-"    The \"listall\" command is like \"listkeys\" but\n"
+"    The \"listall\" command is like \"list\" but\n"
 "    lists both obsolete and current entries and also\n"
-"    includes indicators (+ or -).  The \"listobs\"\n"
-"    command is like \"listfiles\" but only considers\n"
-"    obsolete entries, instead of only current en-\n"
-"    tries.  The \"listind\" command is like \"list-\n"
-"    files\" but considers ALL index entries.  The\n"
-"    \"listcur\" command considers only current en-\n"
-"    entries, and is just another name for"
-				" \"listfiles\".\n"
+"    includes indicators (+ or -).  The"
+				" \"listallkeys\"\n"
+"    command is like \"listall\" but includes keys.\n"
+"    The \"listobsfiles\" command is like"
+				" \"listfiles\"\n"
+"    but only lists obsolete entries, instead of only\n"
+"    current entries.  The \"listallfiles\" command\n"
+"    is like \"listfiles\" but lists both obsolete\n"
+"    and current entries.  The \"listcurfiles\" com-\n"
+"    mand lists only current entries, and is just an-\n"
+"    other name for \"listfiles\".\n"
 "\n"
 "    The following commands may be used to edit the\n"
 "    index in ways that may get the index out of sync\n"
@@ -614,11 +618,13 @@ void read_index ( FILE * f )
     }
 }
 
-/* Write index entry into file stream.
- * Mode is 0 to list only file names, 1 to list
- * everything but keys and current/obsolete indicator,
- * 2 to list everything but current/obsolete indicator,
- * and 3 to list everything.
+/* Write index entry into file stream.  The mode
+ * is a sum of flags that indicate what to list:
+ *
+ *	+0	List filename (always listed)
+ *	+1	List current/obsolete indicator.
+ *	+2	List mode, date, md5sum
+ *	+4	List key.
  *
  * Prefix is prefixed to each line output.
  */
@@ -628,7 +634,7 @@ void write_index_entry
 {
     line_buffer buffer;
     char * b = buffer;
-    if ( mode == 3 )
+    if ( ( mode & 1 ) != 0 )
     {
         * b ++ = ( e->current ? '+' : '-' );
 	* b ++ = ' ';
@@ -636,31 +642,39 @@ void write_index_entry
     put_lexeme ( & b, e->filename );
     * b = 0;
     fprintf ( f, "%s%s\n", prefix, buffer );
-    if ( mode == 0 ) return;
 
     b = buffer;
     strcpy ( b, "    " );
     b += 4;
-    sprintf ( b, "%04o", e->mode );
-    b += 4;
-    * b ++ = ' ';
-    char tbuffer [100];
-    strftime ( tbuffer, 100, time_format, 
-	       gmtime ( & e->mtime ) );
-    put_lexeme ( & b, tbuffer );
-    * b = 0;
-    fprintf ( f, "%s%s\n", prefix, buffer );
-    b = buffer;
-    strcpy ( b, "    " );
-    b += 4;
-    put_lexeme ( & b, e->md5sum );
-    if ( mode >= 2 )
+
+    if ( ( mode & 2 ) != 0 )
+    {
+	sprintf ( b, "%04o", e->mode );
+	b += 4;
+	* b ++ = ' ';
+	char tbuffer [100];
+	strftime ( tbuffer, 100, time_format, 
+		   gmtime ( & e->mtime ) );
+	put_lexeme ( & b, tbuffer );
+	* b = 0;
+	fprintf ( f, "%s%s\n", prefix, buffer );
+	b = buffer;
+	strcpy ( b, "    " );
+	b += 4;
+	put_lexeme ( & b, e->md5sum );
+    }
+
+    if ( ( mode & 4 ) != 0 )
     {
 	* b ++ = ' ';
 	put_lexeme ( & b, e->key );
     }
-    * b = 0;
-    fprintf ( f, "%s%s\n", prefix, buffer );
+
+    if ( ( mode & (2+4) ) != 0 )
+    {
+	* b = 0;
+	fprintf ( f, "%s%s\n", prefix, buffer );
+    }
 }
 
 /* Write index into file stream.  Mode is as per
@@ -1187,7 +1201,7 @@ int add ( const char * filename )
     if ( trace )
     {
         printf ( "* added index entry:\n" );
-	write_index_entry ( stdout, e, 3, "* " );
+	write_index_entry ( stdout, e, 7, "* " );
     }
     return 0;
 }
@@ -1207,7 +1221,7 @@ int sub ( const char * filename )
     if ( trace )
     {
         printf ( "* removing index entry:\n" );
-	write_index_entry ( stdout, e, 3, "* " );
+	write_index_entry ( stdout, e, 7, "* " );
     }
     e->next->previous = e->previous;
     e->previous->next = e->next;
@@ -1280,31 +1294,32 @@ int execute_command ( FILE * in )
     }
     else if ( strcmp ( arg, "listfiles" ) == 0
               ||
+	      strcmp ( arg, "listcurfiles" ) == 0
+              ||
+	      strcmp ( arg, "listobsfiles" ) == 0
+              ||
+	      strcmp ( arg, "listallfiles" ) == 0
+              ||
 	      strcmp ( arg, "list" ) == 0
               ||
 	      strcmp ( arg, "listkeys" ) == 0
               ||
 	      strcmp ( arg, "listall" ) == 0
               ||
-	      strcmp ( arg, "listcur" ) == 0
-              ||
-	      strcmp ( arg, "listobs" ) == 0
-              ||
-	      strcmp ( arg, "listind" ) == 0 )
+	      strcmp ( arg, "listallkeys" ) == 0 )
     {
 	int mode =
-	    ( strcmp ( arg, "listall" ) == 0  ? 3 :
-	      strcmp ( arg, "listkeys" ) == 0 ? 2 :
-	      strcmp ( arg, "list" ) == 0     ? 1 :
-	      					0 );
+	    ( strcmp ( arg, "listall" ) == 0     ? 3 :
+	      strcmp ( arg, "list" ) == 0        ? 2 :
+	      strcmp ( arg, "listallkeys" ) == 0 ? 7 :
+	      strcmp ( arg, "listkeys" ) == 0    ? 6 :
+	      					   0 );
 	int current =
-	    ( mode == 3 ? -1 :
-	      mode == 2 ?  1 :
-	      mode == 1 ?  1 :
-	      strcmp ( arg, "listfiles" ) == 0 ?  1 :
-	      strcmp ( arg, "listcur" ) == 0   ?  1 :
-	      strcmp ( arg, "listobs" ) == 0   ?  0 :
-	      				         -1 );
+	    ( strcmp ( arg, "listall" ) == 0      ? -1 :
+	      strcmp ( arg, "listallkeys" ) == 0  ? -1 :
+	      strcmp ( arg, "listallfiles" ) == 0 ? -1 :
+	      strcmp ( arg, "listobsfiles" ) == 0 ?  0 :
+	      				             1 );
 
 	arg = get_argument ( buffer, in );
 	if ( arg == NULL )
@@ -2020,7 +2035,7 @@ int main ( int argc, char ** argv )
 		    if ( trace )
 		        printf ( "* writing"
 			         " EFM-INDEX.gpg+\n" );
-		    write_index ( indexf, 3, -1 );
+		    write_index ( indexf, 7, -1 );
 		    fclose ( indexf );
 		    if ( cwait ( indexchild ) < 0 )
 		    {
