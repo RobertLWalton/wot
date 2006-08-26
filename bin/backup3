@@ -4,7 +4,7 @@
 #
 # File:		backup
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Thu Aug 24 14:02:25 EDT 2006
+# Date:		Sat Aug 26 06:49:36 EDT 2006
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2006/08/24 18:02:31 $
+#   $Date: 2006/08/26 11:09:36 $
 #   $RCSfile: backup3,v $
-#   $Revision: 1.15 $
+#   $Revision: 1.16 $
 
 case "$1" in
 -doc* )
@@ -39,7 +39,7 @@ NAME ...
     For each DIRECTORY creates the file THISHOST-
     DIRECTORY-DATE.tgz in the current directory.  In
     the name of this file, \`/'s are deleted from the
-    beginning and end of DIRECTORY and changed to \`-/'s
+    beginning and end of DIRECTORY and changed to \`-'s
     elsewhere in DIRECTORY.  Deletes any old version of
     this file.  Excludes files listed in DIRECTORY/
     .backup-ignore from the .tgz (.backup-ignore is
@@ -58,11 +58,18 @@ NAME ...
 	    THISHOST-DIRECTORY-DATE.tgz
 
     The REMOTE_DIRECTORY name must be acceptable to scp.
-    At the end of this program,
 
-    	efm list DIRECTORY ...
+    If this program uses efm, this program at its end
+    executes
 
-    is executed listing all DIRECTORIES moved by efm.
+	mv -f EMF-INDEX.listall EMF-INDEX.listall-
+	efm listall > EMF-INDEX.listall
+    	efm list THISHOST-DIRECTORY-DATE.tgz ...
+
+    which saves all the non-key EFM-INDEX information
+    in EFM-INDEX.listall and lists all the non-key
+    EFM-INDEX information for the files just moved by
+    this program.
 
     If for a given NAME, BACKUP.rc contains
 
@@ -86,15 +93,15 @@ NAME ...
 
     	cd_options="-raw"
 
-    option should be used if your CD driver has bad
-    firmware so the check below often does not work.
+    should be used if your CD driver has bad firmware
+    so that the check below often does not work.
 
-    Lastly this program tests the CD by executing
+    Then this program checks the CD by executing
 
 	cmp /dev/cdrom THISHOST-NAME-DATE.raw
     	eject /dev/cdrom
 
-    Lastly cleans up by executing
+    Lastly this program cleans up by executing
 
     	rm THISHOST-DIRECTORY-DATE.tgz ... \\
 	   THISHOST-NAME-DATE.raw
@@ -110,6 +117,16 @@ NAME ...
     ses .tgz and .raw file removal for CD's, and changes
     \`efm moveto' to \`efm copyto' so .tgz files are not
     deleted by efm.
+
+    If the BACKUP.rc file contains
+
+    	efm_trace=on
+    or
+    	efm_trace=off
+
+    this program sets the efm trace accordingly while
+    this program is running, and then resets the efm
+    trace to its former value.
 "
     exit 1
     ;;
@@ -139,6 +156,8 @@ done
 
 d=`date +%Y-%m-%d`
 efms=""
+efm_used=0
+efm_old_trace=""
 while test "$1" != ""
 do
     name="$1"
@@ -196,6 +215,15 @@ do
 
 		if test "`efm listfiles $t`" == $t
 		then
+		    if test $efm_used -eq 0
+		    then
+		      efm_used=1
+		      if test "$efm_trace" != ""
+		      then
+		        set efm_old_trace="`efm trace`"
+		        efm trace $efm_trace
+		      fi
+		    fi
 		    echo efm remove "${!remote}" $t
 		    efm remove "${!remote}" $t
 		    if test $? -ne 0
@@ -246,6 +274,15 @@ do
 	fi
         for t in $tgzs
 	do
+	    if test $efm_used -eq 0
+	    then
+		efm_used=1
+		if test "$efm_trace" != ""
+		then
+		    set efm_old_trace="`efm trace`"
+		    efm trace $efm_trace
+		fi
+	    fi
 	    echo efm $m "${!remote}" $t
 	    efm $m "${!remote}" $t
 	    if test $? -ne 0
@@ -336,6 +373,16 @@ do
 done
 
 # List efms.
+
+if test $efm_used -ne 0
+then
+    mv -f EFM-INDEX.listall EFM-INDEX.listall-
+    efm listall > EFM-INDEX.listall
+    case "$efm_old_trace" in
+        *off)	efm trace off;;
+	*on)	efm trace on;;
+    esac
+fi
 
 if test "$efms" != ""
 then
