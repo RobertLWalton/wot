@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Thu Aug 24 13:44:50 EDT 2006
+** Date:	Thu Aug 24 15:31:44 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/24 17:52:03 $
+**   $Date: 2006/08/26 09:52:49 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.48 $
+**   $Revision: 1.49 $
 */
 
 #include <stdio.h>
@@ -449,17 +449,18 @@ void read_index ( FILE * f )
 		     " index\n    %s\n", buffer );
 	    exit ( 1 );
 	}
-	char * current = get_lexeme ( & b );
-	if ( current == NULL
+	char * c = get_lexeme ( & b );
+	if ( c == NULL
 	     ||
-	     ( strcmp ( current, "+" ) != 0
+	     ( strcmp ( c, "+" ) != 0
 	       &&
-	       strcmp ( current, "-" ) != 0 ) )
+	       strcmp ( c, "-" ) != 0 ) )
 	{
 	    printf ( "ERROR: index entry begins badly"
 		     "\n    %s\n", buffer );
 	    exit ( 1 );
 	}
+	int current = ( c[0] == '+' ? 1 : 0 );
 	char * fn = get_lexeme ( & b );
 	if ( fn == NULL )
 	{
@@ -595,7 +596,7 @@ void read_index ( FILE * f )
 	struct entry * e =
 	    (struct entry * )
 	    malloc ( sizeof ( struct entry ) );
-	e->current = ( current[0] == '+' ? 1 : 0 );
+	e->current = current;
 	e->filename = filename;
 	e->mode = m;
 	e->mtime = d;
