@@ -4,7 +4,7 @@
 #
 # File:		backup
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Sat Aug 26 07:21:07 EDT 2006
+# Date:		Fri Sep  1 07:22:08 EDT 2006
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,40 +13,54 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2006/08/26 11:22:00 $
+#   $Date: 2006/09/01 11:36:37 $
 #   $RCSfile: backup2,v $
-#   $Revision: 1.18 $
+#   $Revision: 1.19 $
 
 case "$1" in
--doc* )
+"" | -doc* )
 	echo "
 backup [-tgz] [-move] \\
-       [-raw] [-burn] [-check] [-clean] NAME ...
+       [-raw] [-burn] [-check] [-clean] \\
+       [-post] NAME ...
+
+BACKUP.rc Commands:
+
+    	host=THISHOST
+	efm_post=\"COMMAND\"
+    	cd_options=\"CD-OPTIONS\"
+    	efm_trace={on|off}
+    	NAME_directories=\"DIRECTORY ...\"
+    	NAME_remote_directory=REMOTE_DIRECTORY
+    	NAME_make_cd=1
 
     Backs up the NAME'd items which are defined in
     the file BACKUP.rc of the current directory.
-    This file contains lines of the form:
+    This file, which is sourced by bash, contains bash
+    commands of the form:
 
-    	NAME_directories="DIRECTORY ..."
+    	NAME_directories=\"DIRECTORY ...\"
 
-    to define each name.  The file must also contain
-    a line of the form
+    to define the directories that will be backed up
+    for each name.  The file must also contain a line
+    of the form
 
     	host=THISHOST
 
     to define THISHOST.
 
     For each DIRECTORY creates the file THISHOST-
-    DIRECTORY-DATE.tgz in the current directory.  In
-    the name of this file, \`/'s are deleted from the
-    beginning and end of DIRECTORY and changed to \`-'s
-    elsewhere in DIRECTORY.  Deletes any old version of
-    this file.  Excludes files listed in DIRECTORY/
-    .backup-ignore from the .tgz (.backup-ignore is
-    passed as the --exclude-from argument to tar).
-
-    Then proceeds according to the settings of the
-    BACKUP.rc.
+    DIRECTORY-DATE.tgz in the current directory.  In the
+    name of this file, \`/'s are deleted from the begin-
+    ning and end of DIRECTORY and changed to \`-'s else-
+    where in DIRECTORY.  This program deletes any old
+    version of this file.  Files listed in DIRECTORY/
+    .BACKUP-IGNORE are excluded from the .tgz (.BACKUP-
+    IGNORE is passed as the --exclude-from argument to
+    tar).
+
+    This program then proceeds according to the settings
+    of BACKUP.rc.
     
     If BACKUP.rc file contains
 
@@ -58,7 +72,7 @@ backup [-tgz] [-move] \\
 	    THISHOST-DIRECTORY-DATE.tgz
 
     The REMOTE_DIRECTORY name must be acceptable to scp.
-
+
     If this program uses efm, this program at its end
     executes
 
@@ -71,36 +85,53 @@ backup [-tgz] [-move] \\
     EFM-INDEX information for the files just moved by
     this program.
 
+    If efm is used, the files EFM-INDEX.gpg and EFM-
+    INDEX.listall should be backed up by independent
+    means, such as by using cvs or rsync.  BACKUP.rc
+    may also be backed up by the same means.
+
+    If this program uses efm, this program at its end
+    executes any command defined by the BACKUP.rc line:
+
+		efm_post=\"COMMAND\"
+
+    Typical values for \"COMMAND\" are \"cvs com -m ''\"
+    and:
+
+    	\"rsync EFM-INDEX.gpg EFM-INDEX.listall \\
+	        BACKUP.rc SOME-REMOTE-DIRECTORY\"
+
     If for a given NAME, BACKUP.rc contains
 
-    	name_make_cd=1
+    	NAME_make_cd=1
 
     this program creates the file:
 
     	THISHOST-NAME-DATE.raw
 
-    containing the raw CD image.  It then executes
+    that is a raw CD image containing all the .tgz files
+    made for NAME.  It then executes
 
     	cdrecord -v CD-OPTIONS THISHOST-NAME-DATE.raw
 	eject /dev/cdrom
 
-    where CD-OPTIONS if it exists is defined by the
+    where CD-OPTIONS, if it exists, is defined by the
     BACKUP.rc line
 
-    	cd_options="CD-OPTIONS"
+    	cd_options=\"CD-OPTIONS\"
 
     In particular, the line
 
-    	cd_options="-raw"
+    	cd_options=\"-raw\"
 
     should be used if your CD driver has bad firmware
     so that the check below often does not work.
-
+
     Then this program checks the CD by executing
 
 	cmp /dev/cdrom THISHOST-NAME-DATE.raw
     	eject /dev/cdrom
-
+
     Lastly this program cleans up by executing
 
     	rm THISHOST-DIRECTORY-DATE.tgz ... \\
@@ -111,12 +142,13 @@ backup [-tgz] [-move] \\
 
     The -tgz option suppresses the making of .tgz files,
     which must already exist.  -move suppresses using
-    \`efm moveto' for the .tgz file.  -raw suppresses
+    \`efm moveto' for the .tgz files.  -raw suppresses
     making .raw files, -burn suppresses burning CD's,
     -check suppresses checking CD's, and -clean suppres-
     ses .tgz and .raw file removal for CD's, and changes
     \`efm moveto' to \`efm copyto' so .tgz files are not
-    deleted by efm.
+    deleted by efm.  -post suppresses any emf_post com-
+    mand.
 
     If the BACKUP.rc file contains
 
@@ -140,6 +172,7 @@ raw=1
 burn=1
 check=1
 clean=1
+post=1
 while test x = x
 do
     case "$1" in
@@ -149,6 +182,7 @@ do
     -burn )	burn=0;;
     -check )	check=0;;
     -clean )	clean=0;;
+    -post )	post=0;;
     * ) break;;
     esac
     shift
@@ -204,7 +238,7 @@ do
 	    then
 
 		# Be sure efm starts properly before
-		# calling efm listed.
+		# calling efm listfiles.
 
 		efm start
 		if test $? -ne 0
@@ -239,9 +273,9 @@ do
 	    # Make .tgz file.
 
 	    opt=""
-	    if test -r $dir/.backup-ignore
+	    if test -r $dir/.BACKUP-IGNORE
 	    then
-		opt="--exclude-from $dir/.backup-ignore"
+		opt="--exclude-from $dir/.BACKUP-IGNORE"
 	    fi
 	    rm -f $t
 	    echo tar zcf $t $opt $dir
@@ -304,7 +338,7 @@ do
 	mkisofs -RT -v -o $r $tgzs 2>&1 \
 	    | grep -v '^Writing:' \
 	    | grep -v '^Done with:' \
-	    | grep -v 'done, estinated finish'
+	    | grep -v 'done, estimate finish'
 	if test $? -ne 0
 	then
 	    echo "ERROR executing mkisofs"
@@ -385,11 +419,24 @@ then
         *off*)	efm trace off;;
 	*on*)	efm trace on;;
     esac
-fi
 
-if test "$efms" != ""
-then
-    efm list $efms
+    if test "$efms" != ""
+    then
+	efm list $efms
+	echo ""
+    fi
+
+    if test $post -eq 1 -a "$efm_post" != ""
+    then
+	echo "$efm_post"
+        eval "$efm_post"
+	if test $? -ne 0
+	then
+	    echo "ERROR executing $efm_post"
+	    exit 1
+	fi
+	echo ""
+    fi
 fi
 
 exit 0
