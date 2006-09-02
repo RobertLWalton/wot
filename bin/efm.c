@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Sat Aug 26 06:21:13 EDT 2006
+** Date:	Sat Sep  2 08:42:25 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/08/26 10:27:46 $
+**   $Date: 2006/09/02 13:35:39 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.50 $
+**   $Revision: 1.51 $
 */
 
 #include <stdio.h>
@@ -67,14 +67,14 @@ char documentation [] =
 "efm sub file ...\n"
 "efm del source file ...\n"
 "\n"
-"    Each file may have an encrypted version in the\n"
-"    target/source directory.  The file can be moved\n"
-"    or copied to/from that directory.  It is encryp-\n"
-"    ted when moved or copied to the target direc-\n"
-"    tory, and decrypted when moved or copied from\n"
-"    the source directory.  The directory may be"
-                                            " \".\"\n"
-"    to encrypt or decrypt in place.\n"
+"    A file in the current directory may have an en-\n"
+"    crypted version in the target/source directory.\n"
+"    The file can be moved or copied to/from that\n"
+"    directory.  It is encrypted when moved or copied\n"
+"    to the target directory, and decrypted when\n"
+"    moved or copied from the source directory.  The\n"
+"    target/source directory may be \".\" to encrypt\n"
+"    or decrypt in place.\n"
 "\n"
 "    The \"remove\" command is like \"movefrom\" fol-\n"
 "    lowed by discarding the decrypted file.  The\n"
@@ -88,7 +88,7 @@ char documentation [] =
 "    names can be any directory names acceptable to\n"
 "    scp.  Efm makes temporary files in the current\n"
 "    directory whose base names are the 32 character\n"
-"    MD5 sums of the decrypted files.  No to encryp-\n"
+"    MD5 sums of the decrypted files.  No two encryp-\n"
 "    ted files may have the same MD5 sum.  It is ex-\n"
 "    pected that files will be tar files of director-\n"
 "    ies.\n"
@@ -102,7 +102,10 @@ char documentation [] =
 "               gpg -c EFM-INDEX\n"
 "\n"
 "    You choose the password that protects the index\n"
-"    when you do this.\n"
+"    when you do this.  You may put comments at the\n"
+"    beginning of EFM-INDEX before you encrypt.  All\n"
+"    comment lines must have `#' as their first char-\n"
+"    acter, and there can be no blank lines.\n"
 "\n"
 "    The index is REQUIRED to decrypt files, as each\n"
 "    encrypted file has its own unique random encryp-\n"
@@ -209,8 +212,9 @@ char documentation [] =
 "    number, that is the key.\n"
 "\n"
 "    No two current files in the index are allowed to\n"
-"    have the same MD5 sum.  Two files with the same\n"
-"    MD5 sum will have the same key.\n"
+"    have the same MD5 sum.  Two files (not both cur-\n"
+"    rent) with the same MD5 sum will have the same\n"
+"    key.\n"
 "\n"
 "    The \"listall\" command is like \"list\" but\n"
 "    lists both obsolete and current entries and also\n"
@@ -282,16 +286,18 @@ char * ofilter[] = {
  */
 int get_line ( line_buffer buffer, FILE * in )
 {
+    int length;
+
     if ( ! fgets ( buffer, MAX_LINE_SIZE+2, in ) )
         return 0;
-    int length = strlen ( buffer );
-    if ( length == MAX_LINE_SIZE+1 )
+    length = strlen ( buffer );
+    if ( buffer[length-1] != '\n' );
     {
-	printf ( "ERROR: line too long:\n" );
+	printf ( "ERROR: line too long or no"
+	         " line feed at end of file:\n" );
 	printf ( "%-60.60s...\n", buffer );
 	exit ( 1 );
     }
-    assert ( buffer[length-1] == '\n' );
     buffer[length-1] = 0;
     return 1;
 }
@@ -301,7 +307,8 @@ int get_line ( line_buffer buffer, FILE * in )
  */
 int index_modified;
 
-/* Index is a circular list of entries.
+/* Index is a circular list of entries.  All char *'s
+ * are malloc'ed.
  */
 struct entry {
 
@@ -328,7 +335,7 @@ struct entry * first_entry = NULL;
 /* Comment lines are just a circular list of lines.
  */
 struct comment {
-    char * line;
+    char * line;	/* Malloc'ed. */
 
     struct comment * previous, * next;
 };
@@ -344,13 +351,16 @@ struct comment * first_comment = NULL;
  * lexeme.  If there are no lexemes, NULL is returned.
  *
  * This function modifies the lexeme in the buffer to
- * produce its result.
+ * produce its result.  You must copy the returned
+ * lexeme before reusing the buffer.
  */
 char * get_lexeme ( char ** buffer )
 {
-    char * p = * buffer;
+    char * p, * result;
+
+    p = * buffer;
     while ( isspace ( * p ) ) ++ p;
-    char * result = p;
+    result = p;
     if ( * p == '"' )
     {
 	char * q = result;
@@ -381,7 +391,9 @@ char * get_lexeme ( char ** buffer )
  * buffer.  The lexeme is quoted if it contains any
  * non-graphic characters, #, or ".  It is also quoted
  * if it is the empty string.  The buffer pointer is
- * updated to point after the lexeme.
+ * updated to point after the lexeme.  There is no buf-
+ * fer size check, so its up to the caller to be sure
+ * the lexeme will fit.
  */
 void put_lexeme ( char ** buffer, const char * lexeme )
 {
@@ -400,9 +412,9 @@ void put_lexeme ( char ** buffer, const char * lexeme )
     }
     else
     {
-        p = lexeme;
 	char * q = * buffer;
 	* q ++ = '"';
+        p = lexeme;
 	while ( * p )
 	{
 	    char c = * p ++;
@@ -414,8 +426,8 @@ void put_lexeme ( char ** buffer, const char * lexeme )
     }
 }
 
-/* Read index from file stream.  On error prints error
- * message to stdout and does exit ( 1 );
+/* Read index from file stream.  On error print error
+ * message to stdout and exit ( 1 );
  */
 void read_index ( FILE * f )
 {
@@ -424,6 +436,15 @@ void read_index ( FILE * f )
     char * filename;
     while ( get_line ( buffer, f ) )
     {
+	struct tm td;
+	char * b, * c, * fn, * mode, * mtime, * q,
+	     * md5sum, * key;
+	int current;
+	unsigned long m;
+	const char * ts;
+	time_t d;
+	struct entry * e;
+
 	if ( begin && buffer[0] == '#' )
 	{
 	    struct comment * c =
@@ -444,7 +465,7 @@ void read_index ( FILE * f )
 	}
 	begin = 0;
 
-	char * b = buffer;
+	b = buffer;
 	if ( * b == 0 || isspace ( * b ) )
 	{
 	    printf ( "ERROR: index entry first line"
@@ -453,7 +474,7 @@ void read_index ( FILE * f )
 		     " index\n    %s\n", buffer );
 	    exit ( 1 );
 	}
-	char * c = get_lexeme ( & b );
+	c = get_lexeme ( & b );
 	if ( c == NULL
 	     ||
 	     ( strcmp ( c, "+" ) != 0
@@ -464,8 +485,8 @@ void read_index ( FILE * f )
 		     "\n    %s\n", buffer );
 	    exit ( 1 );
 	}
-	int current = ( c[0] == '+' ? 1 : 0 );
-	char * fn = get_lexeme ( & b );
+	current = ( c[0] == '+' ? 1 : 0 );
+	fn = get_lexeme ( & b );
 	if ( fn == NULL )
 	{
 	    printf ( "ERROR: index entry begins badly"
@@ -496,7 +517,7 @@ void read_index ( FILE * f )
 		     filename );
 	    exit ( 1 );
 	}
-	char * mode = get_lexeme ( & b );
+	mode = get_lexeme ( & b );
 	if ( mode == NULL )
 	{
 	    printf ( "ERROR: index entry mode missing"
@@ -504,7 +525,7 @@ void read_index ( FILE * f )
 		     filename );
 	    exit ( 1 );
 	}
-	char * mtime = get_lexeme ( & b );
+	mtime = get_lexeme ( & b );
 	if ( mtime == NULL )
 	{
 	    printf ( "ERROR: index entry modification"
@@ -520,8 +541,7 @@ void read_index ( FILE * f )
 		     filename );
 	    exit ( 1 );
 	}
-	char * q;
-	unsigned long m = strtoul ( mode, & q, 8 );
+	m = strtoul ( mode, & q, 8 );
 	if ( * q || m >= ( 1 << 16 ) )
 	{
 	    printf ( "ERROR: bad EFM-INDEX mode (%s),\n"
@@ -529,12 +549,10 @@ void read_index ( FILE * f )
 		     mode, filename );
 	    exit ( 1 );
 	}
-	struct tm td;
-	const char * ts =
-	    (const char *)
-	    strptime ( mtime, time_format, & td );
-	time_t d = ( ts == NULL || * ts != 0 ) ? -1 :
-	           mktime ( & td );
+	ts = (const char *)
+	     strptime ( mtime, time_format, & td );
+	d = ( ts == NULL || * ts != 0 ) ?
+	    -1 : mktime ( & td );
 	if ( d == -1 )
 	{
 	    printf ( "ERROR: bad EFM-INDEX mtime"
@@ -558,7 +576,7 @@ void read_index ( FILE * f )
 		     filename );
 	    exit ( 1 );
 	}
-	char * md5sum = get_lexeme ( & b );
+	md5sum = get_lexeme ( & b );
 	if ( md5sum == NULL )
 	{
 	    printf ( "ERROR: index entry MD5 sum"
@@ -566,7 +584,7 @@ void read_index ( FILE * f )
 		     filename );
 	    exit ( 1 );
 	}
-	char * key = get_lexeme ( & b );
+	key = get_lexeme ( & b );
 	if ( key == NULL )
 	{
 	    printf ( "ERROR: index entry key"
@@ -597,8 +615,7 @@ void read_index ( FILE * f )
 	    exit ( 1 );
 	}
 
-	struct entry * e =
-	    (struct entry * )
+	e = (struct entry * )
 	    malloc ( sizeof ( struct entry ) );
 	e->current = current;
 	e->filename = filename;
@@ -649,10 +666,11 @@ void write_index_entry
 
     if ( ( mode & 2 ) != 0 )
     {
+	char tbuffer [100];
+
 	sprintf ( b, "%04o", e->mode );
 	b += 4;
 	* b ++ = ' ';
-	char tbuffer [100];
 	strftime ( tbuffer, 100, time_format, 
 		   gmtime ( & e->mtime ) );
 	put_lexeme ( & b, tbuffer );
@@ -684,6 +702,8 @@ void write_index_entry
  */
 void write_index ( FILE * f, int mode, int current )
 {
+    struct entry * e;
+
     if ( mode != 0 )
     {
 	struct comment * c = first_comment;
@@ -693,7 +713,7 @@ void write_index ( FILE * f, int mode, int current )
 	} while ( ( c = c->next ) != first_comment );
     }
 
-    struct entry * e = first_entry;
+    e = first_entry;
     if ( e ) do
     {
         if ( current == -1 || e->current == current )
@@ -739,7 +759,7 @@ struct entry * find_md5sum
  */
 void error ( int err_no )
 {
-    const char * s = strerror ( errno );
+    const char * s = strerror ( err_no );
     printf ( "ERROR: %s\n", s );
     exit ( 1 );
 }
@@ -766,10 +786,12 @@ int cwait ( pid_t child )
  */
 void newkey ( char * buffer )
 {
-    int fd = open ( "/dev/random", O_RDONLY );
-    if ( fd < 0 ) error ( errno );
+    int fd, size;
     unsigned char b[16];
-    int size = read ( fd, b, 16 );
+
+    fd = open ( "/dev/random", O_RDONLY );
+    if ( fd < 0 ) error ( errno );
+    size = read ( fd, b, 16 );
     if ( size < 0 ) error ( errno );
     assert ( size == 16 );
     close ( fd );
@@ -792,9 +814,10 @@ void newkey ( char * buffer )
  * to cwait after the returned descriptor is closed.
  *
  * Output files are created, truncated if they exist,
- * and given user only read/write mode.  Password is
- * plength string of bytes.  If error, returns -1
- * and writes error messages to stdout.
+ * and given user only read/write mode when they are
+ * created.  Password is plength string of bytes.  If
+ * error, returns -1 and writes error messages to
+ * stdout.
  */
 int crypt ( int decrypt,
             const char * input,
@@ -857,6 +880,8 @@ int crypt ( int decrypt,
 
     if ( * child == 0 )
     {
+        int fd;
+
 	/* Set fd's as follows:
 	 * 	0 -> infd
 	 *	1 -> outfd
@@ -878,7 +903,7 @@ int crypt ( int decrypt,
 		error ( errno );
 	    close ( passfd );
 	}
-	int fd = getdtablesize();
+	fd = getdtablesize() - 1;
 	while ( fd > 3 ) close ( fd -- );
 
 	if ( ( decrypt ?
@@ -921,15 +946,22 @@ int md5sum ( char * buffer,
              const char * filename )
 {
     int fd[2];
+    int child, e;
+    FILE * inf;
+    line_buffer line;
     if ( pipe ( fd ) < 0 ) error ( errno );
 
     fflush ( stdout );
 
-    int child = fork();
+    child = fork();
     if ( child < 0 ) error ( errno );
 
     if ( child == 0 )
     {
+        int newfd, d, at_found;
+	char * p;
+	line_buffer buffer;
+
         close ( fd[0] );
 
 	/* Set fd's as follows:
@@ -937,7 +969,7 @@ int md5sum ( char * buffer,
 	 *	1 -> fd[1]
 	 *	2 -> parent's 1
 	 */
-	int newfd = open ( "/dev/null", O_RDONLY );
+	newfd = open ( "/dev/null", O_RDONLY );
 	if ( newfd < 0 ) error ( errno );
 	close ( 0 );
 	if ( dup2 ( newfd, 0 ) < 0 ) error ( errno );
@@ -947,13 +979,12 @@ int md5sum ( char * buffer,
 	close ( 1 );
 	if ( dup2 ( fd[1], 1 ) < 0 ) error ( errno );
 	close ( fd[1] );
-	int d = getdtablesize();
+	d = getdtablesize() - 1;
 	while ( d > 2 ) close ( d -- );
 
-	line_buffer buffer;
 	strcpy ( buffer, filename );
-	char * p = buffer;
-	int at_found = 0;
+	p = buffer;
+	at_found = 0;
 	for ( ; * p; ++ p )
 	{
 	    if ( * p == '@' )
@@ -985,10 +1016,9 @@ int md5sum ( char * buffer,
     }
 
     close ( fd[1] );
-    FILE * inf = fdopen ( fd[0], "r" );
+    inf = fdopen ( fd[0], "r" );
 
-    line_buffer line;
-    int e = -1;
+    e = -1;
 
     if ( get_line ( line, inf ) )
     {
@@ -1006,6 +1036,15 @@ int md5sum ( char * buffer,
 	    strncpy ( buffer, line, 32 );
 	    buffer[32] = 0;
 	    e = 0;
+	}
+	else
+	{
+	    /* Print output that may contain error
+	     * messages.
+	     */
+	    do {
+	        printf ( "%s\n", line );
+	    } while ( get_line ( line, inf ) );
 	}
     }
     fclose ( inf );
@@ -1026,26 +1065,30 @@ int md5sum ( char * buffer,
 int copyfile
 	( const char * source, const char * target )
 {
+    int child;
+
     fflush ( stdout );
 
-    int child = fork();
+    child = fork();
     if ( child < 0 ) error ( errno );
 
     if ( child == 0 )
     {
+        int newfd, d;
+
 	/* Set fd's as follows:
 	 * 	0 -> /dev/null
 	 *	1 -> parent's 1
 	 *	2 -> parent's 1
 	 */
-	int newfd = open ( "/dev/null", O_RDONLY );
+	newfd = open ( "/dev/null", O_RDONLY );
 	if ( newfd < 0 ) error ( errno );
 	close ( 0 );
 	if ( dup2 ( newfd, 0 ) < 0 ) error ( errno );
 	close ( newfd );
 	close ( 2 );
 	if ( dup2 ( 1, 2 ) < 0 ) error ( errno );
-	int d = getdtablesize();
+	d = getdtablesize() - 1;
 	while ( d > 2 ) close ( d -- );
 
 	if ( execlp ( "scp", "scp", "-p",
@@ -1063,10 +1106,13 @@ int copyfile
  */
 int delfile ( const char * filename )
 {
+    int at_found, child;
+    char * p;
+
     line_buffer buffer;
     strcpy ( buffer, filename );
-    char * p = buffer;
-    int at_found = 0;
+    p = buffer;
+    at_found = 0;
     for ( ; * p; ++ p )
     {
         if ( * p == '@' )
@@ -1083,7 +1129,9 @@ int delfile ( const char * filename )
 	     &&
 	     errno != ENOENT )
 	{
-	    printf ( "ERROR: could not delete %s\n",
+	    const char * s = strerror ( errno );
+	    printf ( "ERROR: %s\n", s );
+	    printf ( "    could not delete %s\n",
 	             filename );
 	    return -1;
 	}
@@ -1098,24 +1146,26 @@ int delfile ( const char * filename )
      */
 
     fflush ( stdout );
-    int child = fork();
+    child = fork();
     if ( child < 0 ) error ( errno );
 
     if ( child == 0 )
     {
+        int newfd, d;
+
 	/* Set fd's as follows:
 	 * 	0 -> /dev/null
 	 *	1 -> parent's 1
 	 *	2 -> parent's 1
 	 */
-	int newfd = open ( "/dev/null", O_RDONLY );
+	newfd = open ( "/dev/null", O_RDONLY );
 	if ( newfd < 0 ) error ( errno );
 	close ( 0 );
 	if ( dup2 ( newfd, 0 ) < 0 ) error ( errno );
 	close ( newfd );
 	close ( 2 );
 	if ( dup2 ( 1, 2 ) < 0 ) error ( errno );
-	int d = getdtablesize();
+	d = getdtablesize() - 1;
 	while ( d > 2 ) close ( d -- );
 
 	if ( execlp ( "ssh", "ssh", buffer,
@@ -1131,7 +1181,13 @@ int delfile ( const char * filename )
  */
 int add ( const char * filename )
 {
-    const char * p = filename;
+    const char * p;
+    struct entry * e;
+    char sum [33];
+    struct stat s;
+    char key[33];
+
+    p = filename;
     for ( ; * p; ++ p )
     {
         if ( * p == '/' )
@@ -1154,16 +1210,14 @@ int add ( const char * filename )
 	return -1;
     }
 
-    struct stat s;
     if ( stat ( filename, & s ) < 0 )
     {
         printf ( "ERROR: cannot stat %s\n", filename );
 	return -1;
     }
 
-    char sum [33];
     if ( md5sum ( sum, filename ) < 0 ) return -1;
-    struct entry * e = find_md5sum ( sum, 1 );
+    e = find_md5sum ( sum, 1 );
     if ( e != NULL )
     {
         printf ( "ERROR: cannot make index entry for"
@@ -1173,7 +1227,6 @@ int add ( const char * filename )
 	return -1;
     }
 
-    char key[33];
 
     e = find_md5sum ( sum, 0 );
     if ( e != NULL )
@@ -1247,15 +1300,16 @@ int sub ( const char * filename )
 int eol_found;
 char * get_argument ( line_buffer buffer, FILE * in )
 {
+    char * b, *r, * j;
     if ( eol_found ) return NULL;
     if ( ! get_line ( buffer, in ) )
     {
         eol_found = 1;
 	return NULL;
     }
-    char * b = buffer;
-    char * r = get_lexeme ( & b );
-    char * j = get_lexeme ( & b );
+    b = buffer;
+    r = get_lexeme ( & b );
+    j = get_lexeme ( & b );
     if ( j != NULL )
     {
         printf ( "ERROR: junk at end of argument"
@@ -1276,13 +1330,11 @@ char * get_argument ( line_buffer buffer, FILE * in )
 int execute_command ( FILE * in )
 {
     int result = 0;
-        /* Special value: -2 to return -1 but without
-	 * there being any actual error.
-	 */
-
+    char * arg;
     line_buffer buffer, directory;
+
     eol_found = 0;
-    char * arg = get_argument ( buffer, in );
+    arg = get_argument ( buffer, in );
 
     if ( arg == NULL ) return 0;
     else if ( strcmp ( arg, "start" ) == 0 )
@@ -1376,20 +1428,14 @@ int execute_command ( FILE * in )
 	    }
 	} while ( arg = get_argument ( buffer, in ) );
     }
-    else if ( strcmp ( arg, "listed" ) == 0 )
-    {
-        while ( arg = get_argument ( buffer, in ) )
-	{
-	    struct entry * e = find_filename ( arg );
-	    if ( e == NULL || ! e->current )
-	        result = -2;
-	}
-    }
     else if ( strcmp ( arg, "md5check" ) == 0 )
     {
         while ( arg = get_argument ( buffer, in ) )
 	{
 	    struct entry * e = find_filename ( arg );
+	    struct stat st;
+	    char sum [33];
+
 	    if ( e == NULL )
 	    {
 	        printf ( "ERROR: %s is not in"
@@ -1397,7 +1443,6 @@ int execute_command ( FILE * in )
 		result = -1;
 		continue;
 	    }
-	    struct stat st;
 	    if ( stat ( arg, & st ) < 0 )
 	    {
 	        printf ( "ERROR: %s does not"
@@ -1405,7 +1450,6 @@ int execute_command ( FILE * in )
 		result = -1;
 		continue;
 	    }
-	    char sum [33];
 	    if ( md5sum ( sum, arg ) < 0 )
 	    {
 		result = -1;
@@ -1465,6 +1509,13 @@ int execute_command ( FILE * in )
 
 	    e->current = current;
 	    index_modified = 1;
+	    if ( trace )
+	    {
+		printf ( "* made index entry %s\n",
+		         e->current ? "current"
+			            : "obsolete" );
+		write_index_entry ( stdout, e, 7, "* " );
+	    }
 	}
     }
     else if ( strcmp ( arg, "add" ) == 0 )
@@ -1512,6 +1563,8 @@ int execute_command ( FILE * in )
 		struct entry * e =
 		    find_filename ( arg );
 		struct stat st;
+		char efile [40];
+		pid_t child;
 
 		/* On copyto or moveto with an obsolete
 		 * entry, delete the entry here so it
@@ -1522,6 +1575,8 @@ int execute_command ( FILE * in )
 		if ( e != NULL && ! e->current
 		     && direction == 't' )
 		{
+		    char sum [33];
+
 		    if ( stat ( arg, & st ) < 0 )
 		    {
 		        printf ( "ERROR: file %s does"
@@ -1529,7 +1584,6 @@ int execute_command ( FILE * in )
 			result = -1;
 			continue;
 		    }
-		    char sum [33];
 		    if ( md5sum ( sum, arg ) < 0 )
 		    {
 			result = -1;
@@ -1602,10 +1656,8 @@ int execute_command ( FILE * in )
 
 		/* Perform Copying */
 
-		char efile [40];
 		strcpy ( efile, e->md5sum );
 		strcpy ( efile + 32, ".gpg" );
-		pid_t child;
 		strcpy ( dend, efile );
 		if ( direction == 't' )
 		{
@@ -1638,6 +1690,9 @@ int execute_command ( FILE * in )
 		    }
 		    if ( ! current_directory )
 		    {
+			char efile_sum[33];
+			char dbegin_sum[33];
+
 			if ( trace )
 			    printf ( "* deleting %s\n",
 			             dbegin );
@@ -1661,8 +1716,6 @@ int execute_command ( FILE * in )
 			             " sums of %s\n"
 				     "*     and %s\n",
 			             efile, dbegin );
-			char efile_sum[33];
-			char dbegin_sum[33];
 			if ( md5sum ( efile_sum,
 			              efile )
 			     < 0 )
@@ -1701,6 +1754,8 @@ int execute_command ( FILE * in )
 		else if ( op == 'm' || op == 'c'
 		                    || op == 'k' )
 		{
+		    char sum [33];
+
 		    if ( ! current_directory )
 		    {
 			if ( trace )
@@ -1752,7 +1807,6 @@ int execute_command ( FILE * in )
 		    if ( trace )
 		        printf ( "* checking MD5 sum of"
 			         " %s\n", e->md5sum );
-		    char sum [33];
 		    if ( md5sum ( sum, e->md5sum ) < 0 )
 		    {
 		        printf ( "ERROR: cannot compute"
@@ -1776,6 +1830,8 @@ int execute_command ( FILE * in )
 		    }
 		    if ( op != 'k' )
 		    {
+			struct utimbuf ut;
+
 			if ( trace )
 			    printf
 				( "* linking %s\n"
@@ -1805,7 +1861,6 @@ int execute_command ( FILE * in )
 				     arg );
 			    result = -1;
 			}
-			struct utimbuf ut;
 			ut.actime = time ( NULL );
 			ut.modtime = e->mtime;
 			if ( utime ( arg, & ut ) < 0 )
@@ -1859,6 +1914,13 @@ int execute_command ( FILE * in )
 		{
 		    e->current = 0;
 		    index_modified = 1;
+		    if ( trace )
+		    {
+			printf ( "* made index entry"
+			         " obsolete\n" );
+			write_index_entry
+			    ( stdout, e, 7, "* " );
+		    }
 		}
 	    }
 	}
@@ -1906,7 +1968,7 @@ int execute_command ( FILE * in )
     while ( arg != NULL )
         arg = get_argument ( buffer, in );
 
-    return result == -2 ? -1 : result;
+    return result;
 }
 
 char * password = NULL;
@@ -1915,6 +1977,16 @@ char * password = NULL;
 int main ( int argc, char ** argv )
 {
     line_buffer buffer;
+    int tofd;
+    struct sockaddr_un sa;
+    const char * pass;
+    int indexchild;
+    int indexfd;
+    FILE * indexf;
+    int listenfd;
+    pid_t childpid;
+    FILE * tof;
+    char ** argp;
 
     if ( argc < 2
          ||
@@ -1924,9 +1996,8 @@ int main ( int argc, char ** argv )
 	exit (1);
     }
 
-    int tofd = socket ( PF_UNIX, SOCK_STREAM, 0 );
+    tofd = socket ( PF_UNIX, SOCK_STREAM, 0 );
     if ( tofd < 0 ) error ( errno );
-    struct sockaddr_un sa;
     sa.sun_family = AF_UNIX;
     strcpy ( sa.sun_path, "EFM-INDEX.sock" );
     if ( connect ( tofd,
@@ -1958,18 +2029,17 @@ int main ( int argc, char ** argv )
 	else
 	    error ( errno );
 
-	const char * pass = getpass( "Password: " );
+	pass = getpass ( "Password: " );
 	if ( pass == NULL ) error ( errno );
 	password = strdup ( pass );
 
-	int indexchild;
-	int indexfd =
+	indexfd =
 	    crypt ( 1, "EFM-INDEX.gpg", NULL,
 	            password,
 		    strlen ( password ),
 		    & indexchild );
 	if ( indexfd < 0 ) exit ( 1 );
-	FILE * indexf = fdopen ( indexfd, "r" );
+	indexf = fdopen ( indexfd, "r" );
 	read_index ( indexf );
 	fclose ( indexf );
 	if ( cwait ( indexchild ) < 0 )
@@ -1978,18 +2048,21 @@ int main ( int argc, char ** argv )
 	             " EFM-INDEX.gpg\n" );
 	    exit ( 1 );
 	}
-	int listenfd =
+	listenfd =
 	    socket ( PF_UNIX, SOCK_STREAM, 0 );
 	if ( bind ( listenfd,
 		    (const struct sockaddr *) & sa,
 		    sizeof ( sa ) ) < 0 )
 	    error ( errno );
-	if ( listen ( listenfd, 0 ) ) error ( errno );
-	pid_t childpid = fork ( );
+	if ( listen ( listenfd, 0 ) < 0 )
+	    error ( errno );
+	childpid = fork ( );
 	if ( childpid < 0 ) error ( errno );
 	if ( childpid == 0 )
 	{
 	    struct stat st;
+	    int done;
+
 	    close ( tofd );
 
 	    /* Temporarily reroute stdout to error
@@ -1999,14 +2072,17 @@ int main ( int argc, char ** argv )
 	    close ( 1 );
 	    dup2 ( 2, 1 );
 
-	    int done = 0;  /* Res
+	    done = 0;  /* Res
 	        /* 0 if done without error.
 		   -1 if done with error.
 		   1 to kill (without error).
 		 */
 	    while ( done != 1 )
 	    {
-		int fromfd =
+		int fromfd;
+		FILE * inf;
+
+		fromfd =
 		    accept ( listenfd, NULL, NULL );
 		if ( fromfd < 0 ) error ( errno );
 
@@ -2016,22 +2092,24 @@ int main ( int argc, char ** argv )
 		fflush ( stdout );
 		close ( 1 );
 		dup2 ( fromfd, 1 );
-		FILE * inf = fdopen ( fromfd, "r" );
+		inf = fdopen ( fromfd, "r" );
 
 		index_modified = 0;
 		done = execute_command ( inf );
 		if ( index_modified )
 		{
 		    int indexchild;
-		    int indexfd =
+		    int indexfd;
+		    FILE * indexf;
+
+		    indexfd =
 			crypt ( 0,
 				NULL, "EFM-INDEX.gpg+",
 				password,
 				strlen ( password ),
 				& indexchild );
 		    if ( indexfd < 0 ) exit ( 1 );
-		    FILE * indexf =
-		        fdopen ( indexfd, "w" );
+		    indexf = fdopen ( indexfd, "w" );
 		    if ( trace )
 		        printf ( "* writing"
 			         " EFM-INDEX.gpg+\n" );
@@ -2104,23 +2182,24 @@ int main ( int argc, char ** argv )
     /* To work the parent needs one a+ FILE for some
      * reason.
      */
-    FILE * tof = fdopen ( tofd, "a+" );
+    tof = fdopen ( tofd, "a+" );
 
     /* Send arguments to child.  Each argument sent as
      * a lexeme on its own line.  At the end of the
      * argument list, a blank line is written.
      */
-    char ** argp = argv + 1;
+    argp = argv + 1;
     for ( ; * argp; ++ argp )
     {
         char * b = buffer;
+	const char * p;
 	if ( strlen ( * argp ) > MAX_LEXEME_SIZE )
 	{
 	    printf ( "ERROR: program argument too long:"
 	             " %s\n", * argp );
 	    exit ( 1 );
 	}
-	const char * p = * argp;
+	p = * argp;
 	while ( * p )
 	{
 	    if ( * p ++ == '\n')
@@ -2138,13 +2217,15 @@ int main ( int argc, char ** argv )
     fprintf ( tof, "\n" );
     while ( get_line ( buffer, tof ) )
     {
+	char ** fp;
+
         if ( strncmp ( buffer, END_STRING,
 		       strlen ( END_STRING) ) == 0 )
 	    break;
 
 	/* Filter out unwanted missives from gpg. */
 
-	char ** fp = ofilter;
+	fp = ofilter;
 	for ( ; * fp; ++ fp )
 	{
 	    if ( strcmp ( * fp, buffer ) == 0 ) break;
