@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Sun Sep  3 05:07:13 EDT 2006
+** Date:	Sun Sep  3 05:08:25 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/09/03 09:06:52 $
+**   $Date: 2006/09/03 09:07:42 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.52 $
+**   $Revision: 1.53 $
 */
 
 #include <stdio.h>
@@ -1045,7 +1045,6 @@ int md5sum ( char * buffer,
 	    do {
 	        printf ( "%s\n", line );
 	    } while ( get_line ( line, inf ) );
-	    break;
 	}
     }
     fclose ( inf );
