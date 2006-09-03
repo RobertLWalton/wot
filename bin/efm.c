@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Sat Sep  2 08:42:25 EDT 2006
+** Date:	Sun Sep  3 05:07:13 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/09/02 13:35:39 $
+**   $Date: 2006/09/03 09:06:52 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.51 $
+**   $Revision: 1.52 $
 */
 
 #include <stdio.h>
@@ -66,7 +66,7 @@ char documentation [] =
 "efm add file ...\n"
 "efm sub file ...\n"
 "efm del source file ...\n"
-"\n"
+"\f\n"
 "    A file in the current directory may have an en-\n"
 "    crypted version in the target/source directory.\n"
 "    The file can be moved or copied to/from that\n"
@@ -106,7 +106,7 @@ char documentation [] =
 "    beginning of EFM-INDEX before you encrypt.  All\n"
 "    comment lines must have `#' as their first char-\n"
 "    acter, and there can be no blank lines.\n"
-"\n"
+"\f\n"
 "    The index is REQUIRED to decrypt files, as each\n"
 "    encrypted file has its own unique random encryp-\n"
 "    tion key listed in the index.  If a user wants\n"
@@ -146,7 +146,7 @@ char documentation [] =
 "    no error and if there is an error, returns exit\n"
 "    status 1 and prints the error message to the\n"
 "    standard output.\n"
-"\n"
+"\f\n"
 "    The efm program asks for a password to decrypt\n"
 "    the index only the first time it is run during\n"
 "    a login session.  It then sets up a background\n"
@@ -185,7 +185,7 @@ char documentation [] =
 "    by a pair of quotes (\"\").  The mtime (file\n"
 "    modification time) will always be quoted, and\n"
 "    is Greenwich Mean Time (GMT).\n"
-"\n"
+"\f\n"
 "    Lines at the beginning of the index file whose\n"
 "    first character is # are comment lines, and are\n"
 "    preserved.  Blank lines are forbidden.  Comment\n"
@@ -215,7 +215,7 @@ char documentation [] =
 "    have the same MD5 sum.  Two files (not both cur-\n"
 "    rent) with the same MD5 sum will have the same\n"
 "    key.\n"
-"\n"
+"\f\n"
 "    The \"listall\" command is like \"list\" but\n"
 "    lists both obsolete and current entries and also\n"
 "    includes indicators (+ or -).  The"
@@ -253,7 +253,7 @@ char documentation [] =
 "\n"
 "    Similarly the extension of the index indicates\n"
 "    the program used to encrypt the index.\n"
-"\n"
+"\f\n"
 "    Currently only gpg is supported as an encryp-\n"
 "    ing program.\n"
 ;
@@ -1045,6 +1045,7 @@ int md5sum ( char * buffer,
 	    do {
 	        printf ( "%s\n", line );
 	    } while ( get_line ( line, inf ) );
+	    break;
 	}
     }
     fclose ( inf );
