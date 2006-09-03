@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Sun Sep  3 05:11:12 EDT 2006
+** Date:	Sun Sep  3 05:23:42 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/09/03 09:10:32 $
+**   $Date: 2006/09/03 09:22:56 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.54 $
+**   $Revision: 1.55 $
 */
 
 #include <stdio.h>
@@ -291,7 +291,7 @@ int get_line ( line_buffer buffer, FILE * in )
     if ( ! fgets ( buffer, MAX_LINE_SIZE+2, in ) )
         return 0;
     length = strlen ( buffer );
-    if ( buffer[length-1] != '\n' );
+    if ( buffer[length-1] != '\n' )
     {
 	printf ( "ERROR: line too long or no"
 	         " line feed at end of file:\n" );
