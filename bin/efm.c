@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/09/03 09:22:56 $
+**   $Date: 2006/09/03 09:56:31 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.55 $
+**   $Revision: 1.56 $
 */
 
 #include <stdio.h>
@@ -1581,11 +1581,15 @@ int execute_command ( FILE * in )
 		    {
 		        printf ( "ERROR: file %s does"
 			         " not exist\n", arg );
+			printf ( "    Processing %s"
+			         " aborted.\n", arg );
 			result = -1;
 			continue;
 		    }
 		    if ( md5sum ( sum, arg ) < 0 )
 		    {
+			printf ( "    Processing %s"
+			         " aborted.\n", arg );
 			result = -1;
 			continue;
 		    }
@@ -1601,7 +1605,10 @@ int execute_command ( FILE * in )
 				 " entry\n"
 				 "    for %s\n",
 				 arg, e->filename );
-			return -1;
+			printf ( "    Processing %s"
+			         " aborted.\n", arg );
+			result = -1;
+			continue;
 		    }
 
 		    sub ( arg );
@@ -1615,11 +1622,15 @@ int execute_command ( FILE * in )
 		        printf ( "ERROR: no index entry"
 			         " exists for %s\n",
 				 arg );
+			printf ( "    Processing %s"
+			         " aborted.\n", arg );
 			result = -1;
 			continue;
 		    }
 		    if ( add ( arg ) < 0 )
 		    {
+			printf ( "    Processing %s"
+			         " aborted.\n", arg );
 			result = -1;
 			continue;
 		    }
@@ -1631,6 +1642,8 @@ int execute_command ( FILE * in )
 		    char sum [33];
 		    if ( md5sum ( sum, arg ) < 0 )
 		    {
+			printf ( "    Processing %s"
+			         " aborted.\n", arg );
 			result = -1;
 			continue;
 		    }
@@ -1644,12 +1657,16 @@ int execute_command ( FILE * in )
 				 " the MD5 sum %s in"
 				 " the index\n",
 				 sum, arg, e->md5sum );
+			printf ( "    Processing %s"
+			         " aborted.\n", arg );
 			result = -1;
 			continue;
 		    }
 		} else if ( direction == 't' ) {
 		    printf ( "ERROR: file not found:"
 		             " %s\n", arg );
+		    printf ( "    Processing %s"
+			     " aborted.\n", arg );
 		    result = -1;
 		    continue;
 		}
@@ -1672,6 +1689,8 @@ int execute_command ( FILE * in )
 		    {
 		        printf ( "ERROR: could not"
 			         " encrypt %s\n", arg );
+			printf ( "    Processing %s"
+				 " aborted.\n", arg );
 			result = -1;
 			continue;
 		    }
@@ -1685,6 +1704,8 @@ int execute_command ( FILE * in )
 		    {
 		        printf ( "ERROR: cannot chmod"
 			         " %s\n", efile );
+			printf ( "    Processing %s"
+			         " aborted.\n", arg );
 			result = -1;
 			continue;
 		    }
@@ -1698,6 +1719,9 @@ int execute_command ( FILE * in )
 			             dbegin );
 			if ( delfile ( dbegin ) < 0 )
 			{
+			    printf ( "    Processing %s"
+				     " aborted.\n",
+				     arg );
 			    result = -1;
 			    continue;
 			}
@@ -1708,6 +1732,9 @@ int execute_command ( FILE * in )
 			if ( copyfile ( efile, dbegin )
 			     < 0 )
 			{
+			    printf ( "    Processing %s"
+				     " aborted.\n",
+				     arg );
 			    result = -1;
 			    continue;
 			}
@@ -1720,6 +1747,9 @@ int execute_command ( FILE * in )
 			              efile )
 			     < 0 )
 			{
+			    printf ( "    Processing %s"
+				     " aborted.\n",
+				     arg );
 			    result = -1;
 			    continue;
 			}
@@ -1727,6 +1757,9 @@ int execute_command ( FILE * in )
 				      dbegin )
 			     < 0 )
 			{
+			    printf ( "    Processing %s"
+				     " aborted.\n",
+				     arg );
 			    result = -1;
 			    continue;
 			}
@@ -1742,6 +1775,9 @@ int execute_command ( FILE * in )
 			             efile, efile_sum,
 				     dbegin,
 				     dbegin_sum );
+			    printf ( "    Processing %s"
+				     " aborted.\n",
+				     arg );
 			    result = -1;
 			    continue;
 			}
@@ -1766,6 +1802,9 @@ int execute_command ( FILE * in )
 			if ( copyfile ( dbegin, efile )
 			     < 0 )
 			{
+			    printf ( "    Processing %s"
+				     " aborted.\n",
+				     arg );
 			    result = -1;
 			    continue;
 			}
@@ -1776,6 +1815,8 @@ int execute_command ( FILE * in )
 			         "    (%s) does not"
 				 " exist\n",
 				 arg, efile );
+			printf ( "    Processing %s"
+				 " aborted.\n", arg );
 			result = -1;
 			continue;
 		    }
@@ -1792,6 +1833,8 @@ int execute_command ( FILE * in )
 				 " decrypt %s\n"
 				 "    for %s\n",
 				 efile, arg );
+			printf ( "    Processing %s"
+				 " aborted.\n", arg );
 			result = -1;
 			continue;
 		    }
@@ -1814,6 +1857,8 @@ int execute_command ( FILE * in )
 				 "which is the"
 				 " retrieval of %s\n",
 				 e->md5sum, arg );
+			printf ( "    Processing %s"
+				 " aborted.\n", arg );
 			result = -1;
 			continue;
 		    }
@@ -1825,6 +1870,8 @@ int execute_command ( FILE * in )
 				 "bad retrieval of"
 				 " %s\n", e->md5sum,
 				 sum, arg );
+			printf ( "    Processing %s"
+				 " aborted.\n", arg );
 			result = -1;
 			continue;
 		    }
@@ -1845,6 +1892,9 @@ int execute_command ( FILE * in )
 			             " rename %s\n"
 				     "    to %s\n",
 				     e->md5sum, arg );
+			    printf ( "    Processing %s"
+				     " aborted.\n",
+				     arg );
 			    result = -1;
 			    continue;
 			}
@@ -1890,6 +1940,8 @@ int execute_command ( FILE * in )
 			      dbegin );
 		    if ( delfile ( dbegin ) < 0 )
 		    {
+			printf ( "    Processing %s"
+			         " aborted.\n", arg );
 			result = -1;
 			continue;
 		    }
@@ -1902,6 +1954,9 @@ int execute_command ( FILE * in )
 			    ( "* removing %s\n", arg );
 		    if ( delfile ( arg ) < 0 )
 		    {
+			printf ( "    Processing %s"
+				 " aborted.\n",
+				 arg );
 			result = -1;
 			continue;
 		    }
