@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Sun Sep  3 05:08:25 EDT 2006
+** Date:	Sun Sep  3 05:11:12 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/09/03 09:07:42 $
+**   $Date: 2006/09/03 09:10:32 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.53 $
+**   $Revision: 1.54 $
 */
 
 #include <stdio.h>
@@ -111,9 +111,9 @@ char documentation [] =
 "    encrypted file has its own unique random encryp-\n"
 "    tion key listed in the index.  If a user wants\n"
 "    to change the password used to protect the en-\n"
-"    cryted files, the user changes just the password\n"
-"    of the index, and not the keys encrypting the\n"
-"    files.\n"
+"    crypted files, the user changes just the pass-\n"
+"    word of the index, and not the keys encrypting\n"
+"    the files.\n"
 "\n"
 "    Once listed in the index, files are not normally\n"
 "    removed from the index.  Instead index entries\n"
