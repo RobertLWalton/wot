@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Sun Sep  3 05:23:42 EDT 2006
+** Date:	Mon Sep  4 12:54:04 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/09/03 09:56:31 $
+**   $Date: 2006/09/04 17:22:43 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.56 $
+**   $Revision: 1.57 $
 */
 
 #include <stdio.h>
@@ -874,6 +874,7 @@ int crypt ( int decrypt,
     }
 
     fflush ( stdout );
+    fflush ( stderr );
 
     * child = fork();
     if ( * child < 0 ) error ( errno );
@@ -906,18 +907,66 @@ int crypt ( int decrypt,
 	fd = getdtablesize() - 1;
 	while ( fd > 3 ) close ( fd -- );
 
-	if ( ( decrypt ?
-	       execlp ( "gpg", "gpg",
-	                "--passphrase-fd", "3",
-		        "--batch", "-q", "--no-tty",
-		        NULL ) :
-	       execlp ( "gpg", "gpg",
-		        "--cipher-algo", "BLOWFISH",
-	                "--passphrase-fd", "3",
-		        "--batch", "-q", "--no-tty",
-			"-c", NULL )
-	     ) < 0 )
+	if ( decrypt )
+	{
+	    if ( trace )
+	    {
+		fprintf ( stderr,
+		          "* executing gpg --batch -q"
+		          " --no-tty" );
+		if ( input != NULL )
+		{
+		    fprintf ( stderr, " \\\n"
+		              "            < %s",
+			      input );
+		    if ( output != NULL )
+			fprintf ( stderr, " > %s",
+					  output );
+		}
+		else if ( output != NULL )
+		    fprintf ( stderr, " \\\n"
+		              "            > %s",
+			      output );
+		fprintf ( stderr, "\n" );
+		fflush ( stderr );
+	    }
+	    if ( execlp ( "gpg", "gpg",
+	                  "--passphrase-fd", "3",
+		          "--batch", "-q", "--no-tty",
+		          NULL ) < 0 )
+		error ( errno );
+	}
+	else
+	{
+	    if ( trace )
+	    {
+		fprintf ( stderr,
+		          "* executing gpg"
+			  " --cipher-algo BLOWFISH"
+			  " --batch -q --no-tty -c" );
+		if ( input != NULL )
+		{
+		    fprintf ( stderr, " \\\n"
+		              "            < %s",
+			      input );
+		    if ( output != NULL )
+			fprintf ( stderr, " > %s",
+			                  output );
+		}
+		else if ( output != NULL )
+		    fprintf ( stderr, " \\\n"
+		              "            > %s",
+			      output );
+		fprintf ( stderr, "\n" );
+		fflush ( stderr );
+	    }
+	    if ( execlp ( "gpg", "gpg",
+		          "--cipher-algo", "BLOWFISH",
+	                  "--passphrase-fd", "3",
+		          "--batch", "-q", "--no-tty",
+			  "-c", NULL ) < 0 )
 	    error ( errno );
+	}
     }
 
     close ( infd );
@@ -952,6 +1001,7 @@ int md5sum ( char * buffer,
     if ( pipe ( fd ) < 0 ) error ( errno );
 
     fflush ( stdout );
+    fflush ( stderr );
 
     child = fork();
     if ( child < 0 ) error ( errno );
@@ -999,6 +1049,13 @@ int md5sum ( char * buffer,
 	{
 	    /* Not a remote file. */
 
+	    if ( trace )
+	    {
+		fprintf ( stderr,
+		          "* executing md5sum %s\n",
+		          filename );
+		fflush ( stderr );
+	    }
 	    if ( execlp ( "md5sum", "md5sum",
 			  filename, NULL ) < 0 )
 		error ( errno );
@@ -1009,6 +1066,13 @@ int md5sum ( char * buffer,
 
 	    * p ++ = 0;
 
+	    if ( trace )
+	    {
+		fprintf ( stderr,
+		          "* executing ssh %s md5sum"
+		          " %s\n", buffer, p );
+		fflush ( stderr );
+	    }
 	    if ( execlp ( "ssh", "ssh", buffer,
 	                  "md5sum", p, NULL ) < 0 )
 		error ( errno );
@@ -1068,6 +1132,7 @@ int copyfile
     int child;
 
     fflush ( stdout );
+    fflush ( stderr );
 
     child = fork();
     if ( child < 0 ) error ( errno );
@@ -1091,6 +1156,13 @@ int copyfile
 	d = getdtablesize() - 1;
 	while ( d > 2 ) close ( d -- );
 
+	if ( trace )
+	{
+	    fprintf ( stderr,
+	              "* executing scp -p %s %s\n",
+		      source, target );
+	    fflush ( stderr );
+	}
 	if ( execlp ( "scp", "scp", "-p",
 	              source, target, NULL ) < 0 )
 	    error ( errno );
@@ -1168,6 +1240,13 @@ int delfile ( const char * filename )
 	d = getdtablesize() - 1;
 	while ( d > 2 ) close ( d -- );
 
+	if ( trace )
+	{
+	    fprintf ( stderr,
+	              "* executing ssh %s rm -f %s\n",
+		      buffer, p );
+	    fflush ( stderr );
+	}
 	if ( execlp ( "ssh", "ssh", buffer,
 	              "rm", "-f", p, NULL ) < 0 )
 	    error ( errno );
