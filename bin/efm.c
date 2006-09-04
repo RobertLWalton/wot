@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Mon Sep  4 13:28:11 EDT 2006
+** Date:	Mon Sep  4 13:32:14 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/09/04 17:27:41 $
+**   $Date: 2006/09/04 17:31:41 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.58 $
+**   $Revision: 1.59 $
 */
 
 #include <stdio.h>
@@ -1071,8 +1071,9 @@ int md5sum ( char * buffer,
 	    if ( trace )
 	    {
 		fprintf ( stderr,
-		          "* executing ssh %s md5sum"
-		          " %s\n", buffer, p );
+		          "* executing ssh %s \\\n"
+			  "            md5sum %s\n",
+			  buffer, p );
 		fflush ( stderr );
 	    }
 	    if ( execlp ( "ssh", "ssh", buffer,
@@ -1161,7 +1162,8 @@ int copyfile
 	if ( trace )
 	{
 	    fprintf ( stderr,
-	              "* executing scp -p %s %s\n",
+	              "* executing scp -p %s \\\n"
+		      "                   %s\n",
 		      source, target );
 	    fflush ( stderr );
 	}
@@ -1245,7 +1247,8 @@ int delfile ( const char * filename )
 	if ( trace )
 	{
 	    fprintf ( stderr,
-	              "* executing ssh %s rm -f %s\n",
+	              "* executing ssh %s \\\n"
+		      "            rm -f %s\n",
 		      buffer, p );
 	    fflush ( stderr );
 	}
