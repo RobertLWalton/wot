@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Mon Sep  4 12:54:04 EDT 2006
+** Date:	Mon Sep  4 13:28:11 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/09/04 17:22:43 $
+**   $Date: 2006/09/04 17:27:41 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.57 $
+**   $Revision: 1.58 $
 */
 
 #include <stdio.h>
@@ -917,11 +917,12 @@ int crypt ( int decrypt,
 		if ( input != NULL )
 		{
 		    fprintf ( stderr, " \\\n"
-		              "            < %s",
-			      input );
+			  "            < %s",
+			  input );
 		    if ( output != NULL )
-			fprintf ( stderr, " > %s",
-					  output );
+			fprintf ( stderr, " \\\n"
+			  "            > %s",
+			  output );
 		}
 		else if ( output != NULL )
 		    fprintf ( stderr, " \\\n"
@@ -947,11 +948,12 @@ int crypt ( int decrypt,
 		if ( input != NULL )
 		{
 		    fprintf ( stderr, " \\\n"
-		              "            < %s",
-			      input );
+			  "            < %s",
+			  input );
 		    if ( output != NULL )
-			fprintf ( stderr, " > %s",
-			                  output );
+			fprintf ( stderr, " \\\n"
+			  "            > %s",
+			  output );
 		}
 		else if ( output != NULL )
 		    fprintf ( stderr, " \\\n"
