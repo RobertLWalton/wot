@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/09/07 12:58:58 $
+**   $Date: 2006/09/07 13:25:28 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.60 $
+**   $Revision: 1.61 $
 */
 
 #include <stdio.h>
@@ -261,7 +261,7 @@ NULL
 
 int trace = 0;		/* 1 if trace on, 0 if off. */
 
-int RETRIES = 0;	/* Number of retries. */
+int RETRIES = 3;	/* Number of retries. */
 
 #define MAX_LEXEME_SIZE 2000
 #define MAX_LINE_SIZE ( 2 * MAX_LEXEME_SIZE + 10 )
@@ -1205,14 +1205,17 @@ int copyfile
 /* Delete file.  0 is returned on success, -1 on error.
  * Error messages are written on stdout.  The filename
  * may have the format acceptable to scp, and must
- * not be longer than MAX_LEXEME_SIZE.
+ * not be longer than MAX_LEXEME_SIZE.  If filename is
+ * remote (has @ and :) then RETRIES retries are done on
+ * failure.
  */
 int delfile ( const char * filename )
 {
     int at_found, child;
     char * p;
-
     line_buffer name;
+    int retries = RETRIES;
+
     strcpy ( name, filename );
     p = name;
     at_found = 0;
@@ -1248,43 +1251,57 @@ int delfile ( const char * filename )
      * within account.
      */
 
-    fflush ( stdout );
-    child = fork();
-    if ( child < 0 ) error ( errno );
-
-    if ( child == 0 )
+    while ( 1 )
     {
-        int newfd, d;
+	fflush ( stdout );
+	fflush ( stderr );
+	child = fork();
+	if ( child < 0 ) error ( errno );
 
-	/* Set fd's as follows:
-	 * 	0 -> /dev/null
-	 *	1 -> parent's 1
-	 *	2 -> parent's 1
-	 */
-	newfd = open ( "/dev/null", O_RDONLY );
-	if ( newfd < 0 ) error ( errno );
-	close ( 0 );
-	if ( dup2 ( newfd, 0 ) < 0 ) error ( errno );
-	close ( newfd );
-	close ( 2 );
-	if ( dup2 ( 1, 2 ) < 0 ) error ( errno );
-	d = getdtablesize() - 1;
-	while ( d > 2 ) close ( d -- );
-
-	if ( trace )
+	if ( child == 0 )
 	{
-	    fprintf ( stderr,
-	              "* executing ssh %s \\\n"
-		      "            rm -f %s\n",
-		      name, p );
-	    fflush ( stderr );
-	}
-	if ( execlp ( "ssh", "ssh", name,
-	              "rm", "-f", p, NULL ) < 0 )
-	    error ( errno );
-    }
+	    int newfd, d;
 
-    return cwait ( child );
+	    /* Set fd's as follows:
+	     * 	0 -> /dev/null
+	     *	1 -> parent's 1
+	     *	2 -> parent's 1
+	     */
+	    newfd = open ( "/dev/null", O_RDONLY );
+	    if ( newfd < 0 ) error ( errno );
+	    close ( 0 );
+	    if ( dup2 ( newfd, 0 ) < 0 ) error ( errno );
+	    close ( newfd );
+	    close ( 2 );
+	    if ( dup2 ( 1, 2 ) < 0 ) error ( errno );
+	    d = getdtablesize() - 1;
+	    while ( d > 2 ) close ( d -- );
+
+	    if ( trace )
+	    {
+		fprintf ( stderr,
+			  "* executing ssh %s \\\n"
+			  "            rm -f %s\n",
+			  name, p );
+		fflush ( stderr );
+	    }
+	    if ( execlp ( "ssh", "ssh", name,
+			  "rm", "-f", p, NULL ) < 0 )
+		error ( errno );
+	}
+
+	if ( cwait ( child ) < 0 )
+	{
+	    if ( retries -- )
+	    {
+	    	if ( trace )
+		    printf ( "* retrying deletion of"
+		             " %s\n", filename );
+	    }
+	    else return -1;
+	}
+	else return 0;
+    }
 }
 
 /* Add file entry to index.  Return -1 on error, 0 on
