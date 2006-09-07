@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Thu Sep  7 08:07:51 EDT 2006
+** Date:	Thu Sep  7 09:30:51 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/09/07 13:25:28 $
+**   $Date: 2006/09/07 13:42:00 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.61 $
+**   $Revision: 1.62 $
 */
 
 #include <stdio.h>
@@ -1154,52 +1154,71 @@ int md5sum ( char * buffer,
 /* Copy file.  0 is returned on success, -1 on error.
  * Error messages are written on stdout.  The mode
  * and mtime of the file are preserved.  The filenames
- * may have any format acceptable to scp.
+ * may have any format acceptable to scp.  RETRIES
+ * retries are done on failure (it is assumed that
+ * one of the file names is probably remote).
  */
 int copyfile
 	( const char * source, const char * target )
 {
     int child;
+    int retries = RETRIES;
 
-    fflush ( stdout );
-    fflush ( stderr );
-
-    child = fork();
-    if ( child < 0 ) error ( errno );
-
-    if ( child == 0 )
+    while ( 1 )
     {
-        int newfd, d;
+	fflush ( stdout );
+	fflush ( stderr );
 
-	/* Set fd's as follows:
-	 * 	0 -> /dev/null
-	 *	1 -> parent's 1
-	 *	2 -> parent's 1
-	 */
-	newfd = open ( "/dev/null", O_RDONLY );
-	if ( newfd < 0 ) error ( errno );
-	close ( 0 );
-	if ( dup2 ( newfd, 0 ) < 0 ) error ( errno );
-	close ( newfd );
-	close ( 2 );
-	if ( dup2 ( 1, 2 ) < 0 ) error ( errno );
-	d = getdtablesize() - 1;
-	while ( d > 2 ) close ( d -- );
+	child = fork();
+	if ( child < 0 ) error ( errno );
 
-	if ( trace )
+	if ( child == 0 )
 	{
-	    fprintf ( stderr,
-	              "* executing scp -p %s \\\n"
-		      "                   %s\n",
-		      source, target );
-	    fflush ( stderr );
-	}
-	if ( execlp ( "scp", "scp", "-p",
-	              source, target, NULL ) < 0 )
-	    error ( errno );
-    }
+	    int newfd, d;
 
-    return cwait ( child );
+	    /* Set fd's as follows:
+	     * 	0 -> /dev/null
+	     *	1 -> parent's 1
+	     *	2 -> parent's 1
+	     */
+	    newfd = open ( "/dev/null", O_RDONLY );
+	    if ( newfd < 0 ) error ( errno );
+	    close ( 0 );
+	    if ( dup2 ( newfd, 0 ) < 0 )
+	    	error ( errno );
+	    close ( newfd );
+	    close ( 2 );
+	    if ( dup2 ( 1, 2 ) < 0 )
+	    	error ( errno );
+	    d = getdtablesize() - 1;
+	    while ( d > 2 ) close ( d -- );
+
+	    if ( trace )
+	    {
+		fprintf ( stderr,
+			  "* executing scp -p %s \\\n"
+			  "                   %s\n",
+			  source, target );
+		fflush ( stderr );
+	    }
+	    if ( execlp ( "scp", "scp", "-p",
+			  source, target, NULL ) < 0 )
+		error ( errno );
+	}
+
+	if ( cwait ( child ) < 0 )
+	{
+	    if ( retries -- )
+	    {
+	    	if ( trace )
+		    printf ( "* retrying scp -p %s \\\n"
+		             "                  %s\\n",
+		             source, target );
+	    }
+	    else return -1;
+	}
+	else return 0;
+    }
 }
 
 /* Delete file.  0 is returned on success, -1 on error.
@@ -1270,10 +1289,12 @@ int delfile ( const char * filename )
 	    newfd = open ( "/dev/null", O_RDONLY );
 	    if ( newfd < 0 ) error ( errno );
 	    close ( 0 );
-	    if ( dup2 ( newfd, 0 ) < 0 ) error ( errno );
+	    if ( dup2 ( newfd, 0 ) < 0 )
+	        error ( errno );
 	    close ( newfd );
 	    close ( 2 );
-	    if ( dup2 ( 1, 2 ) < 0 ) error ( errno );
+	    if ( dup2 ( 1, 2 ) < 0 )
+	        error ( errno );
 	    d = getdtablesize() - 1;
 	    while ( d > 2 ) close ( d -- );
 
@@ -1499,7 +1520,8 @@ int execute_command ( FILE * in )
 	      strcmp ( arg, "listallkeys" ) == 0  ? -1 :
 	      strcmp ( arg, "listallfiles" ) == 0 ? -1 :
 	      strcmp ( arg, "listobsfiles" ) == 0 ?  0 :
-	      				             1 );
+	      				             1
+						     );
 
 	arg = get_argument ( buffer, in );
 	if ( arg == NULL )
@@ -1642,7 +1664,8 @@ int execute_command ( FILE * in )
 		printf ( "* made index entry %s\n",
 		         e->current ? "current"
 			            : "obsolete" );
-		write_index_entry ( stdout, e, 7, "* " );
+		write_index_entry
+		    ( stdout, e, 7, "* " );
 	    }
 	}
     }
