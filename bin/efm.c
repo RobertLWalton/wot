@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Thu Sep  7 09:30:51 EDT 2006
+** Date:	Thu Sep  7 10:08:25 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/09/07 13:42:00 $
+**   $Date: 2006/09/07 14:08:01 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.62 $
+**   $Revision: 1.63 $
 */
 
 #include <stdio.h>
@@ -1135,9 +1135,7 @@ int md5sum ( char * buffer,
 
 	if ( error_found && retries > 0 )
 	{
-	    if ( trace )
-	        printf ( "* retrying md5sum %s\n",
-		         filename );
+	    printf ( "RETRYING md5sum %s\n", filename );
 	    -- retries;
 	    continue;
 	}
@@ -1210,10 +1208,9 @@ int copyfile
 	{
 	    if ( retries -- )
 	    {
-	    	if ( trace )
-		    printf ( "* retrying scp -p %s \\\n"
-		             "                  %s\\n",
-		             source, target );
+		printf ( "RETRYING scp -p %s \\\n"
+			 "                %s\\n",
+			 source, target );
 	    }
 	    else return -1;
 	}
@@ -1315,9 +1312,8 @@ int delfile ( const char * filename )
 	{
 	    if ( retries -- )
 	    {
-	    	if ( trace )
-		    printf ( "* retrying deletion of"
-		             " %s\n", filename );
+		printf ( "RETRYING deletion of %s\n",
+		         filename );
 	    }
 	    else return -1;
 	}
