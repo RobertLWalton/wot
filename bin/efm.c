@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Thu Sep  7 12:53:04 EDT 2006
+** Date:	Thu Sep  7 12:58:25 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/09/07 16:56:06 $
+**   $Date: 2006/09/07 17:00:08 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.64 $
+**   $Revision: 1.65 $
 */
 
 #include <stdio.h>
@@ -2125,7 +2125,13 @@ int execute_command ( FILE * in )
 			    ( stdout, e, 7, "* " );
 		    }
 		}
-		printf ( "%s DONE\n", arg );
+
+		printf ( "%s %s\n", arg,
+		         op == 'm' ? "MOVED" :
+		         op == 'c' ? "COPIED" :
+		         op == 'r' ? "REMOVED" :
+		         op == 'd' ? "DELETED" :
+		         op == 'k' ? "OK" : "DONE" );
 	    }
 	}
     }
