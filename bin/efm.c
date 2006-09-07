@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Mon Sep  4 13:32:14 EDT 2006
+** Date:	Thu Sep  7 08:07:51 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/09/04 17:31:41 $
+**   $Date: 2006/09/07 12:58:58 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.59 $
+**   $Revision: 1.60 $
 */
 
 #include <stdio.h>
@@ -33,232 +33,235 @@
 #define _XOPEN_SOURCE_EXTENDED
 #include <time.h>
 
-char documentation [] =
-"efm -doc\n"
-"\n"
-"efm moveto target file ...\n"
-"efm movefrom source file ...\n"
-"efm copyto target file ...\n"
-"efm copyfrom source file ...\n"
-"efm check source file ...\n"
-"efm remove target file ...\n"
-"\n"
-"efm list [file ...]\n"
-"efm listkeys [file ...]\n"
-"efm listfiles [file ...]\n"
-"efm md5check file ...\n"
-"\n"
-"efm start\n"
-"efm kill\n"
-"\n"
-"efm trace on\n"
-"efm trace off\n"
-"efm trace\n"
-"\n"
-"efm listall [file ...]\n"
-"efm listallkeys [file ...]\n"
-"efm listcurfiles [file ...]\n"
-"efm listobsfiles [file ...]\n"
-"efm listallfiles [file ...]\n"
-"\n"
-"efm cur file ...\n"
-"efm obs file ...\n"
-"efm add file ...\n"
-"efm sub file ...\n"
-"efm del source file ...\n"
-"\f\n"
-"    A file in the current directory may have an en-\n"
-"    crypted version in the target/source directory.\n"
-"    The file can be moved or copied to/from that\n"
-"    directory.  It is encrypted when moved or copied\n"
-"    to the target directory, and decrypted when\n"
-"    moved or copied from the source directory.  The\n"
-"    target/source directory may be \".\" to encrypt\n"
-"    or decrypt in place.\n"
-"\n"
-"    The \"remove\" command is like \"movefrom\" fol-\n"
-"    lowed by discarding the decrypted file.  The\n"
-"    \"check\" command is like \"copyfrom\" followed\n"
-"    by discarding the decrypted file.  Neither of\n"
-"    these two commands affects any existing de-\n"
-"    crypted file.\n"
-"\n"
-"    File names must not contain any '/'s (files must\n"
-"    be in the current directory).  Source and target\n"
-"    names can be any directory names acceptable to\n"
-"    scp.  Efm makes temporary files in the current\n"
-"    directory whose base names are the 32 character\n"
-"    MD5 sums of the decrypted files.  No two encryp-\n"
-"    ted files may have the same MD5 sum.  It is ex-\n"
-"    pected that files will be tar files of director-\n"
-"    ies.\n"
-"\n"
-"    Efm maintains an index of encrypted files.  This\n"
-"    index is itself encrypted, and is stored in the\n"
-"    file named \"EFM-INDEX.gpg\".  You must create\n"
-"    and encrypt an initial empty index by executing:\n"
-"\n"
-"               echo > EFM-INDEX\n"
-"               gpg -c EFM-INDEX\n"
-"\n"
-"    You choose the password that protects the index\n"
-"    when you do this.  You may put comments at the\n"
-"    beginning of EFM-INDEX before you encrypt.  All\n"
-"    comment lines must have `#' as their first char-\n"
-"    acter, and there can be no blank lines.\n"
-"\f\n"
-"    The index is REQUIRED to decrypt files, as each\n"
-"    encrypted file has its own unique random encryp-\n"
-"    tion key listed in the index.  If a user wants\n"
-"    to change the password used to protect the en-\n"
-"    crypted files, the user changes just the pass-\n"
-"    word of the index, and not the keys encrypting\n"
-"    the files.\n"
-"\n"
-"    Once listed in the index, files are not normally\n"
-"    removed from the index.  Instead index entries\n"
-"    are marked as being either current or obsolete.\n"
-"    The \"moveto\" and \"copyto\" commands make a\n"
+const char * documentation [] = {
+"efm -doc",
+"",
+"efm moveto target file ...",
+"efm movefrom source file ...",
+"efm copyto target file ...",
+"efm copyfrom source file ...",
+"efm check source file ...",
+"efm remove target file ...",
+"",
+"efm list [file ...]",
+"efm listkeys [file ...]",
+"efm listfiles [file ...]",
+"efm md5check file ...",
+"",
+"efm start",
+"efm kill",
+"",
+"efm trace on",
+"efm trace off",
+"efm trace",
+"",
+"efm listall [file ...]",
+"efm listallkeys [file ...]",
+"efm listcurfiles [file ...]",
+"efm listobsfiles [file ...]",
+"efm listallfiles [file ...]",
+"",
+"efm cur file ...",
+"efm obs file ...",
+"efm add file ...",
+"efm sub file ...",
+"efm del source file ...",
+"\f",
+"    A file in the current directory may have an en-",
+"    crypted version in the target/source directory.",
+"    The file can be moved or copied to/from that",
+"    directory.  It is encrypted when moved or copied",
+"    to the target directory, and decrypted when",
+"    moved or copied from the source directory.  The",
+"    target/source directory may be \".\" to encrypt",
+"    or decrypt in place.",
+"",
+"    The \"remove\" command is like \"movefrom\" fol-",
+"    lowed by discarding the decrypted file.  The",
+"    \"check\" command is like \"copyfrom\" followed",
+"    by discarding the decrypted file.  Neither of",
+"    these two commands affects any existing de-",
+"    crypted file.",
+"",
+"    File names must not contain any '/'s (files must",
+"    be in the current directory).  Source and target",
+"    names can be any directory names acceptable to",
+"    scp.  Efm makes temporary files in the current",
+"    directory whose base names are the 32 character",
+"    MD5 sums of the decrypted files.  No two encryp-",
+"    ted files may have the same MD5 sum.  It is ex-",
+"    pected that files will be tar files of director-",
+"    ies.",
+"",
+"    Efm maintains an index of encrypted files.  This",
+"    index is itself encrypted, and is stored in the",
+"    file named \"EFM-INDEX.gpg\".  You must create",
+"    and encrypt an initial empty index by executing:",
+"",
+"               echo > EFM-INDEX",
+"               gpg -c EFM-INDEX",
+"",
+"    You choose the password that protects the index",
+"    when you do this.  You may put comments at the",
+"    beginning of EFM-INDEX before you encrypt.  All",
+"    comment lines must have `#' as their first char-",
+"    acter, and there can be no blank lines.",
+"\f",
+"    The index is REQUIRED to decrypt files, as each",
+"    encrypted file has its own unique random encryp-",
+"    tion key listed in the index.  If a user wants",
+"    to change the password used to protect the en-",
+"    crypted files, the user changes just the pass-",
+"    word of the index, and not the keys encrypting",
+"    the files.",
+"",
+"    Once listed in the index, files are not normally",
+"    removed from the index.  Instead index entries",
+"    are marked as being either current or obsolete.",
+"    The \"moveto\" and \"copyto\" commands make a",
 "    file's entry current.  The \"movefrom\" and"
-					" \"re-\n"
-"    move\" commands make a file's entry obsolete.\n"
-"    The \"copyfrom\" command does not change index.\n"
-"\n"
-"    The \"list\" command lists for current index\n"
-"    entries the file name, protection mode, modifi-\n"
-"    cation time, and MD5 sum.  The \"listkeys\" com-\n"
-"    mand does the same but includes the file encryp-\n"
-"    tion key.  The \"listfiles\" command only lists\n"
-"    file names, and produces no error messages if\n"
-"    the named files are not current in the index.\n"
-"    If no file arguments are given to these com-\n"
-"    mands, all current index entries are listed.\n"
-"\n"
-"    The list commands can also be given encrypted\n"
-"    file names (that consist of MD sum basenames\n"
-"    plus .gpg extension).\n"
-"\n"
-"    The \"md5check\" command checks that every file\n"
-"    exists, is in the index, and has an md5sum that\n"
-"    matches that in the index.\n"
-"\n"
-"    This program returns exit status 0 if there is\n"
-"    no error and if there is an error, returns exit\n"
-"    status 1 and prints the error message to the\n"
-"    standard output.\n"
-"\f\n"
-"    The efm program asks for a password to decrypt\n"
-"    the index only the first time it is run during\n"
-"    a login session.  It then sets up a background\n"
-"    program holding the password that is accessible\n"
-"    through the socket \"EFM-INDEX.sock\".  The\n"
-"    \"kill\" command may be use to kill the back-\n"
-"    ground process if it exists.  The \"start\" com-\n"
-"    mand just starts the background process if it is\n"
-"    not already running, but this is also done by\n"
-"    other commands implicitly.\n"
-"\n"
-"    It is recommended that you put\n"
-"\n"
-"            ( cd backup-directory; efm kill )\n"
-"\n"
-"    in your .logout or .bash_logout file to kill any\n"
-"    background process on logout.\n"
-"\n"
-"    The \"trace\" commands turn tracing on/off.\n"
-"    When on, actions are annotated on the standard\n"
-"    output by lines beginning with \"* \".  The\n"
-"    \"trace\" command without any \"on\" or \"off\"\n"
-"    argument just prints the current trace status.\n"
-"\n"
-"    The index file contains three line entries of\n"
-"    the form:\n"
-"\n"
-"	 indicator filename\n"
-"            mode mtime\n"
-"            MD5sum key\n"
-"\n"
-"    where the first entry line is not indented and\n"
-"    the other lines are.  The filename may be quoted\n"
-"    with \"'s if it contains special characters,\n"
-"    and a quote in such a filename is represented\n"
-"    by a pair of quotes (\"\").  The mtime (file\n"
-"    modification time) will always be quoted, and\n"
-"    is Greenwich Mean Time (GMT).\n"
-"\f\n"
-"    Lines at the beginning of the index file whose\n"
-"    first character is # are comment lines, and are\n"
-"    preserved.  Blank lines are forbidden.  Comment\n"
-"    lines must be inserted in the initial file made\n"
-"    with gpg, or changed by using gpg to decrypt\n"
-"    and re-encrypt the file.\n"
-"\n"
-"    The indicator is + if the entry is current, and\n"
-"    - if the entry is obsolete.  The mode is 4 octal\n"
-"    digits, and is used to set the file mode when\n"
-"    the file is decrypted.  The mtime is quoted GMT\n"
-"    time and is used to set the file modification\n"
-"    time when the file is decrypted.  The MD5sum is\n"
-"    the 32 hexadecimal digit MD5 sum of the decryp-\n"
-"    ted file, and is used as the basename of the en-\n"
-"    crypted file, as the name of a temporary decryp-\n"
-"    ted file, and to check the integrity of decryp-\n"
-"    tion.  The key is the symmetric encryption/de-\n"
+					" \"re-",
+"    move\" commands make a file's entry obsolete.",
+"    The \"copyfrom\" command does not change index.",
+"",
+"    The \"list\" command lists for current index",
+"    entries the file name, protection mode, modifi-",
+"    cation time, and MD5 sum.  The \"listkeys\" com-",
+"    mand does the same but includes the file encryp-",
+"    tion key.  The \"listfiles\" command only lists",
+"    file names, and produces no error messages if",
+"    the named files are not current in the index.",
+"    If no file arguments are given to these com-",
+"    mands, all current index entries are listed.",
+"",
+"    The list commands can also be given encrypted",
+"    file names (that consist of MD sum basenames",
+"    plus .gpg extension).",
+"",
+"    The \"md5check\" command checks that every file",
+"    exists, is in the index, and has an md5sum that",
+"    matches that in the index.",
+"",
+"    This program returns exit status 0 if there is",
+"    no error and if there is an error, returns exit",
+"    status 1 and prints the error message to the",
+"    standard output.",
+"\f",
+"    The efm program asks for a password to decrypt",
+"    the index only the first time it is run during",
+"    a login session.  It then sets up a background",
+"    program holding the password that is accessible",
+"    through the socket \"EFM-INDEX.sock\".  The",
+"    \"kill\" command may be use to kill the back-",
+"    ground process if it exists.  The \"start\" com-",
+"    mand just starts the background process if it is",
+"    not already running, but this is also done by",
+"    other commands implicitly.",
+"",
+"    It is recommended that you put",
+"",
+"            ( cd backup-directory; efm kill )",
+"",
+"    in your .logout or .bash_logout file to kill any",
+"    background process on logout.",
+"",
+"    The \"trace\" commands turn tracing on/off.",
+"    When on, actions are annotated on the standard",
+"    output by lines beginning with \"* \".  The",
+"    \"trace\" command without any \"on\" or \"off\"",
+"    argument just prints the current trace status.",
+"",
+"    The index file contains three line entries of",
+"    the form:",
+"",
+"	 indicator filename",
+"            mode mtime",
+"            MD5sum key",
+"",
+"    where the first entry line is not indented and",
+"    the other lines are.  The filename may be quoted",
+"    with \"'s if it contains special characters,",
+"    and a quote in such a filename is represented",
+"    by a pair of quotes (\"\").  The mtime (file",
+"    modification time) will always be quoted, and",
+"    is Greenwich Mean Time (GMT).",
+"\f",
+"    Lines at the beginning of the index file whose",
+"    first character is # are comment lines, and are",
+"    preserved.  Blank lines are forbidden.  Comment",
+"    lines must be inserted in the initial file made",
+"    with gpg, or changed by using gpg to decrypt",
+"    and re-encrypt the file.",
+"",
+"    The indicator is + if the entry is current, and",
+"    - if the entry is obsolete.  The mode is 4 octal",
+"    digits, and is used to set the file mode when",
+"    the file is decrypted.  The mtime is quoted GMT",
+"    time and is used to set the file modification",
+"    time when the file is decrypted.  The MD5sum is",
+"    the 32 hexadecimal digit MD5 sum of the decryp-",
+"    ted file, and is used as the basename of the en-",
+"    crypted file, as the name of a temporary decryp-",
+"    ted file, and to check the integrity of decryp-",
+"    tion.  The key is the symmetric encryption/de-",
 "    cryption password for the file, and is the"
-					" upper-\n"
-"    case 32 digit hexadecimal representation of a\n"
-"    128 bit random number.  However, it is this 32\n"
-"    character representation, and NOT the random\n"
-"    number, that is the key.\n"
-"\n"
-"    No two current files in the index are allowed to\n"
-"    have the same MD5 sum.  Two files (not both cur-\n"
-"    rent) with the same MD5 sum will have the same\n"
-"    key.\n"
-"\f\n"
-"    The \"listall\" command is like \"list\" but\n"
-"    lists both obsolete and current entries and also\n"
+					" upper-",
+"    case 32 digit hexadecimal representation of a",
+"    128 bit random number.  However, it is this 32",
+"    character representation, and NOT the random",
+"    number, that is the key.",
+"",
+"    No two current files in the index are allowed to",
+"    have the same MD5 sum.  Two files (not both cur-",
+"    rent) with the same MD5 sum will have the same",
+"    key.",
+"\f",
+"    The \"listall\" command is like \"list\" but",
+"    lists both obsolete and current entries and also",
 "    includes indicators (+ or -).  The"
-				" \"listallkeys\"\n"
-"    command is like \"listall\" but includes keys.\n"
+				" \"listallkeys\"",
+"    command is like \"listall\" but includes keys.",
 "    The \"listobsfiles\" command is like"
-				" \"listfiles\"\n"
-"    but only lists obsolete entries, instead of only\n"
-"    current entries.  The \"listallfiles\" command\n"
-"    is like \"listfiles\" but lists both obsolete\n"
-"    and current entries.  The \"listcurfiles\" com-\n"
-"    mand lists only current entries, and is just an-\n"
-"    other name for \"listfiles\".\n"
-"\n"
-"    The following commands may be used to edit the\n"
-"    index in ways that may get the index out of sync\n"
-"    with existing files.  So be careful if you use\n"
-"    these commands.\n"
-"\n"
-"    The \"cur\" command makes index entries cur-\n"
-"    rent.  The \"obs\" command makes index entries\n"
-"    obsolete.  The \"add\" command creates index en-\n"
-"    tries without encrypting or moving files.  The\n"
-"    \"sub\" command deletes index entries without\n"
-"    decrypting or moving files.  The \"del\" command\n"
-"    deletes encrypted files without changing index\n"
-"    entries.\n"
-"\n"
-"    An external program is used to encrypt/decrypt\n"
-"    files.  By default this is gpg.  The encrypted\n"
-"    file name is MD5SUM.gpg with this default.  In\n"
-"    general the encrypted file basename is the\n"
-"    MD5sum of the file contents and the extension\n"
-"    denotes the encrypting program.\n"
-"\n"
-"    Similarly the extension of the index indicates\n"
-"    the program used to encrypt the index.\n"
-"\f\n"
-"    Currently only gpg is supported as an encryp-\n"
-"    ing program.\n"
-;
+				" \"listfiles\"",
+"    but only lists obsolete entries, instead of only",
+"    current entries.  The \"listallfiles\" command",
+"    is like \"listfiles\" but lists both obsolete",
+"    and current entries.  The \"listcurfiles\" com-",
+"    mand lists only current entries, and is just an-",
+"    other name for \"listfiles\".",
+"",
+"    The following commands may be used to edit the",
+"    index in ways that may get the index out of sync",
+"    with existing files.  So be careful if you use",
+"    these commands.",
+"",
+"    The \"cur\" command makes index entries cur-",
+"    rent.  The \"obs\" command makes index entries",
+"    obsolete.  The \"add\" command creates index en-",
+"    tries without encrypting or moving files.  The",
+"    \"sub\" command deletes index entries without",
+"    decrypting or moving files.  The \"del\" command",
+"    deletes encrypted files without changing index",
+"    entries.",
+"",
+"    An external program is used to encrypt/decrypt",
+"    files.  By default this is gpg.  The encrypted",
+"    file name is MD5SUM.gpg with this default.  In",
+"    general the encrypted file basename is the",
+"    MD5sum of the file contents and the extension",
+"    denotes the encrypting program.",
+"",
+"    Similarly the extension of the index indicates",
+"    the program used to encrypt the index.",
+"\f",
+"    Currently only gpg is supported as an encryp-",
+"    ing program.",
+NULL
+};
 
 int trace = 0;		/* 1 if trace on, 0 if off. */
+
+int RETRIES = 0;	/* Number of retries. */
 
 #define MAX_LEXEME_SIZE 2000
 #define MAX_LINE_SIZE ( 2 * MAX_LEXEME_SIZE + 10 )
@@ -991,137 +994,161 @@ int crypt ( int decrypt,
  * followed by a NUL is returned in the buffer, which
  * must be at least 33 characters long.  0 is returned
  * on success, -1 on error.  Error messages are written
- * on stdout.
+ * on stdout.  If filename is remote (has @ and :) then
+ * RETRIES retries are done on failure.
  */
 int md5sum ( char * buffer,
              const char * filename )
 {
-    int fd[2];
-    int child, e;
-    FILE * inf;
-    line_buffer line;
-    if ( pipe ( fd ) < 0 ) error ( errno );
+    line_buffer name, line;
+    int remote = 0;
+    int retries = RETRIES;
+    int at_found, error_found;
+    char * p;
 
-    fflush ( stdout );
-    fflush ( stderr );
-
-    child = fork();
-    if ( child < 0 ) error ( errno );
-
-    if ( child == 0 )
+    strcpy ( name, filename );
+    p = name;
+    at_found = 0;
+    for ( ; * p; ++ p )
     {
-        int newfd, d, at_found;
-	char * p;
-	line_buffer buffer;
-
-        close ( fd[0] );
-
-	/* Set fd's as follows:
-	 * 	0 -> /dev/null
-	 *	1 -> fd[1]
-	 *	2 -> parent's 1
-	 */
-	newfd = open ( "/dev/null", O_RDONLY );
-	if ( newfd < 0 ) error ( errno );
-	close ( 0 );
-	if ( dup2 ( newfd, 0 ) < 0 ) error ( errno );
-	close ( newfd );
-	close ( 2 );
-	if ( dup2 ( 1, 2 ) < 0 ) error ( errno );
-	close ( 1 );
-	if ( dup2 ( fd[1], 1 ) < 0 ) error ( errno );
-	close ( fd[1] );
-	d = getdtablesize() - 1;
-	while ( d > 2 ) close ( d -- );
-
-	strcpy ( buffer, filename );
-	p = buffer;
-	at_found = 0;
-	for ( ; * p; ++ p )
+	if ( * p == '@' )
 	{
-	    if ( * p == '@' )
-	    {
-		if ( at_found ) break;
-		at_found = 1;
-	    }
-	    else if ( * p == ':' ) break;
+	    if ( at_found ) break;
+	    at_found = 1;
 	}
-
-	if ( * p != ':' || ! at_found )
-	{
-	    /* Not a remote file. */
-
-	    if ( trace )
-	    {
-		fprintf ( stderr,
-		          "* executing md5sum %s\n",
-		          filename );
-		fflush ( stderr );
-	    }
-	    if ( execlp ( "md5sum", "md5sum",
-			  filename, NULL ) < 0 )
-		error ( errno );
-	}
-	else
-	{
-	    /* Remote file. */
-
-	    * p ++ = 0;
-
-	    if ( trace )
-	    {
-		fprintf ( stderr,
-		          "* executing ssh %s \\\n"
-			  "            md5sum %s\n",
-			  buffer, p );
-		fflush ( stderr );
-	    }
-	    if ( execlp ( "ssh", "ssh", buffer,
-	                  "md5sum", p, NULL ) < 0 )
-		error ( errno );
-	}
+	else if ( * p == ':' ) break;
     }
-
-    close ( fd[1] );
-    inf = fdopen ( fd[0], "r" );
-
-    e = -1;
-
-    if ( get_line ( line, inf ) )
+    if ( * p == ':' )
     {
-        char * p = line;
-	for ( ; * p; ++ p )
+        remote = 1;
+	* p ++ = 0;
+    }
+    else retries = 0;
+
+    while ( 1 )
+    {
+	int fd[2];
+	int child;
+	FILE * inf;
+	if ( pipe ( fd ) < 0 ) error ( errno );
+
+	fflush ( stdout );
+	fflush ( stderr );
+
+	child = fork();
+	if ( child < 0 ) error ( errno );
+
+	if ( child == 0 )
 	{
-	    char c = * p;
-	    if ( '0' <= c && c <= '9' ) continue;
-	    if ( 'a' <= c && c <= 'f' ) continue;
-	    if ( 'A' <= c && c <= 'F' ) continue;
-	    break;
-        }
-	if ( p == line + 32 )
-	{
-	    strncpy ( buffer, line, 32 );
-	    buffer[32] = 0;
-	    e = 0;
-	}
-	else
-	{
-	    /* Print output that may contain error
-	     * messages.
+	    int newfd, d;
+
+	    close ( fd[0] );
+
+	    /* Set fd's as follows:
+	     * 	0 -> /dev/null
+	     *	1 -> fd[1]
+	     *	2 -> parent's 1
 	     */
-	    do {
-	        printf ( "%s\n", line );
-	    } while ( get_line ( line, inf ) );
-	}
-    }
-    fclose ( inf );
-    if ( e < 0 )
-    {
-        printf ( "ERROR: cannot compute MD5 sum of"
-	         " %s\n", filename );
-    }
+	    newfd = open ( "/dev/null", O_RDONLY );
+	    if ( newfd < 0 ) error ( errno );
+	    close ( 0 );
+	    if ( dup2 ( newfd, 0 ) < 0 )
+	    	error ( errno );
+	    close ( newfd );
+	    close ( 2 );
+	    if ( dup2 ( 1, 2 ) < 0 )
+	    	error ( errno );
+	    close ( 1 );
+	    if ( dup2 ( fd[1], 1 ) < 0 )
+	    	error ( errno );
+	    close ( fd[1] );
+	    d = getdtablesize() - 1;
+	    while ( d > 2 ) close ( d -- );
 
-    return cwait ( child ) < 0 ? -1 : e;
+	    if ( ! remote )
+	    {
+		/* Not a remote file. */
+
+		if ( trace )
+		{
+		    fprintf ( stderr,
+			      "* executing md5sum %s\n",
+			      filename );
+		    fflush ( stderr );
+		}
+		if ( execlp ( "md5sum", "md5sum",
+			      filename, NULL ) < 0 )
+		    error ( errno );
+	    }
+	    else
+	    {
+		/* Remote file. */
+
+		if ( trace )
+		{
+		    fprintf ( stderr,
+			      "* executing ssh %s \\\n"
+			      "            md5sum %s\n",
+			      name, p );
+		    fflush ( stderr );
+		}
+		if ( execlp ( "ssh", "ssh", name,
+			      "md5sum", p, NULL ) < 0 )
+		    error ( errno );
+	    }
+	}
+
+	close ( fd[1] );
+	inf = fdopen ( fd[0], "r" );
+
+	error_found = 1;
+
+	if ( get_line ( line, inf ) )
+	{
+	    char * p = line;
+	    for ( ; * p; ++ p )
+	    {
+		char c = * p;
+		if ( '0' <= c && c <= '9' ) continue;
+		if ( 'a' <= c && c <= 'f' ) continue;
+		if ( 'A' <= c && c <= 'F' ) continue;
+		break;
+	    }
+	    if ( p == line + 32 && isspace ( * p ) )
+	    {
+		strncpy ( buffer, line, 32 );
+		buffer[32] = 0;
+		error_found = 0;
+	    }
+	    else
+	    {
+		/* Print output that may contain error
+		 * messages.
+		 */
+		do {
+		    printf ( "%s\n", line );
+		} while ( get_line ( line, inf ) );
+	    }
+	}
+	fclose ( inf );
+	if ( cwait ( child ) < 0 ) error_found = 1;
+
+	if ( error_found && retries > 0 )
+	{
+	    if ( trace )
+	        printf ( "* retrying md5sum %s\n",
+		         filename );
+	    -- retries;
+	    continue;
+	}
+	else if ( error_found < 0 )
+	{
+	    printf ( "ERROR: cannot compute MD5 sum of"
+		     " %s\n", filename );
+	    return -1;
+	}
+	else return 0;
+    }
 }
 
 /* Copy file.  0 is returned on success, -1 on error.
@@ -1185,9 +1212,9 @@ int delfile ( const char * filename )
     int at_found, child;
     char * p;
 
-    line_buffer buffer;
-    strcpy ( buffer, filename );
-    p = buffer;
+    line_buffer name;
+    strcpy ( name, filename );
+    p = name;
     at_found = 0;
     for ( ; * p; ++ p )
     {
@@ -1217,7 +1244,7 @@ int delfile ( const char * filename )
 
     * p ++ = 0;
 
-    /* Now buffer points at account and p at file
+    /* Now name points at account and p at file
      * within account.
      */
 
@@ -1249,10 +1276,10 @@ int delfile ( const char * filename )
 	    fprintf ( stderr,
 	              "* executing ssh %s \\\n"
 		      "            rm -f %s\n",
-		      buffer, p );
+		      name, p );
 	    fflush ( stderr );
 	}
-	if ( execlp ( "ssh", "ssh", buffer,
+	if ( execlp ( "ssh", "ssh", name,
 	              "rm", "-f", p, NULL ) < 0 )
 	    error ( errno );
     }
@@ -2008,7 +2035,7 @@ int execute_command ( FILE * in )
 		    }
 		    if ( trace )
 			printf
-			    ( "* removing %s\n",
+			    ( "* deleting %s\n",
 			      e->md5sum );
 		    unlink ( e->md5sum );
 		}
@@ -2020,7 +2047,7 @@ int execute_command ( FILE * in )
 		{
 		    if ( trace )
 			printf
-			    ( "* removing %s\n",
+			    ( "* deleting %s\n",
 			      dbegin );
 		    if ( delfile ( dbegin ) < 0 )
 		    {
@@ -2035,7 +2062,7 @@ int execute_command ( FILE * in )
 		{
 		    if ( trace )
 			printf
-			    ( "* removing %s\n", arg );
+			    ( "* deleting %s\n", arg );
 		    if ( delfile ( arg ) < 0 )
 		    {
 			printf ( "    Processing %s"
@@ -2131,7 +2158,8 @@ int main ( int argc, char ** argv )
          ||
 	 strncmp ( argv[1], "-doc", 4 ) == 0 )
     {
-	printf ( documentation );
+	const char ** p = documentation;
+	while ( * p ) printf ( "%s\n", * p ++ );
 	exit (1);
     }
 
@@ -2258,7 +2286,7 @@ int main ( int argc, char ** argv )
 		    {
 			if ( trace )
 			    printf
-			        ( "* removing"
+			        ( "* deleting"
 			          " EFM-INDEX.gpg+\n" );
 		        unlink ( "EFM-INDEX.gpg+" );
 			printf ( "ERROR: error"
@@ -2272,7 +2300,7 @@ int main ( int argc, char ** argv )
 		    {
 			if ( trace )
 			    printf
-				( "* removing"
+				( "* deleting"
 				  " EFM-INDEX.gpg-\n"
 			        );
 			unlink ( "EFM-INDEX.gpg-" );
