@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Thu Sep  7 13:03:18 EDT 2006
+** Date:	Tue Sep 19 06:24:42 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/09/07 17:02:33 $
+**   $Date: 2006/09/19 13:43:37 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.66 $
+**   $Revision: 1.67 $
 */
 
 #include <stdio.h>
@@ -171,12 +171,13 @@ const char * documentation [] = {
 "    \"trace\" command without any \"on\" or \"off\"",
 "    argument just prints the current trace status.",
 "",
-"    The index file contains three line entries of",
+"    The index file contains four line entries of",
 "    the form:",
 "",
 "	 indicator filename",
-"            mode mtime",
-"            MD5sum key",
+"            mode mtime size",
+"            MD5sum esize",
+"            key",
 "",
 "    where the first entry line is not indented and",
 "    the other lines are.  The filename may be quoted",
@@ -198,12 +199,14 @@ const char * documentation [] = {
 "    digits, and is used to set the file mode when",
 "    the file is decrypted.  The mtime is quoted GMT",
 "    time and is used to set the file modification",
-"    time when the file is decrypted.  The MD5sum is",
+"    time when the file is decrypted.  The size is",
+"    the size of the decrypted file.  The MD5sum is",
 "    the 32 hexadecimal digit MD5 sum of the decryp-",
 "    ted file, and is used as the basename of the en-",
 "    crypted file, as the name of a temporary decryp-",
 "    ted file, and to check the integrity of decryp-",
-"    tion.  The key is the symmetric encryption/de-",
+"    tion.  The esize is the size of the encrypted",
+"    file.  The key is the symmetric encryption/de-",
 "    cryption password for the file, and is the"
 					" upper-",
 "    case 32 digit hexadecimal representation of a",
@@ -327,8 +330,12 @@ struct entry {
 
     unsigned mode;
     time_t mtime;
-
+    off_t size;
     char * md5sum;
+
+    char * emd5sum;
+    off_t esize;
+
     char * key;
 
     struct entry * previous, * next;
@@ -379,14 +386,20 @@ char * get_lexeme ( char ** buffer )
 	}
 	* buffer = p;
 	* q = 0;
+	return result;
     }
-    else
+    else if ( * p )
     {
         while ( * p && ! isspace ( * p ) ) ++ p;
 	if ( isspace ( * p ) ) * p ++ = 0;
 	* buffer = p;
+	return result;
     }
-    return * result ? result : NULL;
+    else
+    {
+        * buffer = p;
+    	return NULL;
+    }
 }
 
 /* Given a pointer into the line buffer and the char-
@@ -440,10 +453,12 @@ void read_index ( FILE * f )
     while ( get_line ( buffer, f ) )
     {
 	struct tm td;
-	char * b, * c, * fn, * mode, * mtime, * q,
-	     * md5sum, * key;
+	char * b, * c, * q,
+	     * mode, * mtime, * size, * md5sum,
+	     * emd5sum, * esize,
+	     * key;
 	int current;
-	unsigned long m;
+	unsigned long m, s, es;
 	const char * ts;
 	time_t d;
 	struct entry * e;
@@ -489,14 +504,13 @@ void read_index ( FILE * f )
 	    exit ( 1 );
 	}
 	current = ( c[0] == '+' ? 1 : 0 );
-	fn = get_lexeme ( & b );
-	if ( fn == NULL )
+	filename = get_lexeme ( & b );
+	if ( filename == NULL )
 	{
 	    printf ( "ERROR: index entry begins badly"
 		     "\n    %s\n", buffer );
 	    exit ( 1 );
 	}
-	filename = strdup ( fn );
 	if ( get_lexeme ( & b ) )
 	{
 	    printf ( "ERROR: stuff on line after"
@@ -504,6 +518,7 @@ void read_index ( FILE * f )
 		     filename );
 	    exit ( 1 );
 	}
+	filename = strdup ( filename );
 
 	if ( ! get_line ( buffer, f ) )
 	{
@@ -531,16 +546,31 @@ void read_index ( FILE * f )
 	mtime = get_lexeme ( & b );
 	if ( mtime == NULL )
 	{
-	    printf ( "ERROR: index entry modification"
-	             "time missing\n    for file %s\n",
+	    printf ( "ERROR: index entry mtime"
+	             " missing\n    for file %s\n",
+		     filename );
+	    exit ( 1 );
+	}
+	size = get_lexeme ( & b );
+	if ( size == NULL )
+	{
+	    printf ( "ERROR: index entry size"
+	             " missing\n    for file %s\n",
+		     filename );
+	    exit ( 1 );
+	}
+	md5sum = get_lexeme ( & b );
+	if ( md5sum == NULL )
+	{
+	    printf ( "ERROR: index entry md5sum"
+	             " missing\n    for file %s\n",
 		     filename );
 	    exit ( 1 );
 	}
 	if ( get_lexeme ( & b ) )
 	{
 	    printf ( "ERROR: stuff on line after"
-		     " mode and mtime,\n"
-		     "    for file %s\n",
+		     " md5sum,\n    for file %s\n",
 		     filename );
 	    exit ( 1 );
 	}
@@ -555,7 +585,7 @@ void read_index ( FILE * f )
 	ts = (const char *)
 	     strptime ( mtime, time_format, & td );
 	d = ( ts == NULL || * ts != 0 ) ?
-	    -1 : mktime ( & td );
+	    -1 : timegm ( & td );
 	if ( d == -1 )
 	{
 	    printf ( "ERROR: bad EFM-INDEX mtime"
@@ -563,6 +593,22 @@ void read_index ( FILE * f )
 		     mtime, filename );
 	    exit ( 1 );
 	}
+	s = strtoul ( size, & q, 10 );
+	if ( * q )
+	{
+	    printf ( "ERROR: bad EFM-INDEX size"
+		     " (%s),\n    for file %s\n",
+		     size, filename );
+	    exit ( 1 );
+	}
+	if ( strlen ( md5sum ) != 32 )
+	{
+	    printf ( "ERROR: bad EFM-INDEX md5sum (%s),"
+	             "\n    for file %s\n",
+		     md5sum, filename );
+	    exit ( 1 );
+	}
+	md5sum = strdup ( md5sum );
 
 	if ( ! get_line ( buffer, f ) )
 	{
@@ -579,11 +625,60 @@ void read_index ( FILE * f )
 		     filename );
 	    exit ( 1 );
 	}
-	md5sum = get_lexeme ( & b );
-	if ( md5sum == NULL )
+	esize = get_lexeme ( & b );
+	if ( esize == NULL )
 	{
-	    printf ( "ERROR: index entry MD5 sum"
+	    printf ( "ERROR: index entry esize"
+		     " missing\n    for file %s\n",
+		     filename );
+	    exit ( 1 );
+	}
+	emd5sum = get_lexeme ( & b );
+	if ( emd5sum == NULL )
+	{
+	    printf ( "ERROR: index entry emd5sum"
 	             " missing\n    for file %s\n",
+		     filename );
+	    exit ( 1 );
+	}
+	if ( get_lexeme ( & b ) )
+	{
+	    printf ( "ERROR: stuff on line after"
+		     " esize\n    for file %s\n",
+		     filename );
+	    exit ( 1 );
+	}
+	es = strtoul ( esize, & q, 10 );
+	if ( * q )
+	{
+	    printf ( "ERROR: bad EFM-INDEX esize"
+		     " (%s),\n    for file %s\n",
+		     esize, filename );
+	    exit ( 1 );
+	}
+	if ( emd5sum[0] != 0
+	     &&
+	     strlen ( emd5sum ) != 32 )
+	{
+	    printf ( "ERROR: bad EFM-INDEX emd5sum (%s),"
+	             "\n    for file %s\n",
+		     emd5sum, filename );
+	    exit ( 1 );
+	}
+	emd5sum = strdup ( emd5sum );
+
+	if ( ! get_line ( buffer, f ) )
+	{
+	    printf ( "ERROR: premature end of entry,\n"
+		     "    for file %s\n", filename );
+	    exit ( 1 );
+	}
+	b = buffer;
+	if ( ! isspace ( * b ) )
+	{
+	    printf ( "ERROR: index entry non-first line"
+		     " does not begin with"
+		     " space,\n    for file %s\n",
 		     filename );
 	    exit ( 1 );
 	}
@@ -598,16 +693,8 @@ void read_index ( FILE * f )
 	if ( get_lexeme ( & b ) )
 	{
 	    printf ( "ERROR: stuff on line after"
-		     " MD5 sum and key,\n"
-		     "    for file %s\n",
+		     " key,\n    for file %s\n",
 		     filename );
-	    exit ( 1 );
-	}
-	if ( strlen ( md5sum ) != 32 )
-	{
-	    printf ( "ERROR: bad EFM-INDEX md5sum (%s),"
-	             "\n    for file %s\n",
-		     md5sum, filename );
 	    exit ( 1 );
 	}
 	if ( strlen ( key ) != 32 )
@@ -617,15 +704,19 @@ void read_index ( FILE * f )
 		     key, filename );
 	    exit ( 1 );
 	}
+	key = strdup ( key );
 
 	e = (struct entry * )
 	    malloc ( sizeof ( struct entry ) );
-	e->current = current;
+	e->current  = current;
 	e->filename = filename;
-	e->mode = m;
-	e->mtime = d;
-	e->md5sum = strdup ( md5sum );
-	e->key = strdup ( key );
+	e->mode     = m;
+	e->mtime    = d;
+	e->size     = s;
+	e->md5sum   = md5sum;
+	e->emd5sum  = emd5sum;
+	e->esize    = es;
+	e->key      = key;
 	if ( first_entry == NULL )
 	    first_entry = e->previous = e->next = e;
 	else
@@ -643,7 +734,8 @@ void read_index ( FILE * f )
  *
  *	+0	List filename (always listed)
  *	+1	List current/obsolete indicator.
- *	+2	List mode, date, md5sum
+ *	+2	List mode, date, size, md5sum,
+ *              emd5sum, esize
  *	+4	List key.
  *
  * Prefix is prefixed to each line output.
@@ -663,13 +755,13 @@ void write_index_entry
     * b = 0;
     fprintf ( f, "%s%s\n", prefix, buffer );
 
-    b = buffer;
-    strcpy ( b, "    " );
-    b += 4;
-
     if ( ( mode & 2 ) != 0 )
     {
 	char tbuffer [100];
+
+	b = buffer;
+	strcpy ( b, "    " );
+	b += 4;
 
 	sprintf ( b, "%04o", e->mode );
 	b += 4;
@@ -677,22 +769,30 @@ void write_index_entry
 	strftime ( tbuffer, 100, time_format, 
 		   gmtime ( & e->mtime ) );
 	put_lexeme ( & b, tbuffer );
+	sprintf ( b, " %lu", (unsigned long) e->size );
+	b += strlen ( b );
+	* b ++ = ' ';
+	put_lexeme ( & b, e->md5sum );
 	* b = 0;
 	fprintf ( f, "%s%s\n", prefix, buffer );
+
 	b = buffer;
 	strcpy ( b, "    " );
 	b += 4;
-	put_lexeme ( & b, e->md5sum );
+	sprintf ( b, "%lu", (unsigned long) e->esize );
+	b += strlen ( b );
+	* b ++ = ' ';
+	put_lexeme ( & b, e->emd5sum );
+	* b = 0;
+	fprintf ( f, "%s%s\n", prefix, buffer );
     }
 
     if ( ( mode & 4 ) != 0 )
     {
-	* b ++ = ' ';
+	b = buffer;
+	strcpy ( b, "    " );
+	b += 4;
 	put_lexeme ( & b, e->key );
-    }
-
-    if ( ( mode & (2+4) ) != 0 )
-    {
 	* b = 0;
 	fprintf ( f, "%s%s\n", prefix, buffer );
     }
@@ -1381,12 +1481,18 @@ int add ( const char * filename )
 
     e = (struct entry *)
         malloc ( sizeof ( struct entry ) );
-    e->current = 1;
+    e->current  = 1;
     e->filename = strdup ( filename );
-    e->md5sum = strdup ( sum );
-    e->mode =  s.st_mode & 07777;
-    e->mtime = s.st_mtime;
-    e->key = strdup ( key );
+    e->mode     = s.st_mode & 07777;
+    e->mtime    = s.st_mtime;
+    e->size     = s.st_size;
+    e->md5sum   = strdup ( sum );
+
+    e->emd5sum  = strdup ( "" );
+    e->esize    = 0;
+
+    e->key      = strdup ( key );
+
     if ( first_entry == NULL )
 	first_entry = e->previous = e->next = e;
     else
@@ -1826,6 +1932,9 @@ int execute_command ( FILE * in )
 		strcpy ( dend, efile );
 		if ( direction == 't' )
 		{
+		    char efile_sum[33];
+		    char dbegin_sum[33];
+
 		    if ( trace )
 		        printf ( "* encrypting %s\n"
 			         "*     to make %s\n",
@@ -1857,10 +1966,67 @@ int execute_command ( FILE * in )
 			result = -1;
 			continue;
 		    }
+		    if ( stat ( efile, & st ) < 0 )
+		    {
+		        printf ( "ERROR: cannot stat"
+			         " %s\n", efile );
+			printf ( "    Processing %s"
+			         " aborted.\n", arg );
+			result = -1;
+			continue;
+		    }
+		    if ( e->esize == 0 )
+		    {
+		        e->esize = st.st_size;
+			index_modified = 1;
+		    }
+		    else if ( e->esize != st.st_size )
+		    {
+		        printf ( "ERROR: esize has"
+			         " changed from %lu to"
+				 " %lu\n    for %s\n",
+				 e->esize, st.st_size,
+				 efile );
+			printf ( "    Processing %s"
+			         " aborted.\n", arg );
+			result = -1;
+			continue;
+		    }
+		    if ( md5sum ( efile_sum,
+				  efile )
+			 < 0 )
+		    {
+			printf ( "    Processing %s"
+				 " aborted.\n",
+				 arg );
+			result = -1;
+			continue;
+		    }
+		    if ( e->emd5sum[0] == 0 )
+		    {
+		        e->emd5sum =
+			    strdup ( efile_sum );
+			index_modified = 1;
+		    }
+		    else if ( strcmp ( efile_sum,
+				       e->emd5sum )
+			      != 0 )
+		    {
+		        printf ( "ERROR: md5sum has"
+			         " changed from %s\n"
+				 "    to %s\n"
+				 "    for %s\n",
+				 e->emd5sum, efile_sum,
+				 efile );
+			printf ( "    Processing %s"
+				 " aborted.\n",
+				 arg );
+			result = -1;
+			continue;
+		    }
+
 		    if ( ! current_directory )
 		    {
-			char efile_sum[33];
-			char dbegin_sum[33];
 
 			if ( trace )
 			    printf ( "* deleting %s\n",
@@ -1891,16 +2057,6 @@ int execute_command ( FILE * in )
 			             " sums of %s\n"
 				     "*     and %s\n",
 			             efile, dbegin );
-			if ( md5sum ( efile_sum,
-			              efile )
-			     < 0 )
-			{
-			    printf ( "    Processing %s"
-				     " aborted.\n",
-				     arg );
-			    result = -1;
-			    continue;
-			}
 			if ( md5sum ( dbegin_sum,
 				      dbegin )
 			     < 0 )
