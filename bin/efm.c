@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Tue Sep 19 06:24:42 EDT 2006
+** Date:	Tue Sep 19 09:45:51 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/09/19 13:43:37 $
+**   $Date: 2006/09/19 13:59:09 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.67 $
+**   $Revision: 1.68 $
 */
 
 #include <stdio.h>
@@ -126,13 +126,14 @@ const char * documentation [] = {
 "",
 "    The \"list\" command lists for current index",
 "    entries the file name, protection mode, modifi-",
-"    cation time, and MD5 sum.  The \"listkeys\" com-",
-"    mand does the same but includes the file encryp-",
-"    tion key.  The \"listfiles\" command only lists",
-"    file names, and produces no error messages if",
-"    the named files are not current in the index.",
-"    If no file arguments are given to these com-",
-"    mands, all current index entries are listed.",
+"    cation time, and size.  The \"listkeys\" command",
+"    does the same but includes the decrypted file MD5",
+"    sum, encrypted file size, encrypted file MD5 sum,",
+"    and encryption key.  The \"listfiles\" command",
+"    only lists file names, and produces no error mes-",
+"    sages if the named files are not current in the",
+"    index.  If no file arguments are given to these",
+"    commands, all current index entries are listed.",
 "",
 "    The list commands can also be given encrypted",
 "    file names (that consist of MD sum basenames",
@@ -219,19 +220,18 @@ const char * documentation [] = {
 "    rent) with the same MD5 sum will have the same",
 "    key.",
 "\f",
-"    The \"listall\" command is like \"list\" but",
-"    lists both obsolete and current entries and also",
-"    includes indicators (+ or -).  The"
-				" \"listallkeys\"",
-"    command is like \"listall\" but includes keys.",
-"    The \"listobsfiles\" command is like"
-				" \"listfiles\"",
-"    but only lists obsolete entries, instead of only",
-"    current entries.  The \"listallfiles\" command",
-"    is like \"listfiles\" but lists both obsolete",
-"    and current entries.  The \"listcurfiles\" com-",
-"    mand lists only current entries, and is just an-",
-"    other name for \"listfiles\".",
+"    The \"listall\" and \"listallkeys\" commands are",
+"    like \"list\" and \"listkeys\" respectively, but",
+"    list both obsolete and current entries and also",
+"    include indicators (+ or -).  The"
+				" \"listobsfiles\"",
+"    command is like \"listfiles\", but only lists",
+"    obsolete entries, instead of only current en-",
+"    tries.  The \"listallfiles\" command is like",
+"    \"listfiles\" but lists both obsolete and cur-",
+"    rent entries.  The \"listcurfiles\" command",
+"    lists only current entries, and is just another",
+"    name for \"listfiles\".",
 "",
 "    The following commands may be used to edit the",
 "    index in ways that may get the index out of sync",
@@ -660,8 +660,8 @@ void read_index ( FILE * f )
 	     &&
 	     strlen ( emd5sum ) != 32 )
 	{
-	    printf ( "ERROR: bad EFM-INDEX emd5sum (%s),"
-	             "\n    for file %s\n",
+	    printf ( "ERROR: bad EFM-INDEX emd5sum"
+	             " (%s),\n    for file %s\n",
 		     emd5sum, filename );
 	    exit ( 1 );
 	}
@@ -734,9 +734,8 @@ void read_index ( FILE * f )
  *
  *	+0	List filename (always listed)
  *	+1	List current/obsolete indicator.
- *	+2	List mode, date, size, md5sum,
- *              emd5sum, esize
- *	+4	List key.
+ *	+2	List mode, date, size.
+ *	+4	List md5sum, esize, emd5sum, key.
  *
  * Prefix is prefixed to each line output.
  */
@@ -771,11 +770,17 @@ void write_index_entry
 	put_lexeme ( & b, tbuffer );
 	sprintf ( b, " %lu", (unsigned long) e->size );
 	b += strlen ( b );
-	* b ++ = ' ';
-	put_lexeme ( & b, e->md5sum );
+	if ( ( mode & 4 ) != 0 )
+	{
+	    * b ++ = ' ';
+	    put_lexeme ( & b, e->md5sum );
+	}
 	* b = 0;
 	fprintf ( f, "%s%s\n", prefix, buffer );
+    }
 
+    if ( ( mode & 4 ) != 0 )
+    {
 	b = buffer;
 	strcpy ( b, "    " );
 	b += 4;
@@ -785,10 +790,7 @@ void write_index_entry
 	put_lexeme ( & b, e->emd5sum );
 	* b = 0;
 	fprintf ( f, "%s%s\n", prefix, buffer );
-    }
 
-    if ( ( mode & 4 ) != 0 )
-    {
 	b = buffer;
 	strcpy ( b, "    " );
 	b += 4;
