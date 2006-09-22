@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Tue Sep 19 09:45:51 EDT 2006
+** Date:	Fri Sep 22 12:52:34 EDT 2006
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,9 +11,9 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2006/09/19 13:59:09 $
+**   $Date: 2006/09/22 17:48:11 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.68 $
+**   $Revision: 1.69 $
 */
 
 #include <stdio.h>
@@ -41,12 +41,12 @@ const char * documentation [] = {
 "efm copyto target file ...",
 "efm copyfrom source file ...",
 "efm check source file ...",
+"efm md5check source file ...",
 "efm remove target file ...",
 "",
 "efm list [file ...]",
 "efm listkeys [file ...]",
 "efm listfiles [file ...]",
-"efm md5check file ...",
 "",
 "efm start",
 "efm kill",
@@ -79,9 +79,14 @@ const char * documentation [] = {
 "    The \"remove\" command is like \"movefrom\" fol-",
 "    lowed by discarding the decrypted file.  The",
 "    \"check\" command is like \"copyfrom\" followed",
-"    by discarding the decrypted file.  Neither of",
-"    these two commands affects any existing de-",
-"    crypted file.",
+"    by discarding the decrypted file.  If there is",
+"    an existing decrypted file, \"check\" also tests",
+"    that its MD5 sum matches that of the retrieved",
+"    decrypted file.  Neither of these two commands",
+"    deletes or alters any existing decrypted file.",
+"",
+"    The \"md5check\" command checks the MD5 sums of",
+"    any existing encrypted and/or decrypted files.",
 "",
 "    File names must not contain any '/'s (files must",
 "    be in the current directory).  Source and target",
@@ -100,13 +105,13 @@ const char * documentation [] = {
 "",
 "               echo > EFM-INDEX",
 "               gpg -c EFM-INDEX",
-"",
+"\f",
 "    You choose the password that protects the index",
 "    when you do this.  You may put comments at the",
 "    beginning of EFM-INDEX before you encrypt.  All",
 "    comment lines must have `#' as their first char-",
 "    acter, and there can be no blank lines.",
-"\f",
+"",
 "    The index is REQUIRED to decrypt files, as each",
 "    encrypted file has its own unique random encryp-",
 "    tion key listed in the index.  If a user wants",
@@ -138,16 +143,12 @@ const char * documentation [] = {
 "    The list commands can also be given encrypted",
 "    file names (that consist of MD sum basenames",
 "    plus .gpg extension).",
-"",
-"    The \"md5check\" command checks that every file",
-"    exists, is in the index, and has an md5sum that",
-"    matches that in the index.",
-"",
+"\f",
 "    This program returns exit status 0 if there is",
 "    no error and if there is an error, returns exit",
 "    status 1 and prints the error message to the",
 "    standard output.",
-"\f",
+"",
 "    The efm program asks for a password to decrypt",
 "    the index only the first time it is run during",
 "    a login session.  It then sets up a background",
@@ -176,18 +177,20 @@ const char * documentation [] = {
 "    the form:",
 "",
 "	 indicator filename",
-"            mode mtime size",
-"            MD5sum esize",
+"            mode mtime size md5sum",
+"            esize emd5sum",
 "            key",
-"",
+"\f",
 "    where the first entry line is not indented and",
 "    the other lines are.  The filename may be quoted",
 "    with \"'s if it contains special characters,",
 "    and a quote in such a filename is represented",
 "    by a pair of quotes (\"\").  The mtime (file",
 "    modification time) will always be quoted, and",
-"    is Greenwich Mean Time (GMT).",
-"\f",
+"    is Greenwich Mean Time (GMT).  Esize may be 0",
+"    to indicate its value is not known, and emd5sum",
+"    may be \"\" to indicate its value is not known.",
+"",
 "    Lines at the beginning of the index file whose",
 "    first character is # are comment lines, and are",
 "    preserved.  Blank lines are forbidden.  Comment",
@@ -201,25 +204,25 @@ const char * documentation [] = {
 "    the file is decrypted.  The mtime is quoted GMT",
 "    time and is used to set the file modification",
 "    time when the file is decrypted.  The size is",
-"    the size of the decrypted file.  The MD5sum is",
+"    the size of the decrypted file.  The md5sum is",
 "    the 32 hexadecimal digit MD5 sum of the decryp-",
 "    ted file, and is used as the basename of the en-",
 "    crypted file, as the name of a temporary decryp-",
 "    ted file, and to check the integrity of decryp-",
 "    tion.  The esize is the size of the encrypted",
-"    file.  The key is the symmetric encryption/de-",
-"    cryption password for the file, and is the"
-					" upper-",
-"    case 32 digit hexadecimal representation of a",
-"    128 bit random number.  However, it is this 32",
-"    character representation, and NOT the random",
-"    number, that is the key.",
-"",
+"    file, and the emd5sum is the 32 hexadecimal digit",
+"    MD5 sum of the encrypted file.  The key is the",
+"    symmetric encryption/decryption password for the",
+"    file, and is the upper-case 32 digit hexadecimal",
+"    representation of a 128 bit random number.  How-",
+"    ever, it is this 32 character representation,",
+"    and NOT the random number, that is the key.",
+"\f",
 "    No two current files in the index are allowed to",
 "    have the same MD5 sum.  Two files (not both cur-",
 "    rent) with the same MD5 sum will have the same",
 "    key.",
-"\f",
+"",
 "    The \"listall\" and \"listallkeys\" commands are",
 "    like \"list\" and \"listkeys\" respectively, but",
 "    list both obsolete and current entries and also",
@@ -253,10 +256,10 @@ const char * documentation [] = {
 "    general the encrypted file basename is the",
 "    MD5sum of the file contents and the extension",
 "    denotes the encrypting program.",
-"",
+"\f",
 "    Similarly the extension of the index indicates",
 "    the program used to encrypt the index.",
-"\f",
+"",
 "    Currently only gpg is supported as an encryp-",
 "    ing program.",
 NULL
@@ -644,7 +647,7 @@ void read_index ( FILE * f )
 	if ( get_lexeme ( & b ) )
 	{
 	    printf ( "ERROR: stuff on line after"
-		     " esize\n    for file %s\n",
+		     " emd5sum\n    for file %s\n",
 		     filename );
 	    exit ( 1 );
 	}
@@ -735,7 +738,8 @@ void read_index ( FILE * f )
  *	+0	List filename (always listed)
  *	+1	List current/obsolete indicator.
  *	+2	List mode, date, size.
- *	+4	List md5sum, esize, emd5sum, key.
+ *	+6	List mode, date, size as for +2 and also
+ *		list md5sum, esize, emd5sum, key.
  *
  * Prefix is prefixed to each line output.
  */
@@ -1535,6 +1539,7 @@ int sub ( const char * filename )
     if ( first_entry == e ) first_entry = NULL;
     free ( e->filename );
     free ( e->md5sum );
+    free ( e->emd5sum );
     free ( e->key );
     free ( e );
     index_modified = 1;
@@ -1682,48 +1687,6 @@ int execute_command ( FILE * in )
 	    }
 	} while ( arg = get_argument ( buffer, in ) );
     }
-    else if ( strcmp ( arg, "md5check" ) == 0 )
-    {
-        while ( arg = get_argument ( buffer, in ) )
-	{
-	    struct entry * e = find_filename ( arg );
-	    struct stat st;
-	    char sum [33];
-
-	    if ( e == NULL )
-	    {
-	        printf ( "ERROR: %s is not in"
-		         " index\n", arg );
-		result = -1;
-		continue;
-	    }
-	    if ( stat ( arg, & st ) < 0 )
-	    {
-	        printf ( "ERROR: %s does not"
-		         " exist\n", arg );
-		result = -1;
-		continue;
-	    }
-	    if ( md5sum ( sum, arg ) < 0 )
-	    {
-		result = -1;
-		continue;
-	    }
-	    if ( strcmp ( sum, e->md5sum ) != 0 )
-	    {
-		printf ( "ERROR: MD5 sum %s\n"
-			 "    of existing file"
-			 " %s\n"
-			 "    does not match"
-			 " the MD5 sum %s in"
-			 " the index\n",
-			 sum, arg, e->md5sum );
-		result = -1;
-		continue;
-	    }
-	    printf ( "OK: %s\n", arg );
-	}
-    }
     else if ( strcmp ( arg, "obs" ) == 0
               ||
 	      strcmp ( arg, "cur" ) == 0 )
@@ -1794,10 +1757,13 @@ int execute_command ( FILE * in )
               || strcmp ( arg, "movefrom" ) == 0
               || strcmp ( arg, "remove" ) == 0
               || strcmp ( arg, "check" ) == 0
+              || strcmp ( arg, "md5check" ) == 0
               || strcmp ( arg, "del" ) == 0 )
     {
-        char op = ( arg[0] == 'c' && arg[1] == 'h' ?
-	            'k' : arg[0] );
+        char op =
+	    ( arg[0] == 'c' && arg[1] == 'h' ? 'k' :
+	      arg[0] == 'm' && arg[1] == 'd' ? 's' :
+	                                       arg[0] );
 	char direction = ( ( op == 'm' || op == 'c' ) ?
 	                   arg[4] : 'f' );
 	char * dbegin = get_argument ( directory, in );
@@ -1927,7 +1893,8 @@ int execute_command ( FILE * in )
 		    continue;
 		}
 
-		/* Perform Copying */
+		/* Perform Copying and Remote
+		   MD5 checking */
 
 		strcpy ( efile, e->md5sum );
 		strcpy ( efile + 32, ".gpg" );
@@ -2006,6 +1973,7 @@ int execute_command ( FILE * in )
 		    }
 		    if ( e->emd5sum[0] == 0 )
 		    {
+		        free ( e->emd5sum );
 		        e->emd5sum =
 			    strdup ( efile_sum );
 			index_modified = 1;
@@ -2234,6 +2202,54 @@ int execute_command ( FILE * in )
 			      e->md5sum );
 		    unlink ( e->md5sum );
 		}
+		else if ( op == 's' )
+		{
+		    char dbegin_sum[33];
+
+		    if ( trace )
+			printf ( "* comparing MD5"
+				 " sums of %s\n"
+				 "*     and %s\n",
+				 efile, dbegin );
+		    if ( md5sum ( dbegin_sum, dbegin )
+			 < 0 )
+		    {
+			printf ( "    Processing %s"
+				 " aborted.\n",
+				 arg );
+			result = -1;
+			continue;
+		    }
+		    if ( e->emd5sum[0] == 0 )
+		    {
+			printf ( "ERROR: index has no"
+				 " MD5 sum for %s\n",
+				 efile );
+			printf ( "    Processing %s"
+				 " aborted.\n",
+				 arg );
+			result = -1;
+			continue;
+		    }
+		    if ( strcmp ( e->emd5sum,
+				  dbegin_sum )
+			 != 0 )
+		    {
+			printf ( "ERROR: MD5 sum of"
+				 " %s (%s)\n"
+				 "    does not"
+				 " match that of %s"
+				 " (%s)\n",
+				 efile, e->emd5sum,
+				 dbegin,
+				 dbegin_sum );
+			printf ( "    Processing %s"
+				 " aborted.\n",
+				 arg );
+			result = -1;
+			continue;
+		    }
+		}
 
 		/* Perform source file deletion. */
 
@@ -2290,6 +2306,7 @@ int execute_command ( FILE * in )
 		         op == 'r' ? "REMOVED" :
 		         op == 'd' ? "DELETED" :
 		         op == 'k' ? "OK" :
+		         op == 's' ? "OK" :
 			             "DONE",
 			 arg );
 	    }
