@@ -5,7 +5,7 @@
 #
 # File:		print
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Sat Mar 10 21:55:40 EST 2007
+# Date:		Wed Mar 21 14:08:10 EST 2007
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -14,9 +14,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2007/03/11 03:17:29 $
+#   $Date: 2007/03/21 19:08:23 $
 #   $RCSfile: print,v $
-#   $Revision: 1.17 $
+#   $Revision: 1.18 $
 
 landscape=""
 border="-j"
@@ -33,7 +33,7 @@ style="Courier"
 case "$1" in
     -doc* )
    	echo "
-print [-2FfdlpWNVEbo] [-P printer] [filename ...]
+print [-12FfdlpWNVEbo] [-P printer] [filename ...]
 
     Print the files named, or the standard input if no
     files are named.
