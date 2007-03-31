@@ -4,7 +4,7 @@
 #
 # File:		backup
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Fri Sep  1 07:22:08 EDT 2006
+# Date:		Sat Mar 31 04:38:45 EST 2007
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2006/09/01 11:36:37 $
+#   $Date: 2007/03/31 09:45:57 $
 #   $RCSfile: backup3,v $
-#   $Revision: 1.19 $
+#   $Revision: 1.20 $
 
 case "$1" in
 "" | -doc* )
@@ -125,13 +125,22 @@ BACKUP.rc Commands:
     	cd_options=\"-raw\"
 
     should be used if your CD driver has bad firmware
-    so that the check below often does not work.
+    so that the check below often does not work, and
 
+    	cd_options=\"-raw speed=2\"
+
+    should be used if in addition your system will not
+    write CDs reliably at its highest speed.
+
     Then this program checks the CD by executing
 
 	cmp /dev/cdrom THISHOST-NAME-DATE.raw
+	md5sum THISHOST-NAME-DATE.raw /dev/cdrom \\
+	       > THISHOST-NAME-DATE.md5
     	eject /dev/cdrom
-
+
+    and checking that the two computed MD5 sums match.
+
     Lastly this program cleans up by executing
 
     	rm THISHOST-DIRECTORY-DATE.tgz ... \\
@@ -202,6 +211,7 @@ do
     make_cd=${name}_make_cd
     cd=${host}-${name}-$d
     r=${cd}.raw
+    md5=${cd}.md5
 
     # Make .tgz files.
 
@@ -372,6 +382,22 @@ do
 	if test $? -ne 0
 	then
 	    echo "ERROR executing cmp"
+	    exit 1
+	fi
+	echo md5sum $r /dev/cdrom
+	rm -f $md5
+	md5sum $r /dev/cdrom > $md5
+	if test $? -ne 0
+	then
+	    echo "ERROR executing md5sum"
+	    exit 1
+	fi
+	cat $md5
+	rawmd5=` head -1 $md5 | cut -d ' ' -f 1 `
+	cdmd5=` tail -1 $md5 | cut -d ' ' -f 1 `
+	if test $rawmd5 != $cdmd5
+	then
+	    echo "MD5 sums in $md5 do not match"
 	    exit 1
 	fi
 	echo eject /dev/cdrom
