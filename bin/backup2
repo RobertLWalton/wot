@@ -4,7 +4,7 @@
 #
 # File:		backup
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Sat Mar 31 04:58:52 EST 2007
+# Date:		Sat Mar 31 05:06:19 EST 2007
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2007/03/31 10:01:27 $
+#   $Date: 2007/03/31 10:09:06 $
 #   $RCSfile: backup2,v $
-#   $Revision: 1.21 $
+#   $Revision: 1.22 $
 
 case "$1" in
 "" | -doc* )
@@ -354,6 +354,7 @@ do
 	    echo "ERROR executing mkisofs"
 	    exit 1
 	fi
+	chmod 400 $r
 	ls -l $r
 	echo ""
     fi
