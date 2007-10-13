@@ -1,0 +1,46 @@
+#!/bin/sh
+
+# Scour directories.
+#
+# File:		scour
+# Author:	Bob Walton <walton@deas.harvard.edu>
+# Date:		Sat Oct 13 06:36:38 EDT 2007
+#
+# The authors have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+#
+# RCS Info (may not be true date or author):
+#
+#   $Author: walton $
+#   $Date: 2007/10/13 10:47:17 $
+#   $RCSfile: scour,v $
+#   $Revision: 1.1 $
+
+case "$1" in
+"" | -doc* )
+	echo "
+scour directory ...
+
+    Remove all binary files (ELF files) from a directory and its
+    subdirectories.
+"
+    exit 1
+    ;;
+esac
+
+for d in $*; do
+
+    for f in `find $d -type f -print`; do
+        type=`file $f`
+	if expr "$type" : '.*: ELF[, ].* executable[, ].* linked[, ]' >/dev/null
+	then
+	    echo REMOVING $type
+	    rm -f $f
+	fi
+    done
+done
+
+
+exit 0
+
