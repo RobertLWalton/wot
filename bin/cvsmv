@@ -1,16 +1,11 @@
-#! /bin/csh -f
-
-echo scp `cat CVS/Root`/`cat CVS/Repository`/$1,v \
-         `cat CVS/Root`/`cat CVS/Repository`/$2,v
-scp `cat CVS/Root`/`cat CVS/Repository`/$1,v \
-    `cat CVS/Root`/`cat CVS/Repository`/$2,v
-
-echo cvs update $2
-cvs update $2
-echo chmod u+w $2
-chmod u+w $2
-
-echo rm -f $1
-rm -f $1
-echo cvs remove $1
-cvs remove $1
+#! /bin/csh -fe
+set root=`cat CVS/Root`
+set account=`expr "$root" : '\([^:]*\):' `
+set root=`expr "$root" : '[^:]*:\(.*\)$' `
+set repository="$root/`cat CVS/Repository`"
+echo ssh "$account" mv "$repository/$1,v" "$repository/$2,v"
+ssh "$account" mv "$repository/$1,v" "$repository/$2,v"
+echo cvs update "$1" "$2"
+cvs update "$1" "$2"
+echo chmod u+w "$2"
+chmod u+w "$2"
