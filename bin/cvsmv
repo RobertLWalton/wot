@@ -1,4 +1,43 @@
 #! /bin/csh -fe
+#
+# Move (rename) a CVS ,v repository file.
+#
+# File:		cvsmv
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Fri Jul 11 11:21:03 EDT 2008
+#
+# The authors have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+#
+# RCS Info (may not be true date or author):
+#
+#   $Author: walton $
+#   $Date: 2008/07/11 15:28:34 $
+#   $RCSfile: cvsmv,v $
+#   $Revision: 1.3 $
+
+switch ( "$1" )
+
+   case -doc*:
+
+   	echo "\
+cvsmv file1 file2\
+\
+    First cvs commit file1, then move (rename) the CVS\
+    repository file file1,v to give it the name\
+    file2,v, and then cvs update file1 and file2 in the\
+    current directory, effectively copying file1 to\
+    file2 and also removing file1 in the current\
+    directory.  End by setting the user write mode bit\
+    on file2.\
+"
+    	exit 1
+	breaksw
+endsw
+
+echo cvs commit -m update "$1"
+cvs commit -m update "$1"
 set root=`cat CVS/Root`
 set account=`expr "$root" : '\([^:]*\):' `
 set root=`expr "$root" : '[^:]*:\(.*\)$' `
