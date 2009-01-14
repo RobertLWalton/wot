@@ -5,7 +5,7 @@
 #
 # File:		print
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Wed Mar 21 14:08:10 EST 2007
+# Date:		Wed Jan 14 10:35:46 EST 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -14,9 +14,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2007/03/21 19:08:23 $
+#   $Date: 2009/01/14 15:36:34 $
 #   $RCSfile: print,v $
-#   $Revision: 1.18 $
+#   $Revision: 1.19 $
 
 landscape=""
 border="-j"
@@ -26,9 +26,13 @@ login=" %n "
 pagenumber="\$% of \$="
 font=10
 titlefont=12
-output="-P $PRINTER"
 switches=""
 style="Courier"
+
+case "$PRINTER" in
+    "" ) output="" ;;
+    * )  output="-P $PRINTER"
+esac
 
 case "$1" in
     -doc* )
@@ -72,7 +76,8 @@ print [-12FfdlpWNVEbo] [-P printer] [filename ...]
     the border.
 
     The printer used is the value of the PRINTER
-    environment variable.  The -P printer option changes
+    environment variable, if that exists, or the default
+    printer otherwise.  The -P printer option changes
     the printer used.  The -o option routes output
     to the standard output, instead of to a printer.
     Note that remarks are always printed on the standard
