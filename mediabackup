@@ -1,0 +1,4 @@
+#/bin/csh -f
+echo rsync -av --delete $argv[2-]:q $argv[1]:q \
+     ~/MEDIA_BACKUP/walton3/$argv[1]:q
+
