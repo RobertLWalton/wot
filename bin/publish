@@ -6,7 +6,7 @@ do
     for y in `cat $x`
     do
         z=$d/$y
-	if [ -d $z ]
+	if [ -x $z ]
 	then
 	    echo chmod a+rx $z
 	    chmod a+rx $z
