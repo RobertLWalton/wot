@@ -1,0 +1,7 @@
+#!/bin/sh
+
+rm -f Publish
+for x in `find . -mindepth 1 -maxdepth 1 -perm -o+r -print`
+do
+    echo >> Publish `basename $x`
+done
