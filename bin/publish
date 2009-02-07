@@ -1,18 +1,23 @@
 #!/bin/sh
 
-for x in `find . -name "Publish" -print`
+d="$1"
+if [ "$d" = "" ]; then d=.; fi
+if [ ! -r "$d/Publish" ]; then exit 0; fi
+
+for x in `cat "$d/Publish"`
 do
-    d=`dirname $x`
-    for y in `cat $x`
-    do
-        z=$d/$y
-	if [ -x $z ]
+    y=$d/$x
+    if [ -x $y ]
+    then
+	if [ "$x" != "." -a -r "$y/Publish" ]
 	then
-	    echo chmod a+rx $z
-	    chmod a+rx $z
+	    publish $y
 	else
-	    echo chmod a+r $z
-	    chmod a+r $z
+	    echo chmod a+rx $y
+	    chmod a+rx $y
 	fi
-    done
+    else
+	echo chmod a+r $y
+	chmod a+r $y
+    fi
 done
