@@ -1,5 +1,17 @@
 #!/bin/sh
 
+if [ "$1" = "-v" ]
+then
+    shift
+    v=-v
+elif [ "$1" = "-c" ]
+then
+    shift
+    v=-c
+else
+    v=-c
+fi
+
 d="$1"
 if [ "$d" = "" ]; then d=.; fi
 if [ ! -r "$d/Publish" ]; then exit 0; fi
@@ -11,11 +23,11 @@ do
     then
 	if [ "$x" != "." -a -r "$y/Publish" ]
 	then
-	    publish $y
+	    publish $v $y
 	else
-	    chmod -c a+rx $y
+	    chmod $v a+rx $y
 	fi
     else
-	chmod -c a+r $y
+	chmod $v a+r $y
     fi
 done
