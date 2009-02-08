@@ -13,11 +13,9 @@ do
 	then
 	    publish $y
 	else
-	    echo chmod a+rx $y
-	    chmod a+rx $y
+	    chmod -c a+rx $y
 	fi
     else
-	echo chmod a+r $y
-	chmod a+r $y
+	chmod -c a+r $y
     fi
 done
