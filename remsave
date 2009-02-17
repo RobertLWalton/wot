@@ -1,0 +1,6 @@
+#/bin/csh -f
+source ~/.linkbackuprc
+echo rsync -av --delete $argv[2-]:q $argv[1]:q/ \
+    ${LINKACCOUNT}@${LINKSTATION}:walton3/$argv[1]:q
+rsync -av --delete $argv[2-]:q $argv[1]:q/ \
+    ${LINKACCOUNT}@${LINKSTATION}:walton3/$argv[1]:q
