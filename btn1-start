@@ -1,0 +1,16 @@
+#!/bin/sh
+gnome-terminal --tab-with-profile=walton \
+               --title=btn/include \
+	       --command='tcsh -c "cd ~/by-the-numbers/btn/include;tcsh"' \
+               --tab-with-profile=walton \
+               --title=btn/src \
+	       --command='tcsh -c "cd ~/by-the-numbers/btn/src;tcsh"' \
+               --tab-with-profile=walton \
+               --title=btn/test \
+	       --command='tcsh -c "cd ~/by-the-numbers/btn/test;tcsh"' \
+               --tab-with-profile=walton \
+               --title=btn/doc \
+	       --command='tcsh -c "cd ~/by-the-numbers/btn/doc;tcsh"' \
+               --tab-with-profile=walton \
+               --title=btn/data \
+	       --command='tcsh -c "cd ~/by-the-numbers/btn/data;tcsh"'

@@ -1,0 +1,13 @@
+#!/bin/sh
+gnome-terminal --tab-with-profile=walton \
+               --title=min/include \
+	       --command='tcsh -c "cd ~/min/include;tcsh"' \
+               --tab-with-profile=walton \
+               --title=min/src \
+	       --command='tcsh -c "cd ~/min/src;tcsh"' \
+               --tab-with-profile=walton \
+               --title=min/test \
+	       --command='tcsh -c "cd ~/min/test;tcsh"' \
+               --tab-with-profile=walton \
+               --title=min/doc \
+	       --command='tcsh -c "cd ~/min/doc;tcsh"'
