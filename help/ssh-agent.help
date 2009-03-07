@@ -135,7 +135,34 @@ files:
 		endif
 	    endif
 
-TBD
+These file entries will start an ssh-agent when you
+log in and kill it when you log out (the latter is very
+important, as otherwise ssh-agents will accumulate).
+
+To use the agent, immediately after you log in execute
+
+	ssh-add
+
+and give it your password.  This will load your private
+key from ~/.ssh/id_rsa (or id_dsa) into your ssh-agent.
+As you will be doing this every time you log in, you
+may want to alias a short name for ssh-add; for example:
+
+    If you use the /bin/bash shell:
+
+        .bashrc:
+
+	    alias key=ssh-add
+
+    If you use the /bin/tcsh shell:
+
+        .cshrc:
+
+	    alias key ssh-add
+
+Propagating Your Public Key
+----------- ---- ------ ---
+
 
 
 The `~/.ssh' directory is the directory in which all SSH
