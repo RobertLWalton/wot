@@ -1,0 +1,318 @@
+SSH HELP
+
+File:		ssh-keys.help
+Author:		Bob Walton (walton@deas.harvard.edu)
+Date:		Sat Mar  7 07:07:27 EST 2009
+
+Purpose
+-------
+
+Here we describe a way of using SSH keys and the
+ssh-agent program on UNIX to provide a maximum of
+security and at the same time a maximum in ease of use.
+The main idea is that when you log into your laptop,
+home computer, or office computer, you will have to type
+your password twice, and then you will be able to access
+any of your remote accounts without having to retype
+your password.  In addition, if you give each of the
+computers you log into separate passwords and SSH keys,
+then if any of these are compromised (e.g., if you lose
+your laptop), you can easily adjust your remote accounts
+so that computer can no longer access them.
+
+Choosing Passwords
+-------- ---------
+
+The password you choose for each computer that you log
+into should be secure.  The passwords of remote accounts
+that you almost never log into should be unique long
+random strings of letters and digits that you carry in
+your wallet.
+
+One good way to choose a password that you will use
+frequently is to think of a long sentence that you can
+remember and that only you would be likely to think of.
+Then take the first letters of each word, and for some
+words, take the obvious related character instead.  For
+example, if you chose the sentence
+
+    At Harvard we love to tweak the bottoms of tyrants
+    @  h       w  l    2  t     t   b       o  t
+
+    and teakettles.
+    &   t
+
+you might get `@hwl2ttbot&t'.
+
+Choosing long random passwords composed of letters and
+digits could be done by using alternating sequences of
+a single lower case letter and 1 to 3 digits.  E.g.,
+`86f294b3p70g'.  These are easy to type when you have
+to.
+
+Making SSH Keys
+------ --- ----
+
+For each computer you log into make a pubic/private key
+pair by executing:
+
+	ssh-keygen
+
+and giving it your password for the computer.  The
+private key is in ~/.ssh/id_rsa and you should never
+have to bother with this file.  The public key is in
+~/.ssh/id_rsa.pub and you should do the following with
+this file.
+
+First, look at the file with an editor; its a single
+long line.  The last field (string of non-whitespace
+characters) in the line is a comment that should tell
+you which computer the key was generated on.  If it
+does not tell you this, edit it to name your computer,
+but be sure to leave the rest of the line untouched.
+
+Then copy the id_rsa.pub file to a file whose name
+has the form XXX_id_rsa.pub where XXX names the
+computer on which the key pair was generated.
+
+If you every run ssh-keygen again it will wipe out
+the private key, so you may want to make a copy
+of id_rsa in XXX_id_rsa so you can undo any damage
+from accidents.
+
+Using The SSH Agent
+----- --- --- -----
+
+Your private key is now stored in ~/.ssh/id_rsa but is
+encrypted by your password.  Only an unencrypted
+version can be used by ssh.  The ssh-agent program,
+which can be started when you log in, can store an
+unencrypted version of the private key and make it
+available to ssh whenever that latter needs it, so you
+do not have to retype your password whenever you use
+ssh.
+
+To enable ssh-agent put the following in the designated
+files:
+
+    If you use the /bin/bash shell:
+
+        .bash_profile:
+
+	    if [ -z "${SSH_AUTH_SOCK:-}" ]
+	    then
+		eval `ssh-agent`
+		SSH_AGENT_STARTED=$$
+		export SSH_AGENT_STARTED
+	    fi
+
+	.bash_logout:
+
+	    if [ -n "${SSH_AGENT_PID:-}" ]
+	    then
+		if [ "$SSH_AGENT_STARTED" = $$ ]
+		then
+		    eval `ssh-agent -k`
+		fi
+	    fi
+
+
+    If you use the /bin/tcsh shell:
+
+	.login:
+
+	    if ( ! $?SSH_AUTH_SOCK ) then
+		eval `ssh-agent`
+		setenv SSH_AGENT_STARTED $$
+	    endif
+
+	.logout:
+
+
+	    if ( $?SSH_AGENT_PID ) then
+		if ( "$SSH_AGENT_STARTED" == $$ ) then
+		    eval `ssh-agent -k`
+		endif
+	    endif
+
+TBD
+
+
+The `~/.ssh' directory is the directory in which all SSH
+key files are normally kept, along with other SSH files
+such at the known_hosts file mentioned above.
+
+To install a public key on a remote account, simply add
+the contents of the key's .pub file, which is a single
+long line, to the file
+
+	.ssh/authorized_keys2
+
+in the remote account.  Note that unlike host authenti-
+cation keys above, there is no problem with key names
+in these files.  When ssh connects, all the private keys
+available to it are checked against all the public keys
+on the remote host, and if any match, the connection is
+allowed.
+
+Its possible to give the private key name to ssh and scp
+by using the `-i key-file-name' option, but there are
+ways for avoiding the need for this option.
+
+If you want to avoid giving private key file names to
+ssh programs, and you have just one private key of
+each type (rsa, rsa1, dsa) in each local account, then
+in each local account you can symbolically link the file
+name
+
+	~/.ssh/id_rsa
+
+to your private key.  This is where all SSH programs
+will look when they are not given a `-i' option and
+there is no ssh agent which is already storing the key.
+
+To run an ssh-agent you should set up each local account
+so a process running the ssh-agent program is started
+when you log in and stopped when you log out.  This can
+be done by adding
+
+    if ( ! $?SSH_AUTH_SOCK ) then
+	eval `ssh-agent`
+	set ssh_agent_started
+    endif
+
+to your ~/.login file and
+
+    if ( $?ssh_agent_started ) then
+	eval `ssh-agent -k`
+    endif
+
+to your ~/.logout file, if you are using the tcsh
+(a.k.a. csh) shell.  If you are using the bash shell,
+you must add commands similar to these but using a
+different shell language syntax to your ~/.profile and
+~/.bash_logout files.
+
+You also may find it helpful to make a ~/.ssh/config
+file containing the line
+
+    ForwardAgent yes
+
+This causes a secure socket connection to your ssh-agent
+program to be forwarded to any other computer account
+you log into with ssh.
+
+The first time you use a private key file while an ssh-
+agent process is running, the file will be loaded into
+the agent.  If the file is protected by a password, you
+will be asked for the password at this time.  There-
+after, whenever the private key is needed, ssh and scp
+will find it by looking in the agent, and not need to
+consult you or be given a password.
+
+You can load keys into the agent with the command
+
+	ssh-add private-key-file-name ...
+
+If several keys have the same password, you need to type
+the password only once.  A good idea is to put
+
+	alias key ssh-add private-key-file-name ...
+
+in your .cshrc file, use the same password for all key
+files, and upon login in locally, type the command
+`key' and then the password.  This loads all your keys
+into the agent and eliminates any subsequent need for
+the password during your login session.
+
+Using DSA is just like using RSA; just change `rsa' to
+`dsa' in all file names given in the previous discu-
+sion.
+
+RSA1 is only useful if you must connect to a remote
+computer that only supports SSH protocol 1, and does not
+support SSH protocol 2.  To make such remote connections
+you must
+
+1. Perform the above procedures with the following
+   name changes:
+
+   Use `-t rsa1' instead of `-t rsa'.
+   Use `identity' instead of `id_rsa'.
+   Use `known_hosts' instead of `known_hosts2'.
+   Use `authorized_keys' instead of `authorized_keys2'.
+
+2. When using ssh and scp:
+
+   Use `ssh -1' instead of `ssh'.
+   Use `scp -o Protocol=1' instead of `scp'.
+
+If you have all or any of the key files
+
+	.ssh/id_rsa
+	.ssh/id_dsa
+	.ssh/identity
+
+then ssh programs will find these key files without
+being given key file names explicitly.
+
+Not all SSH's use the same file names and file formats
+as the `OpenSSH_2.9p2' in RedHat 7.2.  An example of
+a different SSH that just understands protocol 1 is
+
+    SSH Version 1.2.26 [sparc-sun-solaris2.6],
+    protocol version 1.5.  Standard version.
+    Does not use RSAREF.
+
+However, this uses the same rsa1 file names as
+`OpenSSH_2.9p2' in RedHat 7.2.
+
+An example of different SSH's that understand protocol 2
+are
+
+    SSH Secure Shell 3.2.5 (non-commercial version)
+    	on i686-pc-linux-gnu (under mandrake linux)
+    SSH Version 2.0.13 (running under sun-solaris)
+
+
+These SSH's:
+
+    Use `~/.ssh2' instead of `~/.ssh'.
+    Use `~/.ssh2/hostkeys/*' instead of lines in
+        `~/.ssh/known_hosts'.
+
+    Use the file `~/.ssh2/authorization' in combination
+    with particular public key files instead of lines
+    in the file `~/.ssh/authorized_keys2'.
+
+    Use the file `~/.ssh2/identification' that lists
+    particular private key files instead of using a
+    single private key file with a special name.
+
+Suppose you have public key files named fee.pub and
+fi.pub, each containing a long line.  Inspection of that
+line shows it has three parts, one of which is a long
+string of random looking characters containing no
+spaces.  This is the key proper, encoded in `base64',
+a system of encoding that encodes 6 bits in a non-space
+ASCII character.  To use this with `~/.ssh2' you make
+files `~/.ssh2/fee.compub' and `~/.ssh2/fi.compub' each
+with the format:
+
+    ---- BEGIN SSH2 PUBLIC KEY ----
+    public-key-proper-on-one-line
+    ---- END SSH2 PUBLIC KEY ----
+
+and the file `~/.ssh2/authorization' containing
+
+    Key fee.compub
+    Key fi.compub
+
+Forwarding keys does not seem to work when you log into
+a remote account that uses this SSH from a local account
+that uses OpenSSH, even though it is advertise to work.
+Attempts to find configuration settings so that forward-
+ing keys will work have so far failed in this case, and
+it is speculated that the two SSH's use different agent
+protocols (even though both use SSH protocol 2).
+

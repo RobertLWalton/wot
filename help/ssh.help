@@ -2,13 +2,14 @@ SSH HELP
 
 File:		ssh.help
 Author:		Bob Walton (walton@deas.harvard.edu)
-Date:		Fri Jul  4 22:22:12 EDT 2003
+Date:		Sat Mar  7 06:11:46 EST 2009
 
 SSH, the `Secure Shell', is just a way of connecting to
 a remote computer's account so you can use a shell in
-that account from your local computer.  The command
+that account from your local computer.  In a UNIX base
+computer the command
 
-	ssh  login-name@host-name
+	ssh login-name@host-name
 
 will connect you to the named remote account on the
 named remote host, assuming that host runs the SSH
@@ -17,22 +18,27 @@ the password for the remote account (but more on this
 below).  After you have been connected, commands you
 type will go to the normal shell of the remote account
 on the remote host, and the output of that shell will
-return to your terminal.  In addition, any X-windows
-activity in the remote account will be rerouted to your
-local account's X-windows server.
+return to your terminal.  In addition, if you are
+running X-windows and have the appropriate setup (see
+below) any X-windows activity in the remote account
+will be rerouted to your local account's X-windows,
+although if your network connection is not very fast
+this may be too slow to use.
 
 The first time you use ssh for a particular remote
 host, you will be told that the host cannot be authenti-
 cated, and you will be asked whether you want to contin-
-ue.  Normally you answer yes, and keys that can be
-used to authenticate that host are stored in a file
-somewhere so you do not have to repeat this process.
+ue.  Normally you answer yes, and cryptographic keys
+that can be used to authenticate that host are stored
+in a file somewhere so you do not have to repeat this
+process.  If you are on a UNIX machine this file will
+be ~/.ssh/known_hosts.
 
 Note that if you use different names for the same remote
-host you will be asked about continuing the first time
-you use each distinct name.  The key storage system only
-knows the names you use, not the actual identity of the
-host.
+host you may be asked about continuing the first time
+you use each distinct name.  The key storage system may
+only know the names you use, and not the actual identity
+of the host.
 
 If after storing authentication keys for a remote host,
 the sshd daemon running on that host changes its keys
@@ -44,19 +50,14 @@ try to connect to the host.  If this happens, you need
 to delete all authentication keys previously used for
 the host, and then get new authentication keys by con-
 necting to the host with ssh and answering `yes' to the
-continuation question.  The authentication keys to be
-deleted are single long lines in the files
+continuation question.  On UNIX the authentication keys
+to be deleted are single long lines in the file
+~/.ssh/known_hosts.
 
-	.ssh/known_hosts	.ssh/known_hosts2
-
-or files in the directory
-
-	.ssh2/hostkeys
-
-The lines or hostkeys file names give the name of the
-remote host whose keys they store.  As a remote host may
-be known under several names, ALL keys relating to ANY
-of these several names for the host must be deleted.
+The lines give the name of the remote host whose keys
+they store.  As a remote host may be known under several
+names, ALL keys relating to ANY of these several names
+for the host must be deleted.
 
 The only security problem that answering `yes' actually
 causes is that if a hacker has compromised the internet
@@ -85,17 +86,6 @@ pathnames and copy directories.  -r copies directories
 recursively, and -p preserves file modes (rwx).  Scp is
 layered on top of ssh, and requires the same passwords.
 
-SSH replaces the previous RSH (and rcp) commands of
-UNIX, and the telnet (and ftp) internet commands.  The
-advantage of SSH is that it encrypts all data it sends
-over the internet, so only your local host and the
-remote host can see the actual data.  SSH has become
-ubiquitous in many places, including large universities,
-because system hackers would get control of a single
-less secure computer on a university network, and use
-that computer to snoop the network and read the unen-
-crypted passwords that the telnet and ftp protocols were
-transmitting.  SSH makes this impossible.
 
 SSH also has a very effective and secure mechanism for
 enabling you to avoid typing passwords every time you
