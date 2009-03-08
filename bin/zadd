@@ -1,20 +1,22 @@
 #!/bin/sh
-zone=$1
-shopt -s nullglob
-x=`grep -l $zone ~/.ssh/*_id_{rsa,dsa}.pub`
-shopt -u nullglob
 files=
 found=0
-for y in $x
+for zone in "$@"
 do
-    z="$HOME/.ssh/`basename $y .pub`"
-    if ssh-add -l | grep -q $z
-    then
-        donothing=
-    else
-    	files="$files $z"
-	found=1
-    fi
+    shopt -s nullglob
+    x=`grep -l $zone ~/.ssh/*_id_{rsa,dsa}.pub`
+    shopt -u nullglob
+    for y in $x
+    do
+	z="$HOME/.ssh/`basename $y .pub`"
+	if ssh-add -l | grep -q $z
+	then
+	    donothing=
+	else
+	    files="$files $z"
+	    found=1
+	fi
+    done
 done
 if [ $found == 1 ]
 then
