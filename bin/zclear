@@ -1,0 +1,46 @@
+#!/bin/sh
+
+if [ $# = 0 ]
+then
+    zones=$SSH_ZONE
+else
+    zones="$*"
+fi
+
+shopt -s nullglob
+allfiles=`echo ~/.ssh/*_id_{rsa,dsa}.pub`
+shopt -u nullglob
+
+found=0
+files=
+for f in $allfiles
+do
+    z="$HOME/.ssh/`basename $f .pub`"
+    if ssh-add -l | grep -q $z
+    then
+	zfound=0
+    	for zone in $zones
+	do
+	    if grep -q $zone $f
+	    then
+	        zfound=1
+	    fi
+	done
+
+	if [ $zfound = 0 ]
+	then
+	    files="$files $z"
+	    found=1
+	fi
+    fi
+done
+
+if [ $found == 1 ]
+then
+    echo "ssh-add -d $files"
+    ssh-add -d $files 2>/dev/null
+    if [ "$zones" != "" ]
+    then
+    	echo "$zones not cleared"
+    fi
+fi
