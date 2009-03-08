@@ -1,0 +1,30 @@
+#!/bin/sh
+SSH_ZONE=$1; export SSH_ZONE
+pidf=~/.ssh/agents/${SSH_ZONE}.pid
+sockf=~/.ssh/agents/${SSH_ZONE}.sock
+if [ ! -d $pidf ]
+then
+    if [ ! -d ~/.ssh/agents ]
+    then
+    	mkdir ~/.ssh/agents
+    fi
+    rm -f $pidf $sockf
+    eval `ssh-agent -s -a $sockf`
+    ln -s /proc/$SSH_AGENT_PID $pidf
+    shopt -s nullglob
+    x=`grep -l $SSH_ZONE ~/.ssh/*_id_{rsa,dsa}.pub`
+    shopt -u nullglob
+    z=
+    for y in $x; do z="$z $HOME/.ssh/`basename $y .pub`"; done
+    echo "SSH_ZONE is $SSH_ZONE"
+    echo "ssh-add $z"
+    ssh-add $z
+else
+    SSH_AUTH_SOCK=~/.ssh/agents/${SSH_ZONE}.sock
+    export SSH_AUTH_SOCK
+    pidlink=`readlink $pidf`
+    SSH_AGENT_PID=`basename $pidlink`
+    export SSH_AGENT_PID
+    echo "SSH_ZONE is $SSH_ZONE"
+fi
+$SHELL

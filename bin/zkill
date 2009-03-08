@@ -1,0 +1,18 @@
+#!/bin/sh
+shopt -s nullglob
+for x in ~/.ssh/agents/*.pid
+do
+    if [ -d $x ]
+    then
+        pidlink=`readlink $x`
+	pid=`basename $pidlink`
+	kill $pid
+    fi
+    rm -f $x
+done
+for x in ~/.ssh/agents/*.sock
+do
+    rm -f $x
+done
+shopt -u nullglob
+rm -rf ~/.ssh/agents
