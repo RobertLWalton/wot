@@ -1,8 +1,4 @@
-SSH HELP
-
-File:		ssh-agent.help
-Author:		Bob Walton (walton@deas.harvard.edu)
-Date:		Sun Mar  8 22:19:04 EDT 2009
+SSH HELP                   Mon Mar  9 14:03:43 EDT 2009
 
 
 Purpose
@@ -38,7 +34,7 @@ remember and that only you would be likely to think of.
 Then take the first letters of each word, and for some
 words, take the obvious related character instead.  For
 example, if you chose the sentence
-
+
     At Harvard we love to tweak the bottoms of tyrants
     @  h       w  l    2  t     t   b       o  t
 
@@ -78,7 +74,7 @@ but be sure to leave the rest of the line untouched.
 Then copy the id_rsa.pub file to a file whose name
 has the form XXX_id_rsa.pub where XXX names the
 computer on which the key pair was generated.
-
+
 If you ever run ssh-keygen again it will wipe out
 the private key, so you may want to make a copy
 of id_rsa in XXX_id_rsa so you can undo any damage
@@ -110,7 +106,7 @@ files:
 		SSH_AGENT_STARTED=$$
 		export SSH_AGENT_STARTED
 	    fi
-
+
 	.bash_logout:
 
 	    if [ -n "${SSH_AGENT_PID:-}" ]
@@ -142,9 +138,8 @@ files:
 
 These file entries will start an ssh-agent when you
 log in and kill it when you log out (the latter is very
-important, as otherwise ssh-agents will accumulate and
-will also be a security risk, as we describe below).
-
+important, as otherwise ssh-agents will accumulate.
+
 To use the agent, immediately after you log in execute
 
 	ssh-add
@@ -173,7 +168,7 @@ Propagating Your Public Key
 Now if you have a remote account NNN@HHH that you
 want to access, using your key pair
 
-	~/.ssh/_id_rsa     ~/.ssh/XXX_id_rsa.pub
+	~/.ssh/id_rsa     ~/.ssh/XXX_id_rsa.pub
 
 then you need to append ~/.ssh/XXX_id_rsa.pub to the
 end of the NNN@HHH account's
@@ -184,16 +179,24 @@ file.  This last file consists of lines each of which
 is a public key.  The holders of the private keys that
 match these public keys are allowed to access the
 NNN@HHH account without using a password.
-
+
 To move your public key into the right place you
 execute:
 
 	scp ~/.ssh/XXX_id_rsa.pub NNN@HHH:.
-	[this copies the public key]
+	    [type ENTER when this types:
+	        Enter passphrase for key '...':]
+	    [type NNN@HHH's password when this types:
+	        NNN@HHH's password:]
+	    [this copies the public key]
 	ssh NNN@HHH
-	[this logs you into the NNN@HHH account]
+	    [type ENTER when this types:
+	        Enter passphrase for key '...':]
+	    [type NNN@HHH's password when this types:
+	        NNN@HHH's password:]
+	    [this logs you into the NNN@HHH account]
 	mkdir .ssh; chmod 700 .ssh
-	[do this if .ssh does not exist in NNN@HHH]
+	    [do this if .ssh does not exist in NNN@HHH]
 	mv XXX_id_rsa.pub .ssh
 	cd .ssh
 	cat XXX_id_rsa.pub >> authorized_keys
@@ -208,7 +211,7 @@ account using
 without a password (if you remembered to ssh-add your
 private key to your running ssh-agent).
 
-
+
 Editing Your Configuration
 ------- ---- -------------
 
@@ -223,30 +226,29 @@ on the computer you log into and put into it
     # ForwardX11 yes
     # LogLevel DEBUG
 
-Here the # comments out line you normally do not need
+Here the # comments out lines you normally do not need
 but might find useful from time to time.
 
-The ForwardAgent line causes your ssh-agent to be
+The `ForwardAgent yes' line causes your ssh-agent to be
 `forwarded' to any account you log into using ssh.  If
-you are using cvs, the source code control system, is
-this likely to be useful.  For example, suppose you
-have a remote account NNN@HHH and are using a cvs
-repository in another remote account CCC@JJJ.  Then
-if you log into NNN@HHH and try to use the cvs
-repository from there, without setting ForwardAgent
-to yes, you will have to use your password again to
-use cvs on NNN@HHH.  But if you set ForwardAgent to
-yes, then when you log into NNN@HHH your ssh-agent
-from your login computer will be forwarded to and
-become a running ssh-agent in account NNN@HHH, and
-you will not have to set up another agent in that
-account or type your password when accessing
+you are using cvs, the source code control system, this
+is likely to be useful.  For example, suppose you have a
+remote account NNN@HHH and are using a cvs repository in
+another remote account CCC@JJJ.  Then if you log into
+NNN@HHH and try to use the cvs repository from there,
+without setting ForwardAgent to yes, you will have to
+use your password again to use cvs on NNN@HHH.  But if
+you set ForwardAgent to yes, then when you log into
+NNN@HHH your ssh-agent from your login computer will be
+forwarded to and become a running ssh-agent in account
+NNN@HHH, and you will not have to set up another agent
+in that account or type your password when accessing
 CCC@JJJ from NNN@HHH.
 
-The ForwardX11 line if not commented-out permits
+The `ForwardX11 yes' line if not commented-out permits
 programs in the account you log into (NNN@HHH) to use
 the X-server on your login machine.
-
+
 Forwarding of any kind should not be used unless
 necessary because of Security Issues covered in the
 next session.  Often ssh-agent forwarding is too useful
@@ -273,7 +275,7 @@ into any account A1 that you use to log into or access
 another account A2 has an excellent chance of breaking
 into A2 without your knowing it by using a Trojan Horse.
 Thus using a Trojan House an intruder who breaks into
-NNN@HHH can break into CCC@JJJ with excellent chance
+NNN@HHH can break into CCC@JJJ with an excellent chance
 of success without detection.
 
 Use of ssh or ssh-agent neither helps or hinders this
@@ -281,7 +283,7 @@ situation.
 
 However, there special issues with X11 forwarding and
 ssh-agent forwarding.
-
+
 First and simplest, use of X11 forwarding permits an
 intruder to break in backwards.  This is, to break
 into A1 after having broken into A2 (where A1 ---> A2).
@@ -291,9 +293,11 @@ a Trojan Horse the allows the intruder to break into
 LLL.
 
 Ssh-agent does NOT have this backward break-in problem.
-Ssh-agent never give out the private keys it stores.
+Ssh-agent never gives out the private keys it stores.
 Instead it takes messages it is sent, encrypts them with
-the private keys, and returns the encrypted results.
+the private keys, and returns the encrypted results,
+thus proving it posses the private keys without
+revealing the private keys.
 
 However in more complex circumstances ssh-agent does
 have an additional vulnerability to break-ins.  Suppose
@@ -305,13 +309,13 @@ the access pattern is
 	 +------->   PPP@KKK   ----------+
 
 If you use ssh-agent forwarding and in intruder breaks
-into NNN@HHH, then the intruder mount a Trojan Horse
-to use your ssh-agent forwarded to NNN@HHH to break
-into PPP@KKK.  This is because the intruder can get the
-agent to encrypt messages using its private keys that
-permit access not only to NNN@HHH and CCC@JJJ but also
-to PPP@KKK.
-
+into NNN@HHH, then the intruder can deploy a Trojan
+Horse that uses your ssh-agent forwarded to NNN@HHH to
+break into PPP@KKK.  This is because the intruder can
+get the agent to encrypt messages using its private keys
+that permit access not only to NNN@HHH and CCC@JJJ but
+also to PPP@KKK.
+
 You can get around this by using two separate key pairs
 for the two access patterns
 
@@ -321,8 +325,24 @@ and
 
 	LLL   --->   PPP@KKK   --->   CCC@JJJ
 
-See ssh-zones.help.
+See ssh-zones.help if you really want to do this.
 
 However, Trojan Horses in the UNIX environment are not
 very common, so people have been getting by so far
 (2009) without paying much attention to this.
+
+
+File:		ssh-agent.help
+Author:		Bob Walton (walton@deas.harvard.edu)
+Date:		Mon Mar  9 14:14:27 EDT 2009
+
+The authors have placed this file in the public domain;
+they make no warranty and accept no liability for this
+file.
+
+RCS Info (may not be true date or author):
+
+    $Author: walton $
+    $Date: 2009/03/09 18:26:18 $
+    $RCSfile: ssh-agent.help,v $
+    $Revision: 1.4 $
