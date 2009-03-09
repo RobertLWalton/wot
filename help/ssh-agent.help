@@ -1,14 +1,15 @@
 SSH HELP
 
-File:		ssh-keys.help
+File:		ssh-agent.help
 Author:		Bob Walton (walton@deas.harvard.edu)
-Date:		Sat Mar  7 07:07:27 EST 2009
+Date:		Sun Mar  8 22:19:04 EDT 2009
+
 
 Purpose
 -------
 
 Here we describe a way of using SSH keys and the
-ssh-agent program on UNIX to provide a maximum of
+ssh-agent program on UNIX to provide a near maximum of
 security and at the same time a maximum in ease of use.
 The main idea is that when you log into your laptop,
 home computer, or office computer, you will have to type
@@ -20,13 +21,15 @@ then if any of these are compromised (e.g., if you lose
 your laptop), you can easily adjust your remote accounts
 so that computer can no longer access them.
 
+
 Choosing Passwords
 -------- ---------
 
 The password you choose for each computer that you log
-into should be secure.  The passwords of remote accounts
-that you almost never log into should be unique long
-random strings of letters and digits that you carry in
+into using a password should be unique and secure.  The
+passwords of remote accounts that you almost never log
+into using a password should be unique long random
+strings of letters and digits that you carry in
 your wallet.
 
 One good way to choose a password that you will use
@@ -49,6 +52,7 @@ digits could be done by using alternating sequences of
 a single lower case letter and 1 to 3 digits.  E.g.,
 `86f294b3p70g'.  These are easy to type when you have
 to.
+
 
 Making SSH Keys
 ------ --- ----
@@ -75,10 +79,11 @@ Then copy the id_rsa.pub file to a file whose name
 has the form XXX_id_rsa.pub where XXX names the
 computer on which the key pair was generated.
 
-If you every run ssh-keygen again it will wipe out
+If you ever run ssh-keygen again it will wipe out
 the private key, so you may want to make a copy
 of id_rsa in XXX_id_rsa so you can undo any damage
 from accidents.
+
 
 Using The SSH Agent
 ----- --- --- -----
@@ -137,7 +142,8 @@ files:
 
 These file entries will start an ssh-agent when you
 log in and kill it when you log out (the latter is very
-important, as otherwise ssh-agents will accumulate).
+important, as otherwise ssh-agents will accumulate and
+will also be a security risk, as we describe below).
 
 To use the agent, immediately after you log in execute
 
@@ -160,186 +166,163 @@ may want to alias a short name for ssh-add; for example:
 
 	    alias key ssh-add
 
+
 Propagating Your Public Key
 ----------- ---- ------ ---
 
+Now if you have a remote account NNN@HHH that you
+want to access, using your key pair
+
+	~/.ssh/_id_rsa     ~/.ssh/XXX_id_rsa.pub
+
+then you need to append ~/.ssh/XXX_id_rsa.pub to the
+end of the NNN@HHH account's
+
+	~/.ssh/authorized_keys
+
+file.  This last file consists of lines each of which
+is a public key.  The holders of the private keys that
+match these public keys are allowed to access the
+NNN@HHH account without using a password.
+
+To move your public key into the right place you
+execute:
+
+	scp ~/.ssh/XXX_id_rsa.pub NNN@HHH:.
+	[this copies the public key]
+	ssh NNN@HHH
+	[this logs you into the NNN@HHH account]
+	mkdir .ssh; chmod 700 .ssh
+	[do this if .ssh does not exist in NNN@HHH]
+	mv XXX_id_rsa.pub .ssh
+	cd .ssh
+	cat XXX_id_rsa.pub >> authorized_keys
+	chmod 600 authorized_keys
+	logout
+
+At this point you should be able to log into the NNN@HHH
+account using
+
+	ssh NNN@HHH
+
+without a password (if you remembered to ssh-add your
+private key to your running ssh-agent).
 
 
-The `~/.ssh' directory is the directory in which all SSH
-key files are normally kept, along with other SSH files
-such at the known_hosts file mentioned above.
+Editing Your Configuration
+------- ---- -------------
 
-To install a public key on a remote account, simply add
-the contents of the key's .pub file, which is a single
-long line, to the file
+You will probably also find it helpful to make the
+file
 
-	.ssh/authorized_keys2
+    ~/.ssh/config
 
-in the remote account.  Note that unlike host authenti-
-cation keys above, there is no problem with key names
-in these files.  When ssh connects, all the private keys
-available to it are checked against all the public keys
-on the remote host, and if any match, the connection is
-allowed.
-
-Its possible to give the private key name to ssh and scp
-by using the `-i key-file-name' option, but there are
-ways for avoiding the need for this option.
-
-If you want to avoid giving private key file names to
-ssh programs, and you have just one private key of
-each type (rsa, rsa1, dsa) in each local account, then
-in each local account you can symbolically link the file
-name
-
-	~/.ssh/id_rsa
-
-to your private key.  This is where all SSH programs
-will look when they are not given a `-i' option and
-there is no ssh agent which is already storing the key.
-
-To run an ssh-agent you should set up each local account
-so a process running the ssh-agent program is started
-when you log in and stopped when you log out.  This can
-be done by adding
-
-    if ( ! $?SSH_AUTH_SOCK ) then
-	eval `ssh-agent`
-	set ssh_agent_started
-    endif
-
-to your ~/.login file and
-
-    if ( $?ssh_agent_started ) then
-	eval `ssh-agent -k`
-    endif
-
-to your ~/.logout file, if you are using the tcsh
-(a.k.a. csh) shell.  If you are using the bash shell,
-you must add commands similar to these but using a
-different shell language syntax to your ~/.profile and
-~/.bash_logout files.
-
-You also may find it helpful to make a ~/.ssh/config
-file containing the line
+on the computer you log into and put into it
 
     ForwardAgent yes
+    # ForwardX11 yes
+    # LogLevel DEBUG
 
-This causes a secure socket connection to your ssh-agent
-program to be forwarded to any other computer account
-you log into with ssh.
+Here the # comments out line you normally do not need
+but might find useful from time to time.
 
-The first time you use a private key file while an ssh-
-agent process is running, the file will be loaded into
-the agent.  If the file is protected by a password, you
-will be asked for the password at this time.  There-
-after, whenever the private key is needed, ssh and scp
-will find it by looking in the agent, and not need to
-consult you or be given a password.
-
-You can load keys into the agent with the command
+The ForwardAgent line causes your ssh-agent to be
+`forwarded' to any account you log into using ssh.  If
+you are using cvs, the source code control system, is
+this likely to be useful.  For example, suppose you
+have a remote account NNN@HHH and are using a cvs
+repository in another remote account CCC@JJJ.  Then
+if you log into NNN@HHH and try to use the cvs
+repository from there, without setting ForwardAgent
+to yes, you will have to use your password again to
+use cvs on NNN@HHH.  But if you set ForwardAgent to
+yes, then when you log into NNN@HHH your ssh-agent
+from your login computer will be forwarded to and
+become a running ssh-agent in account NNN@HHH, and
+you will not have to set up another agent in that
+account or type your password when accessing
+CCC@JJJ from NNN@HHH.
 
-	ssh-add private-key-file-name ...
+The ForwardX11 line if not commented-out permits
+programs in the account you log into (NNN@HHH) to use
+the X-server on your login machine.
 
-If several keys have the same password, you need to type
-the password only once.  A good idea is to put
+Forwarding of any kind should not be used unless
+necessary because of Security Issues covered in the
+next session.  Often ssh-agent forwarding is too useful
+not to use, especially among cvs users, whereas X11
+forwarding is rarely needed.
 
-	alias key ssh-add private-key-file-name ...
-
-in your .cshrc file, use the same password for all key
-files, and upon login in locally, type the command
-`key' and then the password.  This loads all your keys
-into the agent and eliminates any subsequent need for
-the password during your login session.
-
-Using DSA is just like using RSA; just change `rsa' to
-`dsa' in all file names given in the previous discu-
-sion.
-
-RSA1 is only useful if you must connect to a remote
-computer that only supports SSH protocol 1, and does not
-support SSH protocol 2.  To make such remote connections
-you must
-
-1. Perform the above procedures with the following
-   name changes:
-
-   Use `-t rsa1' instead of `-t rsa'.
-   Use `identity' instead of `id_rsa'.
-   Use `known_hosts' instead of `known_hosts2'.
-   Use `authorized_keys' instead of `authorized_keys2'.
-
-2. When using ssh and scp:
-
-   Use `ssh -1' instead of `ssh'.
-   Use `scp -o Protocol=1' instead of `scp'.
-
-If you have all or any of the key files
-
-	.ssh/id_rsa
-	.ssh/id_dsa
-	.ssh/identity
-
-then ssh programs will find these key files without
-being given key file names explicitly.
-
-Not all SSH's use the same file names and file formats
-as the `OpenSSH_2.9p2' in RedHat 7.2.  An example of
-a different SSH that just understands protocol 1 is
-
-    SSH Version 1.2.26 [sparc-sun-solaris2.6],
-    protocol version 1.5.  Standard version.
-    Does not use RSAREF.
-
-However, this uses the same rsa1 file names as
-`OpenSSH_2.9p2' in RedHat 7.2.
-
-An example of different SSH's that understand protocol 2
-are
-
-    SSH Secure Shell 3.2.5 (non-commercial version)
-    	on i686-pc-linux-gnu (under mandrake linux)
-    SSH Version 2.0.13 (running under sun-solaris)
+Setting the LogLevel to DEBUG is useful only if you are
+trying to find out exactly why your ssh is failing to
+connect.
 
 
-These SSH's:
+Security Issues
+-------- ------
 
-    Use `~/.ssh2' instead of `~/.ssh'.
-    Use `~/.ssh2/hostkeys/*' instead of lines in
-        `~/.ssh/known_hosts'.
+Suppose you start in a login account LLL and from there
+log into a remote account NNN@HHH and from there log in
+or use the cvs repository in another remote account
+CCC@JJJ.  Thus there is an access pattern
 
-    Use the file `~/.ssh2/authorization' in combination
-    with particular public key files instead of lines
-    in the file `~/.ssh/authorized_keys2'.
+    LLL   --->   NNN@HHH   --->   CCC@JJJ
 
-    Use the file `~/.ssh2/identification' that lists
-    particular private key files instead of using a
-    single private key file with a special name.
-
-Suppose you have public key files named fee.pub and
-fi.pub, each containing a long line.  Inspection of that
-line shows it has three parts, one of which is a long
-string of random looking characters containing no
-spaces.  This is the key proper, encoded in `base64',
-a system of encoding that encodes 6 bits in a non-space
-ASCII character.  To use this with `~/.ssh2' you make
-files `~/.ssh2/fee.compub' and `~/.ssh2/fi.compub' each
-with the format:
+The first observation is that any intruder who breaks
+into any account A1 that you use to log into or access
+another account A2 has an excellent chance of breaking
+into A2 without your knowing it by using a Trojan Horse.
+Thus using a Trojan House an intruder who breaks into
+NNN@HHH can break into CCC@JJJ with excellent chance
+of success without detection.
 
-    ---- BEGIN SSH2 PUBLIC KEY ----
-    public-key-proper-on-one-line
-    ---- END SSH2 PUBLIC KEY ----
+Use of ssh or ssh-agent neither helps or hinders this
+situation.
 
-and the file `~/.ssh2/authorization' containing
+However, there special issues with X11 forwarding and
+ssh-agent forwarding.
 
-    Key fee.compub
-    Key fi.compub
+First and simplest, use of X11 forwarding permits an
+intruder to break in backwards.  This is, to break
+into A1 after having broken into A2 (where A1 ---> A2).
+So if ForwardX11 is set yes in LLL, then if an intruder
+breaks into NNN@HHH, the intruder may be able to mount
+a Trojan Horse the allows the intruder to break into
+LLL.
 
-Forwarding keys does not seem to work when you log into
-a remote account that uses this SSH from a local account
-that uses OpenSSH, even though it is advertise to work.
-Attempts to find configuration settings so that forward-
-ing keys will work have so far failed in this case, and
-it is speculated that the two SSH's use different agent
-protocols (even though both use SSH protocol 2).
+Ssh-agent does NOT have this backward break-in problem.
+Ssh-agent never give out the private keys it stores.
+Instead it takes messages it is sent, encrypts them with
+the private keys, and returns the encrypted results.
 
+However in more complex circumstances ssh-agent does
+have an additional vulnerability to break-ins.  Suppose
+the access pattern is
+
+	LLL   --->   NNN@HHH   --->   CCC@JJJ
+	 |                               ^
+	 |                               |
+	 +------->   PPP@KKK   ----------+
+
+If you use ssh-agent forwarding and in intruder breaks
+into NNN@HHH, then the intruder mount a Trojan Horse
+to use your ssh-agent forwarded to NNN@HHH to break
+into PPP@KKK.  This is because the intruder can get the
+agent to encrypt messages using its private keys that
+permit access not only to NNN@HHH and CCC@JJJ but also
+to PPP@KKK.
+
+You can get around this by using two separate key pairs
+for the two access patterns
+
+	LLL   --->   NNN@HHH   --->   CCC@JJJ
+
+and 
+
+	LLL   --->   PPP@KKK   --->   CCC@JJJ
+
+See ssh-zones.help.
+
+However, Trojan Horses in the UNIX environment are not
+very common, so people have been getting by so far
+(2009) without paying much attention to this.
