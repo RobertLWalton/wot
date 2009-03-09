@@ -4,7 +4,7 @@ found=0
 for zone in "$@"
 do
     shopt -s nullglob
-    x=`grep -l $zone ~/.ssh/*_id_{rsa,dsa}.pub`
+    x=`egrep -l "( |:)$zone(\$|:)" ~/.ssh/*_id_{rsa,dsa}.pub`
     shopt -u nullglob
     for y in $x
     do

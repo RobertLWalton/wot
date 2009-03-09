@@ -21,7 +21,7 @@ do
 	zfound=0
     	for zone in $zones
 	do
-	    if grep -q $zone $f
+	    if egrep -q "( |:)$zone($|:)" $f
 	    then
 	        zfound=1
 	    fi
