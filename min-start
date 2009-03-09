@@ -1,5 +1,5 @@
 #!/bin/sh
-if [ $?SSH_ZONE ]
+if [ "${SSH_ZONE-}" ]
 then
     profile=$SSH_ZONE
     shell="zshell $SSH_ZONE"
