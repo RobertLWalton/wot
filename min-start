@@ -1,13 +1,21 @@
 #!/bin/sh
-gnome-terminal --tab-with-profile=walton \
+if [ $?SSH_ZONE ]
+then
+    profile=$SSH_ZONE
+    shell="zshell $SSH_ZONE"
+else
+    profile=Default
+    shell="tcsh"
+fi
+gnome-terminal --tab-with-profile=$profile \
                --title=min/include \
-	       --command='tcsh -c "cd ~/min/include;tcsh"' \
-               --tab-with-profile=walton \
+	       --command="tcsh -c 'cd ~/min/include;$shell'" \
+               --tab-with-profile=$profile \
                --title=min/src \
-	       --command='tcsh -c "cd ~/min/src;tcsh"' \
-               --tab-with-profile=walton \
+	       --command="tcsh -c 'cd ~/min/src;$shell'" \
+               --tab-with-profile=$profile \
                --title=min/test \
-	       --command='tcsh -c "cd ~/min/test;tcsh"' \
-               --tab-with-profile=walton \
+	       --command="tcsh -c 'cd ~/min/test;$shell'" \
+               --tab-with-profile=$profile \
                --title=min/doc \
-	       --command='tcsh -c "cd ~/min/doc;tcsh"'
+	       --command="tcsh -c 'cd ~/min/doc;$shell'"

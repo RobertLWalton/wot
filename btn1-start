@@ -1,16 +1,25 @@
 #!/bin/sh
-gnome-terminal --tab-with-profile=walton \
+if [ $?SSH_ZONE ]
+then
+    profile=$SSH_ZONE
+    shell="zshell $SSH_ZONE"
+else
+    profile=Default
+    shell="tcsh"
+fi
+#!/bin/sh
+gnome-terminal --tab-with-profile=$profile \
                --title=btn/include \
-	       --command='tcsh -c "cd ~/by-the-numbers/btn/include;tcsh"' \
-               --tab-with-profile=walton \
+	       --command="tcsh -c 'cd ~/by-the-numbers/btn/include;$shell'" \
+               --tab-with-profile=$profile \
                --title=btn/src \
-	       --command='tcsh -c "cd ~/by-the-numbers/btn/src;tcsh"' \
-               --tab-with-profile=walton \
+	       --command="tcsh -c 'cd ~/by-the-numbers/btn/src;$shell'" \
+               --tab-with-profile=$profile \
                --title=btn/test \
-	       --command='tcsh -c "cd ~/by-the-numbers/btn/test;tcsh"' \
-               --tab-with-profile=walton \
+	       --command="tcsh -c 'cd ~/by-the-numbers/btn/test;$shell'" \
+               --tab-with-profile=$profile \
                --title=btn/doc \
-	       --command='tcsh -c "cd ~/by-the-numbers/btn/doc;tcsh"' \
-               --tab-with-profile=walton \
+	       --command="tcsh -c 'cd ~/by-the-numbers/btn/doc;$shell'" \
+               --tab-with-profile=$profile \
                --title=btn/data \
-	       --command='tcsh -c "cd ~/by-the-numbers/btn/data;tcsh"'
+	       --command="tcsh -c 'cd ~/by-the-numbers/btn/data;$shell'"
