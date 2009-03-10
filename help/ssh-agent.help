@@ -35,13 +35,13 @@ Then take the first letters of each word, and for some
 words, take the obvious related character instead.  For
 example, if you chose the sentence
 
-    At Harvard we love to tweak the bottoms of tyrants
-    @  h       w  l    2  t     t   b       o  t
+    At Harvard we love to singe the bottoms of tyrants
+    @  h       w  l    2  s     t   b       o  t
 
     and teakettles.
     &   t
 
-you might get `@hwl2ttbot&t'.
+you might get `@hwl2stbot&t'.
 
 Choosing long random passwords composed of letters and
 digits could be done by using alternating sequences of
@@ -138,7 +138,7 @@ files:
 
 These file entries will start an ssh-agent when you
 log in and kill it when you log out (the latter is very
-important, as otherwise ssh-agents will accumulate.
+important, as otherwise ssh-agents will accumulate).
 
 To use the agent, immediately after you log in execute
 
@@ -285,11 +285,11 @@ However, there special issues with X11 forwarding and
 ssh-agent forwarding.
 
 First and simplest, use of X11 forwarding permits an
-intruder to break in backwards.  This is, to break
+intruder to break in backwards.  That is, to break
 into A1 after having broken into A2 (where A1 ---> A2).
 So if ForwardX11 is set yes in LLL, then if an intruder
 breaks into NNN@HHH, the intruder may be able to mount
-a Trojan Horse the allows the intruder to break into
+a Trojan Horse that allows the intruder to break into
 LLL.
 
 Ssh-agent does NOT have this backward break-in problem.
@@ -333,8 +333,8 @@ very common, so people have been getting by so far
 
 
 File:		ssh-agent.help
-Author:		Bob Walton (walton@deas.harvard.edu)
-Date:		Mon Mar  9 14:14:27 EDT 2009
+Author:		Bob Walton (walton@seas.harvard.edu)
+Date:		Mon Mar  9 20:58:00 EDT 2009
 
 The authors have placed this file in the public domain;
 they make no warranty and accept no liability for this
@@ -343,6 +343,6 @@ file.
 RCS Info (may not be true date or author):
 
     $Author: walton $
-    $Date: 2009/03/09 18:26:18 $
+    $Date: 2009/03/10 01:00:27 $
     $RCSfile: ssh-agent.help,v $
-    $Revision: 1.4 $
+    $Revision: 1.5 $
