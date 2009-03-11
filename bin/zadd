@@ -6,6 +6,10 @@ do
     shopt -s nullglob
     x=`egrep -l "( |:)$zone(\$|:)" ~/.ssh/*_id_{rsa,dsa}.pub`
     shopt -u nullglob
+    if [ -z "$x" ]
+    then
+        echo WARNING: $zone is not a defined zone
+    fi
     for y in $x
     do
 	z="$HOME/.ssh/`basename $y .pub`"

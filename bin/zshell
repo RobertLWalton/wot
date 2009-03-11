@@ -1,8 +1,23 @@
 #!/bin/sh
+
+if [ $# -gt 1 ]
+then
+    echo ERROR: at most one zone may be given
+    exit 1
+fi
+
+shopt -s nullglob
+if ! egrep -l "( |:)$1(\$|:)" ~/.ssh/*_id_{rsa,dsa}.pub
+then
+    echo ERROR: $1 is not a defined zone
+    exit 1
+fi
+shopt -u nullglob
+
 SSH_ZONE=$1; export SSH_ZONE
 pidf=~/.ssh/agents/${SSH_ZONE}.pid
 sockf=~/.ssh/agents/${SSH_ZONE}.sock
-if [ ! -d $pidf ]
+if [ ! -d $pidf -o ! -e $sockf ]
 then
     if [ ! -d ~/.ssh/agents ]
     then
