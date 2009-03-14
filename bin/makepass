@@ -1,0 +1,70 @@
+#!/bin/sh
+
+case "$1" in
+-doc*)
+	echo "makepass FILE
+
+Takes a file with lines of the form
+
+	account:password:...
+
+and adds random 10 character passwords where these are
+missing.  The password is made by concatenating
+sequences each consisting of a lower case letter
+followed by 1 to 3 digits, until there are at least
+15 characters, and then selecting 10 sequential
+characters from this randomly.";;
+esac
+
+file="$1"
+if [ ! -r "$file" -o ! -w "$file" ]
+then
+    echo "ERROR: cannot both read and write $file"
+    exit 1
+fi
+
+# We omit l as being to easy to confuse with 1.
+letters=(a b c d e f g h i j k m \
+         n o p q r s t u v w x y z)
+newpassword() {
+    declare i j p
+    p=''
+    for ((i=0;i<10;++i))
+    do
+        p="$p${letters[RANDOM%25]}"
+	for ((j=0;j<=(RANDOM%3);++j))
+	do
+	    p="$p$((RANDOM%10))"
+	done
+    done
+    p=`echo $p | cut -c$((RANDOM%4))-`
+    p=`echo $p | cut --complement -c11-`
+    echo $p
+}
+
+tmpfile=/tmp/makepass$$
+trap "rm -f $tmpfile" EXIT
+exec 3<"$file"
+exec 4>$tmpfile
+while read <&3
+do
+    if expr "$REPLY" : '[ 	]*#' >/dev/null
+    then
+        echo -E "$REPLY" 1>&4
+	continue
+    fi
+    name=`echo "$REPLY" | cut -d: -f1`
+    password=`echo "$REPLY" | cut -s -d: -f2`
+    rest=`echo "$REPLY" | cut -s -d: -f3-`
+    if [ -z "$password" ]
+    then
+        password=`newpassword`
+    fi
+    echo 1>&4 $name:$password:$rest
+done
+
+exec 3<&-
+exec 4>&-
+
+mv -f $tmpfile $file
+exit 0
