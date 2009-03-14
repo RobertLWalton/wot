@@ -1,0 +1,61 @@
+#!/bin/sh
+
+case "$1" in
+-doc*)
+	echo "printpass FILE PREFIX
+
+Takes a FILE with lines of the form
+
+	account:password:name:...
+
+and outputs (to the standard output) a file each
+page of which is the PREFIX file followed by the
+lines of the FILE with a given name.  Lines with
+the same name in FILE MUST be consecutive."
+	exit 1;;
+esac
+
+file="$1"
+prefix="$2"
+if [ ! -r "$file" ]
+then
+    echo "ERROR: cannot read $file"
+    exit 1
+fi
+
+if [ ! -r "$prefix" ]
+then
+    echo "ERROR: cannot read $prefix"
+    exit 1
+fi
+
+lastname=XXXNONEXXX
+first=1
+exec 3<"$file"
+while read <&3
+do
+    if expr "$REPLY" : '[ 	]*#' >/dev/null
+    then
+	continue
+    fi
+    account=`echo "$REPLY" | cut -d: -f1`
+    password=`echo "$REPLY" | cut -s -d: -f2`
+    name=`echo "$REPLY" | cut -s -d: -f3`
+    rest=`echo "$REPLY" | cut -s -d: -f4-`
+    if [ "$lastname" != "$name" ]
+    then
+        if [ $first -ne 1 ]
+	then
+	    echo -e '\f'
+	else
+	    first=0
+	fi
+	cat $prefix
+    fi
+    echo "$REPLY"
+    lastname="$name"
+done
+
+exec 3<&-
+exit 0
+

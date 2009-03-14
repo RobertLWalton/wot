@@ -13,7 +13,8 @@ missing.  The password is made by concatenating
 sequences each consisting of a lower case letter
 followed by 1 to 3 digits, until there are at least
 15 characters, and then selecting 10 sequential
-characters from this randomly.";;
+characters from this randomly."
+	exit 1;;
 esac
 
 file="$1"
@@ -53,14 +54,14 @@ do
         echo -E "$REPLY" 1>&4
 	continue
     fi
-    name=`echo "$REPLY" | cut -d: -f1`
+    account=`echo "$REPLY" | cut -d: -f1`
     password=`echo "$REPLY" | cut -s -d: -f2`
     rest=`echo "$REPLY" | cut -s -d: -f3-`
     if [ -z "$password" ]
     then
         password=`newpassword`
     fi
-    echo 1>&4 $name:$password:$rest
+    echo 1>&4 $account:$password:$rest
 done
 
 exec 3<&-
