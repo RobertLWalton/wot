@@ -2,7 +2,7 @@
 
 for file in "$@"
 do
-    if [ ! -f "$file" ]
+    if [ -L "$file" -o ! -f "$file" ]
     then
         echo "$file is not a regular file"
     elif [ -O "$file" ]
