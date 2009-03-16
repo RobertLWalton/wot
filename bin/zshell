@@ -15,19 +15,19 @@ fi
 shopt -u nullglob
 
 SSH_ZONE=$1; export SSH_ZONE
-pidf=~/.ssh/agents/${SSH_ZONE}.pid
-sockf=~/.ssh/agents/${SSH_ZONE}.sock
+pidf=~/.ssh/.agents/${SSH_ZONE}.pid
+sockf=~/.ssh/.agents/${SSH_ZONE}.sock
 if [ ! -d $pidf -o ! -e $sockf ]
 then
-    if [ ! -d ~/.ssh/agents ]
+    if [ ! -d ~/.ssh/.agents ]
     then
-    	mkdir ~/.ssh/agents
+    	mkdir ~/.ssh/.agents
     fi
     rm -f $pidf $sockf
     eval `ssh-agent -s -a $sockf`
     ln -s /proc/$SSH_AGENT_PID $pidf
 else
-    SSH_AUTH_SOCK=~/.ssh/agents/${SSH_ZONE}.sock
+    SSH_AUTH_SOCK=~/.ssh/.agents/${SSH_ZONE}.sock
     export SSH_AUTH_SOCK
     pidlink=`readlink $pidf`
     SSH_AGENT_PID=`basename $pidlink`

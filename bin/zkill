@@ -1,18 +1,20 @@
 #!/bin/sh
 shopt -s nullglob
-for x in ~/.ssh/agents/*.pid
+for x in ~/.ssh/.agents/*.pid
 do
     if [ -d $x ]
     then
         pidlink=`readlink $x`
 	pid=`basename $pidlink`
+	echo Killing ssh-agent $pid
 	kill $pid
     fi
     rm -f $x
 done
-for x in ~/.ssh/agents/*.sock
+for x in ~/.ssh/.agents/*.sock
 do
+    echo Removing $x
     rm -f $x
 done
 shopt -u nullglob
-rm -rf ~/.ssh/agents
+rm -rf ~/.ssh/.agents
