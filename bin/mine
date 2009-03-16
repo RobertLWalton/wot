@@ -1,3 +1,22 @@
-#!/bin/csh -f
+#!/bin/sh
 
-chmod u+w $argv:q
+for file in "$@"
+do
+    if [ ! -f "$file" ]
+    then
+        echo "$file is not a regular file"
+    elif [ -O "$file" ]
+    then
+        echo "chmod u+w $file"
+	chmod u+w "$file"
+    else
+        tmpfile="$file-mine-tmp-$$"
+	rm -f "$tmpfile"
+	echo "cp -p $file $tmpfile"
+	cp -p "$file" "$tmpfile"
+	echo "mv -f $tmpfile $file"
+	mv -f "$tmpfile" "$file"
+	echo "chmod u+w $file"
+	chmod u+w "$file"
+    fi
+done
