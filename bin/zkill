@@ -6,14 +6,14 @@ do
     then
         pidlink=`readlink $x`
 	pid=`basename $pidlink`
-	echo Killing ssh-agent $pid
+	echo zkill: killing ssh-agent $pid
 	kill $pid
     fi
     rm -f $x
 done
 for x in ~/.ssh/.agents/*.sock
 do
-    echo Removing $x
+    echo zkill: removing $x
     rm -f $x
 done
 shopt -u nullglob
