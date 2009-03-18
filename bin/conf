@@ -1,0 +1,354 @@
+#!/bin/sh
+
+##File:	 	conf
+##Author:	Bob Walton (walton@acm.org)
+##Date:		Wed Mar 18 09:06:58 EDT 2009
+
+nop() {
+    do_nothing=
+}
+
+verbose=nop
+if [ "$1" = "-v" ]
+then
+    verbose=echo
+    shift
+fi
+
+case "$1" in
+-doc*)
+	echo '
+conf [-v] test|diff|fulldiff|put|sync [FILE-OR-SUBDIRECTORY ...]
+
+    Finds the differences between copies of system files in the source
+    directories and copies in the target directory.  The -v option makes
+    operation verbose.  Exactly one of the following must be given:
+
+      test      The files that are essentually different are listed,
+      		along with an indication of whether the sync or put
+		command is needed to resolve the difference.  By default
+		this is tested by cmp(1) and a put is required.
+
+      diff	Essentual differences between the files are listed.
+      		By default this is computed by diff(1).
+
+      fulldiff	A full diff(1) listing of the files is given, without
+      		regard to whether the differences are essential are not.
+
+      put	The source files are used to update the target files.
+      		By default this is done by `cp -p'"'"'.  The target files
+		need not pre-exist.
+
+      sync	The target files are used to update the source files.
+      		By default this is done by `cp -p'"'"'.  The source files
+		must pre-exist this command.
+
+    The source directories are a list of one or more directories.  If a
+    file appears in several of these, only the first directory containing
+    the file is is considered, and it hides the subsequent directories for
+    that file.  Conf never creates new files in the source directories:
+    sync always operates to update an existing file in a source directory.
+
+    Only FILES that are arguments or within SUBDIRECTORIES that are
+    arguments are considered, unless there are no FILES or SUBDIRECTORIES
+    arguments, in which case all files in the source directories are
+    considered.  The FILES and SUBDIRECTORY arguments are names relative
+    to the source directories.
+
+    There may be more than one target directory and for each an associated
+    list of source directories.  All will be considered.
+
+    The conf program begins by sourcing the ~/conf/conf.rc file, unless
+    the CONFRC environment variable is defined, in which case the file
+    named in that directory is sourced.  The sourced file should define
+    the following global variables.  Note that since arrays with string
+    subscripts are not allowed in bash, these are fudged by using
+
+    	XXX[YYY]
+
+    as shorthand for
+
+    	symbol YYY
+	XXX[$?]
+
+    in what follows.  In other words, to find the element of the array XXX
+    that corresponds to a string index YYY, first call the symbol function,
+    and then use its returned status as the index into XXX.
+
+	HOST
+	    The name of the current host computer, in a form sufficient
+	    to distiguish it from other computers being maintained by
+	    the same source files.  Usually the short hostname: example:
+
+	    HOST=`hostname -s`
+
+    	DIRECTORIES
+	    This is a list each element of which is a : separated list
+	    of directories.  For each element the first directory
+	    listed is the target directory and the remaining are the
+	    source directories in the order they are searched.  Example:
+
+	    DIRECTORIES=/:/root/conf/`hostname -s`:/root/conf/default
+
+	CONF[$file]=NNN
+	    This is the name NNN of a program or bash function such that
+	    the above commands are executed respectively by:
+
+	    	NNN test file sourcefile targetfile
+	    	NNN diff file sourcefile targetfile
+	    	NNN put  file sourcefile targetfile
+	    	NNN sync file sourcefile targetfile
+
+	    where `file'"'"' is the file name relative to its
+	    containing source and target directory, whereas
+	    sourcefile and targetfile are the directory names
+	    with `file'"'"' appended.
+
+	    The fulldiff is implemented by
+
+	        diff targetfile sourcefile
+
+	    The following are default values as indicated:
+
+	    CONF[etc/passwd]=passwd_conf
+
+	        File lines are compared and updated individually, with
+		lines being identified by account name.  It is assumed
+		that the source file takes precedence for which account
+		names, i.e., which lines, should be in the files, and
+		for the order of these lines.
+
+		Otherwise for the shell name the target has precedence
+		and for all other fields in the source has precedence.
+
+	    CONF[etc/shadow]=shadow_conf
+	        File lines are compared and updated individually, with
+		lines being identified by account name.  It is assumed
+		for everything but sync that the source file takes
+		precedence for which account names, i.e., which lines,
+		should be in the files, and for the order of these lines.
+		For sync it is assumed that target file takes precedence
+		in these matters.
+
+		The password field in the source file has special syntax
+		and consists of a sequence of the form:
+
+		    !host!host!...!password
+
+		indicating that the account is enabled on the listed
+		hosts (which are matched to the HOST variable value)
+		and disabled on other hosts.  Furthermore the password
+		should be set on the first listed host and propagated
+		to the other hosts.
+
+		If the current HOST is the first host listed in the
+		source, the target password takes precedence and should
+		be copied to the source password after the host list.
+		If the current HOST is listed but not first, and if
+		there is a source password, that should be copied to
+		the target, but if there is no source password, then
+		the target is set to !!.  If the current HOST is not
+		listed in the source, the target should be set to !!.
+
+		Note that the source password itself begin with !,
+		as in !somehost!!!$1$89ce4A89B3.
+
+		For fields giving the date of the last password change
+		and date when the account was last disabled, the target
+		takes precedence if the current HOST is the first host
+		listed in the source, and otherwise the source takes
+		precedence.  For all other fields the source takes
+		precedence.
+
+		Hoever if the command is sync and the account is not in
+		the source, the target line is added to the source with
+		!HOST! prepended to the password field.
+
+	    CONF[etc/cups/printers.conf]=printers_conf
+	        The target takes precedence for lines beginning with
+		any of:
+
+			#
+			State
+			Accepting
+
+		For all other lines the source takes precedence.'
+
+    exit 1
+    ;;
+test|diff|fulldiff|put|sync)
+    do_noting=
+    ;;
+*)
+    echo "Undefined command $1"
+    exit 2
+    ;;
+esac
+
+# We prepare to use tmp files
+#
+tmpfile=/tmp/conf$$-tmp
+trap "rm -f $tmpfile" HUP INT QUIT TERM EXIT
+
+# Symbol table.
+#
+declare -a symbol
+#
+# Return the index of symbol in status $?.
+#
+symbol() {
+    local -i i size=${#symbol[*]}
+    for((i=1;i<=size;++i))
+    do
+        if [ "${symbol[i]}" = "$1" ]
+	then
+	    return $i
+	fi
+    done
+    symbol[++size]="$1"
+    return $size
+}
+
+passwd_conf() {
+    if cmp -s "$3" "$4"
+    then
+    	return
+    fi
+    local command="$1"
+    local file="$2"
+    local source="$3"
+    local target="$4"
+    local account targetsh sourcesh rest
+    local -a shell
+
+    # We read the target and set shell[account]=login-shell for
+    # all accounts in the target.
+    #
+    exec 3<"$target"
+    while read <&3
+    do
+	account=`echo "$REPLY" | cut -d: -f1`
+	targetsh=`echo "$REPLY" | cut -d: -f7`
+	symbol "$account"
+	shell[$?]="$targetsh"
+    done
+    exec 3<&-
+
+    # We read and make a copy of the source in tmpfile
+    # with the shells updated to those of the target.
+
+    exec 3<"$source"
+    exec 4>$tmpfile
+    while read <&3
+    do
+	account=`echo "$REPLY" | cut -d: -f1`
+	rest=`echo "$REPLY" | cut -d: -f2-6`
+	sourcesh=`echo "$REPLY" | cut -d: -f7`
+	symbol "$account"
+	targetsh="${shell[$?]:-"$sourcesh"}"
+	echo >&4 "$account:$rest:$targetsh"
+    done
+    exec 3<&-
+    exec 4>&-
+
+    if cmp -s "$target" $tmpfile
+    then
+        rm -f $tmpfile
+	return
+    fi
+
+    case "$1" in
+    test)
+	echo "DIFFERS: $source $target"
+	;;
+    diff)
+    	echo "DIFFING: $file"
+	diff "$target" $tmpfile
+	;;
+    put)
+	echo "PUTTING $file"
+    	cp -p $tmpfile "$target"
+	;;
+    sync)
+	echo "SYNCING $file"
+    	cp -p "$target" "$source"
+	;;
+    esac
+
+    rm -f $tmpfile
+}
+symbol etc/passwd
+CONF[$?]=passwd_conf
+
+. ${CONFRC:=$HOME/conf/confrc}
+
+command=$1
+for dirlist in $DIRECTORIES
+do
+    targetdir=`echo $dirlist | cut -d: -f1`
+    sourcedirs=`echo $dirlist | cut -s -d: -f2- | tr : ' '`
+
+    # We find all the files in the source directories
+    # and mark them done we find them.
+
+    unset done
+    declare -a done
+    for dir in $sourcedirs
+    do
+	files=`find $dir -name RCS -prune \
+		    -o -name SETUP -prune \
+		    -o -name Attic -prune \
+		    -o -type f -printf '%P\n'`
+	for file in $files
+	do
+	    symbol $file
+	    declare -i f=$?
+	    if [ ${done[$f]:-no} = yes ]
+	    then
+	    	continue
+	    fi
+	    done[$f]=yes
+	    $verbose "FILE: $file in $dir"
+	    program=${CONF[$f]:-}
+	    if [ ! -e $targetdir/$file ]
+	    then
+	        case "$command" in
+		test|diff|fulldiff|sync)
+		    echo "TARGET MISSING: $file"
+		    ;;
+		put)
+		    echo "PUTTING: $file"
+		    cp -p $dir/$file $targetdir/$file
+		    ;;
+		esac
+	    elif cmp -s $dir/$file $targetdir/$file
+	    then
+	        do_nothing=
+	    elif [ "$program" = "" ]
+	    then
+	        case "$command" in
+		test)
+		    echo "DIFFERS: $file"
+		    ;;
+		diff)
+		    echo "DIFF: $file"
+		    diff $targetdir/$file $dir/$file
+		    ;;
+		put)
+		    echo "PUTTING: $file"
+		    cp -p $dir/$file $targetdir/$file
+		    ;;
+		sync)
+		    echo "SYNCING: $file"
+		    cp -p $targetdir/$file $dir/$file
+		    ;;
+		esac
+	    else
+		echo $program $command $file $dir/$file $targetdir/$file
+		$program $command $file $dir/$file $targetdir/$file
+	    fi
+	done
+    done
+done
+
+exit 0
