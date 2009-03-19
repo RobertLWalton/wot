@@ -2,7 +2,7 @@
 
 ##File:	 	conf
 ##Author:	Bob Walton (walton@acm.org)
-##Date:		Wed Mar 18 09:06:58 EDT 2009
+##Date:		Thu Mar 19 04:50:40 EDT 2009
 
 nop() {
     do_nothing=
@@ -14,8 +14,10 @@ then
     verbose=echo
     shift
 fi
+command="$1"
+shift
 
-case "$1" in
+case "$command" in
 -doc*)
 	echo '
 conf [-v] test|put|get|pdiff|gdiff [FILE-OR-SUBDIRECTORY ...]
@@ -145,8 +147,10 @@ conf [-v] test|put|get|pdiff|gdiff [FILE-OR-SUBDIRECTORY ...]
 		be copied to the source password after the host list.
 		If the current HOST is listed but not first, the source
 		password should be copied to the target.  If the current
-		HOST is not listed in the source, the target should be
-		set to !!.
+		HOST is not listed in the source, but there are listed
+		hosts, the target should be set to !!.  If there are
+		no listed hosts in the source, the source password takes
+		precedence.
 
 		Note that the source password itself can begin with !,
 		as in !somehost!!!$1$89ce4A89B3 and !somehost!!!.
@@ -158,10 +162,10 @@ conf [-v] test|put|get|pdiff|gdiff [FILE-OR-SUBDIRECTORY ...]
 		precedence.  For all other fields the source takes
 		precedence.
 
-		For put a line in the source that is not in the target is
+		For put, a line in the source that is not in the target is
 		used to create a line in the target, resetting the
 		password in the line as above, according to whether or not
-		HOST is listed in the source line.  For get a line in the
+		HOST is listed in the source line.  For get, a line in the
 		target that is not in the source is used to create a line
 		in the source with its password prepended by !HOST!.
 
@@ -181,7 +185,7 @@ test|put|get|pdiff|gdiff)
     do_noting=
     ;;
 *)
-    echo "Undefined command $1"
+    echo "Undefined command: $command"
     exit 2
     ;;
 esac
@@ -246,7 +250,7 @@ passwd_conf() {
 	account=`echo "$REPLY" | cut -d: -f1`
 	symbol "$account"
 	local -i i=$?
-	amiddle[$i]=`echo "$REPLY" | cut -s -d: -f1-6`
+	amiddle[$i]=`echo "$REPLY" | cut -s -d: -f2-6`
 	ashell[$i]=`echo "$REPLY" | cut -s -d: -f7-`
     done
     exec 3<&-
@@ -262,23 +266,23 @@ passwd_conf() {
 	account=`echo "$REPLY" | cut -d: -f1`
 	symbol "$account"
 	local -i i=$?
-	smiddle=`echo "$REPLY" | cut -s -d: -f1-6`
+	smiddle=`echo "$REPLY" | cut -s -d: -f2-6`
 	dmiddle=${amiddle[$i]:-}
 	sshell=`echo "$REPLY" | cut -s -d: -f7-`
 	dshell=${ashell[$i]:-}
 	if [ $direction = put ]
 	then
-	    if [ -n ${dshell:-} ]
+	    if [ -n "$dshell" ]
 	    then
 	    	sshell="$dshell"
 	    fi
 	else
-	    if [ -n ${dmiddle:-} ]
+	    if [ -n "$dmiddle" ]
 	    then
 	    	smiddle="$dmiddle"
 	    fi
 	fi
-	echo >&4 "$saccount:$smiddle:$sshell"
+	echo >&4 "$account:$smiddle:$sshell"
     done
     exec 3<&-
     exec 4>&-
@@ -319,6 +323,13 @@ symbol etc/passwd
 CONF[$?]=passwd_conf
 
 shadow_conf() {
+
+    if [ -z "$HOST" ]
+    then
+        echo "ERROR: the variable HOST is not defined"
+	exit 2
+    fi
+
     if cmp -s "$3" "$4"
     then
     	return
@@ -327,29 +338,33 @@ shadow_conf() {
     local file="$2"
     local source="$3"
     local target="$4"
-    local account mpassword spassword \
-          mchangedate schangedate \
-	  mmiddle smiddle \
-          mdisabledate sdisabledate \
-	  mend send
+    local src des direction
+    local account spassword dpassword \
+                  schangedate dchangedate \
+		  smiddle dmiddle \
+		  sdisabledate ddisabledate \
+		  send dend
+    local -a apassword achangedate amiddle \
+                       adisabledate aend
 
     # Identify the source file src and the destination
     # file des of the copy.
     #
     if [ $command = put -o $command = pdiff ]
     then
+	direction=put
 	src="$source"
         des="$target"
     else
+	direction=get
         src="$target"
 	des="$source"
     fi
 
-    # Read the src fle and record its fields in the given
+    # Read the des file and record its fields in the given
     # arrays.
     #
-    local -a apassword achangedate amiddle adisabledate aend
-    exec 3<"$src"
+    exec 3<"$des"
     while read <&3
     do
 	account=`echo "$REPLY" | cut -d: -f1`
@@ -363,24 +378,127 @@ shadow_conf() {
     done
     exec 3<&-
 
-    # We read and make a copy of the source in tmpfile
-    # with the shells updated to those of the target.
-
-    exec 3<"$source"
+    # Read the src file, replace the relevant fields with des file
+    # fields, and output in tmpfile.
+    #
+    rm -f $tmpfile
+    exec 3<"$src"
     exec 4>$tmpfile
     while read <&3
     do
 	account=`echo "$REPLY" | cut -d: -f1`
-	rest=`echo "$REPLY" | cut -d: -f2-6`
-	sourcesh=`echo "$REPLY" | cut -d: -f7`
 	symbol "$account"
-	targetsh="${shell[$?]:-"$sourcesh"}"
-	echo >&4 "$account:$rest:$targetsh"
+	local -i i=$?
+	spassword=`echo "$REPLY" | cut -s -d: -f2`
+	dpassword=${apassword[$i]:-}
+	schangedate=`echo "$REPLY" | cut -s -d: -f3`
+	dchangedate=${achangedate[$i]:-}
+	smiddle=`echo "$REPLY" | cut -s -d: -f4-7`
+	dmiddle=${amiddle[$i]:-}
+	sdisabledate=`echo "$REPLY" | cut -s -d: -f8`
+	ddisabledate=${adisabledate[$i]:=}
+	send=`echo "$REPLY" | cut -s -d: -f9-`
+	dend=${aend[$i]:-}
+
+	# Compute whether host is listed in source password
+	# !host!...! prefix, and whether it is listed first.
+	#
+	if [ $direction = put ]
+	then
+	    sourcepassword="$spassword"
+	else
+	    sourcepassword="$dpassword"
+	fi
+	local prefix=`expr "$sourcepassword" : '\(!.*[^!]!\)!*[^!]*$' `
+	local suffix=`expr "$sourcepassword" : '!.*[^!]!\(!*[^!]*\)$' `
+	local hostfirst=0
+	local inhostlist=0
+	local hostslisted=0
+	local first=1
+	for host in `echo "$prefix" | tr '!' ' ' `
+	do
+	    if [ "$host" = "$HOST" ]
+	    then
+	        if [ $first = 1 ]
+		then
+		    hostfirst=1
+		fi
+		inhostlist=1
+		hostslisted=1
+	    elif [ -n "$host" ]
+	    then
+	    	hostslisted=1
+	    fi
+	    first=0
+	done
+
+	if [ $direction = put ]
+	then
+	    if [ -z "$dpassword" ]
+	    then
+	        if [ $inhostlist = 1 ]
+		then
+		    spassword="$suffix"
+		elif [ $hostslisted = 1 ]
+		then
+		    spassword='!!'
+		fi
+	    elif [ $hostfirst = 1 ]
+	    then
+	        spassword="$dpassword"
+		if [ -n "$dchangedate" ]
+		then
+		    schangedate="$dchangedate"
+		fi
+		if [ -n "$ddisabledate" ]
+		then
+		    sdisabledate="$ddisabledate"
+		fi
+	    elif [ $inhostlist = 1 ]
+	    then
+	    	spassword="$suffix"
+	    elif [ $hostslisted = 1 ]
+	    then
+	    	spassword='!!'
+	    fi
+	else
+	    if [ -z "$dpassword" ]
+	    then
+		spassword="!$HOST!$spassword"
+	    elif [ $hostfirst = 1 ]
+	    then
+	        spassword="$prefix$spassword"
+	    else
+	    	spassword="$dpassword"
+		if [ -n "$dchangedate" ]
+		then
+		    schangedate="$dchangedate"
+		fi
+		if [ -n "$ddisabledate" ]
+		then
+		    sdisabledate="$ddisabledate"
+		fi
+	    fi
+	    if [ -n "$dmiddle" ]
+	    then
+	    	smiddle="$dmiddle"
+	    fi
+	    if [ -n "$dend" ]
+	    then
+	    	send="$dend"
+	    fi
+	fi
+	echo >&4 \
+	  "$account:$spassword:$schangedate:$smiddle:$sdisabledate:$send"
     done
     exec 3<&-
     exec 4>&-
 
-    if cmp -s "$target" $tmpfile
+    cp $tmpfile foobar
+
+    # If tmpfile equals des file return
+    #
+    if cmp -s $tmpfile $des
     then
         rm -f $tmpfile
 	return
@@ -388,30 +506,33 @@ shadow_conf() {
 
     case "$1" in
     test)
-	echo "DIFFERS: $source $target"
-	;;
-    diff)
-    	echo "DIFFING: $file"
-	diff "$target" $tmpfile
+	echo "DIFFERS: $file"
 	;;
     put)
 	echo "PUTTING $file"
     	cp -p $tmpfile "$target"
 	;;
-    sync)
-	echo "SYNCING $file"
-    	cp -p "$target" "$source"
+    pdiff)
+    	echo "PDIFFING: $file"
+	diff "$target" $tmpfile
+	;;
+    get)
+	echo "GETTNG $file"
+    	cp -p $tmpfile "$source"
+	;;
+    gdiff)
+    	echo "GDIFFING: $file"
+	diff "$source" $tmpfile
 	;;
     esac
 
     rm -f $tmpfile
 }
-symbol etc/passwd
-CONF[$?]=passwd_conf
+symbol etc/shadow
+CONF[$?]=shadow_conf
 
 . ${CONFRC:=$HOME/conf/confrc}
 
-command=$1
 for dirlist in $DIRECTORIES
 do
     targetdir=`echo $dirlist | cut -d: -f1`
@@ -430,6 +551,29 @@ do
 		    -o -type f -printf '%P\n'`
 	for file in $files
 	do
+	    # If there are arguments beyond the command, require
+	    # that some argument equal file, or argument/ be a
+	    # prefix of file.  We assume *, ?, [ are not in the
+	    # argument.
+	    #
+	    if [ $# > 0 ]
+	    then
+	    	found=0
+		for arg in "$@"
+		do
+		    case "$file" in
+		    $arg|$arg/*) found=1;;
+		    esac
+		done
+		if [ $found = 0 ]
+		then
+		    continue
+		fi
+	    fi
+
+	    # If we have processed the file already,
+	    # don't do so again.
+	    #
 	    symbol $file
 	    declare -i f=$?
 	    if [ ${done[$f]:-no} = yes ]
@@ -438,6 +582,7 @@ do
 	    fi
 	    done[$f]=yes
 	    $verbose "FILE: $file in $dir"
+
 	    program=${CONF[$f]:-}
 	    if [ ! -e $targetdir/$file ]
 	    then
