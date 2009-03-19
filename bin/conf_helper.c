@@ -3,7 +3,7 @@
  *
  * File:	conf_passwd_shadow.c
  * Author:	Bob Walton (walton@deas.harvard.edu)
- * Date:	Thu Mar 19 09:33:42 EDT 2009
+ * Date:	Thu Mar 19 11:42:21 EDT 2009
  *
  * The authors have placed this program in the public
  * domain; they make no warranty and accept no liability
@@ -12,9 +12,9 @@
  * RCS Info (may not be true date or author):
  *
  *   $Author: root $
- *   $Date: 2009/03/19 15:42:00 $
+ *   $Date: 2009/03/19 17:24:08 $
  *   $RCSfile: conf_helper.c,v $
- *   $Revision: 1.1 $
+ *   $Revision: 1.2 $
  */
 
 #include <stdlib.h>
@@ -111,7 +111,7 @@ int main ( int argc, char ** argv )
 	exit ( 2 );
     }
 
-    int verbose          = ( argv[1][0] != 0 );
+    int verbose          = ( argv[1][0] == '1' );
     const char * HOST    = argv[2];
     const char * TYPE    = argv[3];
     const char * command = argv[4];
@@ -173,64 +173,256 @@ int main ( int argc, char ** argv )
     }
     int isput = ( strcmp ( command, "put" ) == 0 );
     int ispasswd = ( strcmp ( TYPE, "passwd" ) == 0 );
+    int hostlength = strlen ( HOST );
     while ( fgets ( buffer, sizeof ( buffer ), srcf ) )
     {
         buffer[strlen(buffer)-1] = 0;
         char * p = buffer;
 	SKIP ( p );
 	struct line * desline = find ( buffer );
-	if ( desline == NULL )
+
+	if ( ispasswd )
 	{
-	    if ( * p )
-	        fprintf ( tmpf, "%s:%s\n", buffer, p );
+	    if ( desline == NULL )
+	    {
+		if ( * p )
+		    fprintf ( tmpf, "%s:%s\n",
+		              buffer, p );
+		else
+		    fprintf ( tmpf, "%s\n", buffer );
+
+		continue;
+	    }
+	    if ( isput )
+	    {
+		/* shell comes from des file.
+		 */
+		char * q = desline->rest;
+		fprintf ( tmpf, buffer );
+		PRINT ( p );
+		SKIP  ( q );
+		PRINT ( p );
+		SKIP  ( q );
+		PRINT ( p );
+		SKIP  ( q );
+		PRINT ( p );
+		SKIP  ( q );
+		PRINT ( p );
+		SKIP  ( q );
+
+		SKIP  ( p );
+		PRINT ( q );
+
+		fprintf ( tmpf, "%s\n", p );
+	    }
 	    else
-		fprintf ( tmpf, "%s\n", buffer );
+	    {
+		/* shell comes from src file.
+		 */
+		char * q = desline->rest;
+		fprintf ( tmpf, buffer );
+		PRINT ( q );
+		SKIP  ( p );
+		PRINT ( q );
+		SKIP  ( p );
+		PRINT ( q );
+		SKIP  ( p );
+		PRINT ( q );
+		SKIP  ( p );
+		PRINT ( q );
+		SKIP  ( p );
 
-	    continue;
+		SKIP  ( q );
+		PRINT ( p );
+
+		fprintf ( tmpf, "%s\n", q );
+	    }
 	}
-	if ( isput )
+	else /* is shadow */
 	{
-	    /* shell comes from des file.
+	    /* compute whether !host!...! host list
+	     * exists, whether HOST is in it, and
+	     * whether HOST is first in it.  If it
+	     * exists, set h to first character
+	     * after the host list.
 	     */
-	    char * q = desline->rest;
-	    fprintf ( tmpf, buffer );
-	    PRINT ( p );
-	    SKIP  ( q );
-	    PRINT ( p );
-	    SKIP  ( q );
-	    PRINT ( p );
-	    SKIP  ( q );
-	    PRINT ( p );
-	    SKIP  ( q );
-	    PRINT ( p );
-	    SKIP  ( q );
+	    int hostlistexists = 0;
+	    int inhostlist = 0;
+	    int firsthost = 0;
+	    char * h;
+	    if ( isput ) h = p;
+	    else if ( desline == NULL ) h = "";
+	    else h = desline->rest;
 
-	    SKIP  ( p );
-	    PRINT ( q );
+	    int first = 1;
+	    if ( * h == '!' ) while ( 1 )
+	    {
+	        char * k = ++ h;
+		while ( * k && * k != '!' ) ++ k;
+		if ( * k != '!' ) break;
+		if ( k == h ) break;
+		if ( k - h == hostlength
+		     &&
+		     strncmp ( h, HOST, hostlength ) )
+		{
+		    if ( first ) firsthost = 1;
+		    inhostlist = 1;
+		}
+		hostlistexists = 1;
+		first = 0;
+		h = k;
+	    }
 
-	    fprintf ( tmpf, "%s\n", p );
-	}
-	else
-	{
-	    /* shell comes from src file.
-	     */
-	    char * q = desline->rest;
-	    fprintf ( tmpf, buffer );
-	    PRINT ( q );
-	    SKIP  ( p );
-	    PRINT ( q );
-	    SKIP  ( p );
-	    PRINT ( q );
-	    SKIP  ( p );
-	    PRINT ( q );
-	    SKIP  ( p );
-	    PRINT ( q );
-	    SKIP  ( p );
 
-	    SKIP  ( q );
-	    PRINT ( p );
+	    if ( desline == NULL )
+	    {
+		fprintf ( tmpf, "%s:", buffer );
+	        if ( isput )
+		{
+		    if ( ! hostlistexists )
+			fprintf ( tmpf, "%s\n", p );
+		    else if ( inhostlist )
+			fprintf ( tmpf, "%s\n", h );
+		    else
+		    {
+		    	SKIP ( p );
+			fprintf ( tmpf, "!!:%s", p );
+		    }
+		}
+		else /* is get */
+		{
+		    assert ( ! hostlistexists );
+		    fprintf ( tmpf, "!%s!%s\n",
+		                    HOST, p );
+		}
+		continue;
+	    }
 
-	    fprintf ( tmpf, "%s\n", q );
+	    /* account */
+
+	    fprintf ( tmpf, "%s", buffer );
+	    if ( isput )
+	    {
+		char * q = desline->rest;
+
+		/* password */
+		if ( firsthost )
+		{
+		    p = h;
+		    PRINT ( q );
+		    SKIP ( p );
+		}
+		else if ( inhostlist )
+		{
+		    p = h;
+		    SKIP ( q );
+		    PRINT ( p );
+		}
+		else if ( hostlistexists )
+		{
+		    p = h;
+		    SKIP ( q );
+		    SKIP ( p );
+		    fprintf ( tmpf, ":!!" );
+		}
+		else
+		{
+		    SKIP ( q );
+		    PRINT ( p );
+		}
+
+		/* password change date */
+		if ( firsthost )
+		{
+		    PRINT ( q );
+		    SKIP ( p );
+		}
+		else
+		{
+		    SKIP ( q );
+		    PRINT ( p );
+		}
+
+		/* four fields copied from source */
+		PRINT ( p );
+		SKIP  ( q );
+		PRINT ( p );
+		SKIP  ( q );
+		PRINT ( p );
+		SKIP  ( q );
+		PRINT ( p );
+		SKIP  ( q );
+
+		/* account disable date */
+		if ( firsthost )
+		{
+		    PRINT ( q );
+		    SKIP ( p );
+		}
+		else
+		{
+		    SKIP ( q );
+		    PRINT ( p );
+		}
+
+		fprintf ( tmpf, ":%s\n", p );
+	    }
+	    else /* is get */
+	    {
+		char * q = desline->rest;
+
+		/* password */
+		if ( firsthost )
+		{
+		    * h = ':';
+		    PRINT ( q );
+		    SKIP ( q );
+		    h = p;
+		    SKIP ( p );
+		    fprintf ( tmpf, "%s", h );
+		}
+		else
+		{
+		    PRINT ( q );
+		    SKIP ( p );
+		}
+
+		/* password change date */
+		if ( firsthost )
+		{
+		    PRINT ( p );
+		    SKIP ( q );
+		}
+		else
+		{
+		    SKIP ( p );
+		    PRINT ( q );
+		}
+
+		/* four fields copied from source */
+		SKIP  ( p );
+		PRINT ( q );
+		SKIP  ( p );
+		PRINT ( q );
+		SKIP  ( p );
+		PRINT ( q );
+		SKIP  ( p );
+		PRINT ( q );
+
+		/* account disable date */
+		if ( firsthost )
+		{
+		    PRINT ( p );
+		    SKIP ( q );
+		}
+		else
+		{
+		    SKIP ( p );
+		    PRINT ( q );
+		}
+
+		fprintf ( tmpf, ":%s\n", q );
+	    }
 	}
     }
     fclose ( srcf );
@@ -238,72 +430,3 @@ int main ( int argc, char ** argv )
 
     return 0;
 }
-
-
-#ifdef FOOBAR
-
-# Read the src file, replace the relevant fields with des file
-# fields, and output in tmpfile.
-#
-rm -f $tmpfile
-exec 3<"$src"
-exec 4>$tmpfile
-while read <&3
-do
-account=`echo "$REPLY" | cut -d: -f1`
-symbol "$account"
-local -i i=$?
-smiddle=`echo "$REPLY" | cut -s -d: -f2-6`
-dmiddle="${amiddle[$i]:-}"
-sshell=`echo "$REPLY" | cut -s -d: -f7-`
-dshell="${ashell[$i]:-}"
-if [ $direction = put ]
-then
-    if [ -n "$dshell" ]
-    then
-	sshell="$dshell"
-    fi
-else
-    if [ -n "$dmiddle" ]
-    then
-	smiddle="$dmiddle"
-    fi
-fi
-echo >&4 "$account:$smiddle:$sshell"
-done
-exec 3<&-
-exec 4>&-
-
-# If tmpfile equals des file return
-#
-if cmp -s $tmpfile $des
-then
-rm -f $tmpfile
-return
-fi
-
-case "$1" in
-test)
-echo "DIFFERS: $file"
-;;
-put)
-echo "PUTTING $file"
-cp -p $tmpfile "$target"
-;;
-pdiff)
-echo "PDIFFING: $file"
-diff "$target" $tmpfile
-;;
-get)
-echo "GETTNG $file"
-cp -p $tmpfile "$source"
-;;
-gdiff)
-echo "GDIFFING: $file"
-diff "$source" $tmpfile
-;;
-esac
-
-rm -f $tmpfile
-
-#endif

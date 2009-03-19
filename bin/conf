@@ -1,8 +1,8 @@
 #!/bin/sh
 
-##File:	 	conf
-##Author:	Bob Walton (walton@acm.org)
-##Date:		Thu Mar 19 04:50:40 EDT 2009
+## File: 	conf
+## Author:	Bob Walton (walton@acm.org)
+## Date:	Thu Mar 19 12:51:58 EDT 2009
 
 nop() {
     do_nothing=
@@ -215,6 +215,7 @@ symbol() {
 }
 
 passwd_conf() {
+
     if cmp -s "$3" "$4"
     then
     	return
@@ -223,69 +224,28 @@ passwd_conf() {
     local file="$2"
     local source="$3"
     local target="$4"
-    local src des direction
-    local account smiddle dmiddle sshell dshell
-    local -a amiddle ashell
 
-    # Identify the source file src and the destination
-    # file des of the copy.
+    # Identify the command and the destination file
+    # des of the copy.
     #
     if [ $command = put -o $command = pdiff ]
     then
-	direction=put
-	src="$source"
-        des="$target"
+	c=put
+	des="$target"
     else
-	direction=get
-        src="$target"
+        c=get
 	des="$source"
     fi
 
-    # Read the des file and record its fields in the given
-    # arrays.
-    #
-    exec 3<"$des"
-    while read <&3
-    do
-	account=`echo "$REPLY" | cut -d: -f1`
-	symbol "$account"
-	local -i i=$?
-	amiddle[$i]=`echo "$REPLY" | cut -s -d: -f2-6`
-	ashell[$i]=`echo "$REPLY" | cut -s -d: -f7-`
-    done
-    exec 3<&-
+    if [ $verbose = nop ]
+    then
+        v=0
+    else
+        v=1
+    fi
 
-    # Read the src file, replace the relevant fields with des file
-    # fields, and output in tmpfile.
-    #
-    rm -f $tmpfile
-    exec 3<"$src"
-    exec 4>$tmpfile
-    while read <&3
-    do
-	account=`echo "$REPLY" | cut -d: -f1`
-	symbol "$account"
-	local -i i=$?
-	smiddle=`echo "$REPLY" | cut -s -d: -f2-6`
-	dmiddle="${amiddle[$i]:-}"
-	sshell=`echo "$REPLY" | cut -s -d: -f7-`
-	dshell="${ashell[$i]:-}"
-	if [ $direction = put ]
-	then
-	    if [ -n "$dshell" ]
-	    then
-	    	sshell="$dshell"
-	    fi
-	else
-	    if [ -n "$dmiddle" ]
-	    then
-	    	smiddle="$dmiddle"
-	    fi
-	fi
-	echo >&4 "$account:$smiddle:$sshell"
-    done
-    exec 3<&-
-    exec 4>&-
+    conf_passwd_shadow $v ${HOST:-NONE} passwd $c \
+        $file $source $target $tmpfile
 
     # If tmpfile equals des file return
     #
@@ -338,163 +298,28 @@ shadow_conf() {
     local file="$2"
     local source="$3"
     local target="$4"
-    local src des direction
-    local account spassword dpassword \
-                  schangedate dchangedate \
-		  smiddle dmiddle \
-		  sdisabledate ddisabledate \
-		  send dend
-    local -a apassword achangedate amiddle \
-                       adisabledate aend
 
-    # Identify the source file src and the destination
-    # file des of the copy.
+    # Identify the command and the destination file
+    # des of the copy.
     #
     if [ $command = put -o $command = pdiff ]
     then
-	direction=put
-	src="$source"
-        des="$target"
+	c=put
+	des="$target"
     else
-	direction=get
-        src="$target"
+        c=get
 	des="$source"
     fi
 
-    # Read the des file and record its fields in the given
-    # arrays.
-    #
-    exec 3<"$des"
-    while read <&3
-    do
-	account=`echo "$REPLY" | cut -d: -f1`
-	symbol "$account"
-	local -i i=$?
-	apassword[$i]=`echo "$REPLY" | cut -s -d: -f2`
-	achangedate[$i]=`echo "$REPLY" | cut -s -d: -f3`
-	amiddle[$i]=`echo "$REPLY" | cut -s -d: -f4-7`
-	adisabledate[$i]=`echo "$REPLY" | cut -s -d: -f8`
-	aend[$i]=`echo "$REPLY" | cut -s -d: -f9-`
-    done
-    exec 3<&-
+    if [ $verbose = nop ]
+    then
+        v=0
+    else
+        v=1
+    fi
 
-    # Read the src file, replace the relevant fields with des file
-    # fields, and output in tmpfile.
-    #
-    rm -f $tmpfile
-    exec 3<"$src"
-    exec 4>$tmpfile
-    while read <&3
-    do
-	account=`echo "$REPLY" | cut -d: -f1`
-	symbol "$account"
-	local -i i=$?
-	spassword=`echo "$REPLY" | cut -s -d: -f2`
-	dpassword="${apassword[$i]:-}"
-	schangedate=`echo "$REPLY" | cut -s -d: -f3`
-	dchangedate="${achangedate[$i]:-}"
-	smiddle=`echo "$REPLY" | cut -s -d: -f4-7`
-	dmiddle="${amiddle[$i]:-}"
-	sdisabledate=`echo "$REPLY" | cut -s -d: -f8`
-	ddisabledate="${adisabledate[$i]:=}"
-	send=`echo "$REPLY" | cut -s -d: -f9-`
-	dend="${aend[$i]:-}"
-
-	# Compute whether host is listed in source password
-	# !host!...! prefix, and whether it is listed first.
-	#
-	if [ $direction = put ]
-	then
-	    sourcepassword="$spassword"
-	else
-	    sourcepassword="$dpassword"
-	fi
-	local prefix=`expr "$sourcepassword" : '\(!.*[^!]!\)!*[^!]*$' `
-	local suffix=`expr "$sourcepassword" : '!.*[^!]!\(!*[^!]*\)$' `
-	local hostfirst=0
-	local inhostlist=0
-	local hostslisted=0
-	local first=1
-	for host in `echo "$prefix" | tr '!' ' ' `
-	do
-	    if [ "$host" = "$HOST" ]
-	    then
-	        if [ $first = 1 ]
-		then
-		    hostfirst=1
-		fi
-		inhostlist=1
-		hostslisted=1
-	    elif [ -n "$host" ]
-	    then
-	    	hostslisted=1
-	    fi
-	    first=0
-	done
-
-	if [ $direction = put ]
-	then
-	    if [ -z "$dpassword" ]
-	    then
-	        if [ $inhostlist = 1 ]
-		then
-		    spassword="$suffix"
-		elif [ $hostslisted = 1 ]
-		then
-		    spassword='!!'
-		fi
-	    elif [ $hostfirst = 1 ]
-	    then
-	        spassword="$dpassword"
-		if [ -n "$dchangedate" ]
-		then
-		    schangedate="$dchangedate"
-		fi
-		if [ -n "$ddisabledate" ]
-		then
-		    sdisabledate="$ddisabledate"
-		fi
-	    elif [ $inhostlist = 1 ]
-	    then
-	    	spassword="$suffix"
-	    elif [ $hostslisted = 1 ]
-	    then
-	    	spassword='!!'
-	    fi
-	else
-	    if [ -z "$dpassword" ]
-	    then
-		spassword="!$HOST!$spassword"
-	    elif [ $hostfirst = 1 ]
-	    then
-	        spassword="$prefix$spassword"
-	    else
-	    	spassword="$dpassword"
-		if [ -n "$dchangedate" ]
-		then
-		    schangedate="$dchangedate"
-		fi
-		if [ -n "$ddisabledate" ]
-		then
-		    sdisabledate="$ddisabledate"
-		fi
-	    fi
-	    if [ -n "$dmiddle" ]
-	    then
-	    	smiddle="$dmiddle"
-	    fi
-	    if [ -n "$dend" ]
-	    then
-	    	send="$dend"
-	    fi
-	fi
-	echo >&4 \
-	  "$account:$spassword:$schangedate:$smiddle:$sdisabledate:$send"
-    done
-    exec 3<&-
-    exec 4>&-
-
-    cp $tmpfile foobar
+    conf_passwd_shadow $v $HOST shadow $c \
+        $file $source $target $tmpfile
 
     # If tmpfile equals des file return
     #
@@ -620,7 +445,6 @@ do
 		    ;;
 		esac
 	    else
-		echo $program $command $file $dir/$file $targetdir/$file
 		$program $command $file $dir/$file $targetdir/$file
 	    fi
 	done
