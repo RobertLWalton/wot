@@ -267,9 +267,9 @@ passwd_conf() {
 	symbol "$account"
 	local -i i=$?
 	smiddle=`echo "$REPLY" | cut -s -d: -f2-6`
-	dmiddle=${amiddle[$i]:-}
+	dmiddle="${amiddle[$i]:-}"
 	sshell=`echo "$REPLY" | cut -s -d: -f7-`
-	dshell=${ashell[$i]:-}
+	dshell="${ashell[$i]:-}"
 	if [ $direction = put ]
 	then
 	    if [ -n "$dshell" ]
@@ -390,15 +390,15 @@ shadow_conf() {
 	symbol "$account"
 	local -i i=$?
 	spassword=`echo "$REPLY" | cut -s -d: -f2`
-	dpassword=${apassword[$i]:-}
+	dpassword="${apassword[$i]:-}"
 	schangedate=`echo "$REPLY" | cut -s -d: -f3`
-	dchangedate=${achangedate[$i]:-}
+	dchangedate="${achangedate[$i]:-}"
 	smiddle=`echo "$REPLY" | cut -s -d: -f4-7`
-	dmiddle=${amiddle[$i]:-}
+	dmiddle="${amiddle[$i]:-}"
 	sdisabledate=`echo "$REPLY" | cut -s -d: -f8`
-	ddisabledate=${adisabledate[$i]:=}
+	ddisabledate="${adisabledate[$i]:=}"
 	send=`echo "$REPLY" | cut -s -d: -f9-`
-	dend=${aend[$i]:-}
+	dend="${aend[$i]:-}"
 
 	# Compute whether host is listed in source password
 	# !host!...! prefix, and whether it is listed first.
@@ -537,6 +537,7 @@ for dirlist in $DIRECTORIES
 do
     targetdir=`echo $dirlist | cut -d: -f1`
     sourcedirs=`echo $dirlist | cut -s -d: -f2- | tr : ' '`
+    $verbose "TARGET DIRECTORY: $targetdir"
 
     # We find all the files in the source directories
     # and mark them done we find them.
@@ -545,6 +546,7 @@ do
     declare -a done
     for dir in $sourcedirs
     do
+	$verbose "SOURCE DIRECTORY: $dir"
 	files=`find $dir -name RCS -prune \
 		    -o -name SETUP -prune \
 		    -o -name Attic -prune \
@@ -556,7 +558,7 @@ do
 	    # prefix of file.  We assume *, ?, [ are not in the
 	    # argument.
 	    #
-	    if [ $# > 0 ]
+	    if [ $# -gt 0 ]
 	    then
 	    	found=0
 		for arg in "$@"
