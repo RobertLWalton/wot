@@ -18,30 +18,30 @@ fi
 case "$1" in
 -doc*)
 	echo '
-conf [-v] test|diff|fulldiff|put|sync [FILE-OR-SUBDIRECTORY ...]
+conf [-v] test|put|get|pdiff|gdiff [FILE-OR-SUBDIRECTORY ...]
 
     Finds the differences between copies of system files in the source
     directories and copies in the target directory.  The -v option makes
     operation verbose.  Exactly one of the following must be given:
 
-      test      The files that are essentually different are listed,
-      		along with an indication of whether the sync or put
-		command is needed to resolve the difference.  By default
-		this is tested by cmp(1) and a put is required.
-
-      diff	Essentual differences between the files are listed.
-      		By default this is computed by diff(1).
-
-      fulldiff	A full diff(1) listing of the files is given, without
-      		regard to whether the differences are essential are not.
+      test      The files that would change if they were put are listed.
+		By default this is tested by cmp(1).
 
       put	The source files are used to update the target files.
       		By default this is done by `cp -p'"'"'.  The target files
 		need not pre-exist.
 
-      sync	The target files are used to update the source files.
+      get	The target files are used to update the source files.
       		By default this is done by `cp -p'"'"'.  The source files
 		must pre-exist this command.
+
+      pdiff	Perform a diff on the current target file and the file
+      		that would replace it if a put were done.  By default
+      		default this is computed by `diff target source'"'"'.
+
+      gdiff	Perform a diff on the current source file and the file
+      		that would replace it if a get were done.  By default
+      		default this is computed by `diff source targer'"'"'.
 
     The source directories are a list of one or more directories.  If a
     file appears in several of these, only the first directory containing
@@ -66,19 +66,19 @@ conf [-v] test|diff|fulldiff|put|sync [FILE-OR-SUBDIRECTORY ...]
 
     	XXX[YYY]
 
-    as shorthand for
+    in what follows as shorthand for
 
     	symbol YYY
 	XXX[$?]
 
-    in what follows.  In other words, to find the element of the array XXX
-    that corresponds to a string index YYY, first call the symbol function,
-    and then use its returned status as the index into XXX.
+    In other words, to find the element of the array XXX that corresponds
+    to a string index YYY, first call the symbol function, and then use its
+    returned status as the index into XXX.
 
 	HOST
 	    The name of the current host computer, in a form sufficient
 	    to distiguish it from other computers being maintained by
-	    the same source files.  Usually the short hostname: example:
+	    the same conf files.  Usually the short hostname: example:
 
 	    HOST=`hostname -s`
 
@@ -94,41 +94,40 @@ conf [-v] test|diff|fulldiff|put|sync [FILE-OR-SUBDIRECTORY ...]
 	    This is the name NNN of a program or bash function such that
 	    the above commands are executed respectively by:
 
-	    	NNN test file sourcefile targetfile
-	    	NNN diff file sourcefile targetfile
-	    	NNN put  file sourcefile targetfile
-	    	NNN sync file sourcefile targetfile
+	    	NNN test  file sourcefile targetfile
+	    	NNN put   file sourcefile targetfile
+	    	NNN get   file sourcefile targetfile
+	    	NNN pdiff file sourcefile targetfile
+	    	NNN gdiff file sourcefile targetfile
+
 
 	    where `file'"'"' is the file name relative to its
 	    containing source and target directory, whereas
 	    sourcefile and targetfile are the directory names
 	    with `file'"'"' appended.
 
-	    The fulldiff is implemented by
-
-	        diff targetfile sourcefile
-
 	    The following are default values as indicated:
 
 	    CONF[etc/passwd]=passwd_conf
-
 	        File lines are compared and updated individually, with
-		lines being identified by account name.  It is assumed
-		that the source file takes precedence for which account
-		names, i.e., which lines, should be in the files, and
-		for the order of these lines.
+		lines being identified by account name.  For put and
+		pdiff it is assumed that the source file takes precedence
+		for which account names, i.e., which lines, should be in
+		the files, and for the order of these lines.  For get
+		and gdiff the target file takes precedence for these
+		matters instead.
 
 		Otherwise for the shell name the target has precedence
 		and for all other fields in the source has precedence.
 
 	    CONF[etc/shadow]=shadow_conf
 	        File lines are compared and updated individually, with
-		lines being identified by account name.  It is assumed
-		for everything but sync that the source file takes
-		precedence for which account names, i.e., which lines,
-		should be in the files, and for the order of these lines.
-		For sync it is assumed that target file takes precedence
-		in these matters.
+		lines being identified by account name.  For put and
+		pdiff it is assumed that the source file takes precedence
+		for which account names, i.e., which lines, should be in
+		the files, and for the order of these lines.  For get
+		and gdiff the target file takes precedence for these
+		matters instead.
 
 		The password field in the source file has special syntax
 		and consists of a sequence of the form:
@@ -144,14 +143,13 @@ conf [-v] test|diff|fulldiff|put|sync [FILE-OR-SUBDIRECTORY ...]
 		If the current HOST is the first host listed in the
 		source, the target password takes precedence and should
 		be copied to the source password after the host list.
-		If the current HOST is listed but not first, and if
-		there is a source password, that should be copied to
-		the target, but if there is no source password, then
-		the target is set to !!.  If the current HOST is not
-		listed in the source, the target should be set to !!.
+		If the current HOST is listed but not first, the source
+		password should be copied to the target.  If the current
+		HOST is not listed in the source, the target should be
+		set to !!.
 
-		Note that the source password itself begin with !,
-		as in !somehost!!!$1$89ce4A89B3.
+		Note that the source password itself can begin with !,
+		as in !somehost!!!$1$89ce4A89B3 and !somehost!!!.
 
 		For fields giving the date of the last password change
 		and date when the account was last disabled, the target
@@ -160,9 +158,12 @@ conf [-v] test|diff|fulldiff|put|sync [FILE-OR-SUBDIRECTORY ...]
 		precedence.  For all other fields the source takes
 		precedence.
 
-		Hoever if the command is sync and the account is not in
-		the source, the target line is added to the source with
-		!HOST! prepended to the password field.
+		For put a line in the source that is not in the target is
+		used to create a line in the target, resetting the
+		password in the line as above, according to whether or not
+		HOST is listed in the source line.  For get a line in the
+		target that is not in the source is used to create a line
+		in the source with its password prepended by !HOST!.
 
 	    CONF[etc/cups/printers.conf]=printers_conf
 	        The target takes precedence for lines beginning with
@@ -176,7 +177,7 @@ conf [-v] test|diff|fulldiff|put|sync [FILE-OR-SUBDIRECTORY ...]
 
     exit 1
     ;;
-test|diff|fulldiff|put|sync)
+test|put|get|pdiff|gdiff)
     do_noting=
     ;;
 *)
@@ -218,19 +219,147 @@ passwd_conf() {
     local file="$2"
     local source="$3"
     local target="$4"
-    local account targetsh sourcesh rest
-    local -a shell
+    local src des direction
+    local account smiddle dmiddle sshell dshell
+    local -a amiddle ashell
 
-    # We read the target and set shell[account]=login-shell for
-    # all accounts in the target.
+    # Identify the source file src and the destination
+    # file des of the copy.
     #
-    exec 3<"$target"
+    if [ $command = put -o $command = pdiff ]
+    then
+	direction=put
+	src="$source"
+        des="$target"
+    else
+	direction=get
+        src="$target"
+	des="$source"
+    fi
+
+    # Read the des file and record its fields in the given
+    # arrays.
+    #
+    exec 3<"$des"
     while read <&3
     do
 	account=`echo "$REPLY" | cut -d: -f1`
-	targetsh=`echo "$REPLY" | cut -d: -f7`
 	symbol "$account"
-	shell[$?]="$targetsh"
+	local -i i=$?
+	amiddle[$i]=`echo "$REPLY" | cut -s -d: -f1-6`
+	ashell[$i]=`echo "$REPLY" | cut -s -d: -f7-`
+    done
+    exec 3<&-
+
+    # Read the src file, replace the relevant fields with des file
+    # fields, and output in tmpfile.
+    #
+    rm -f $tmpfile
+    exec 3<"$src"
+    exec 4>$tmpfile
+    while read <&3
+    do
+	account=`echo "$REPLY" | cut -d: -f1`
+	symbol "$account"
+	local -i i=$?
+	smiddle=`echo "$REPLY" | cut -s -d: -f1-6`
+	dmiddle=${amiddle[$i]:-}
+	sshell=`echo "$REPLY" | cut -s -d: -f7-`
+	dshell=${ashell[$i]:-}
+	if [ $direction = put ]
+	then
+	    if [ -n ${dshell:-} ]
+	    then
+	    	sshell="$dshell"
+	    fi
+	else
+	    if [ -n ${dmiddle:-} ]
+	    then
+	    	smiddle="$dmiddle"
+	    fi
+	fi
+	echo >&4 "$saccount:$smiddle:$sshell"
+    done
+    exec 3<&-
+    exec 4>&-
+
+    # If tmpfile equals des file return
+    #
+    if cmp -s $tmpfile $des
+    then
+        rm -f $tmpfile
+	return
+    fi
+
+    case "$1" in
+    test)
+	echo "DIFFERS: $file"
+	;;
+    put)
+	echo "PUTTING $file"
+    	cp -p $tmpfile "$target"
+	;;
+    pdiff)
+    	echo "PDIFFING: $file"
+	diff "$target" $tmpfile
+	;;
+    get)
+	echo "GETTNG $file"
+    	cp -p $tmpfile "$source"
+	;;
+    gdiff)
+    	echo "GDIFFING: $file"
+	diff "$source" $tmpfile
+	;;
+    esac
+
+    rm -f $tmpfile
+}
+symbol etc/passwd
+CONF[$?]=passwd_conf
+
+shadow_conf() {
+    if cmp -s "$3" "$4"
+    then
+    	return
+    fi
+    local command="$1"
+    local file="$2"
+    local source="$3"
+    local target="$4"
+    local account mpassword spassword \
+          mchangedate schangedate \
+	  mmiddle smiddle \
+          mdisabledate sdisabledate \
+	  mend send
+
+    # Identify the source file src and the destination
+    # file des of the copy.
+    #
+    if [ $command = put -o $command = pdiff ]
+    then
+	src="$source"
+        des="$target"
+    else
+        src="$target"
+	des="$source"
+    fi
+
+    # Read the src fle and record its fields in the given
+    # arrays.
+    #
+    local -a apassword achangedate amiddle adisabledate aend
+    exec 3<"$src"
+    while read <&3
+    do
+	account=`echo "$REPLY" | cut -d: -f1`
+	symbol "$account"
+	local -i i=$?
+	apassword[$i]=`echo "$REPLY" | cut -s -d: -f2`
+	achangedate[$i]=`echo "$REPLY" | cut -s -d: -f3`
+	amiddle[$i]=`echo "$REPLY" | cut -s -d: -f4-7`
+	adisabledate[$i]=`echo "$REPLY" | cut -s -d: -f8`
+	aend[$i]=`echo "$REPLY" | cut -s -d: -f9-`
     done
     exec 3<&-
 
