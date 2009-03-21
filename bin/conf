@@ -431,21 +431,25 @@ do
 	        do_nothing=
 	    elif [ "$program" = "" ]
 	    then
-	        case "$command" in
+		case "$command" in
 		test)
 		    echo "DIFFERS: $file"
 		    ;;
-		diff)
-		    echo "DIFF: $file"
-		    diff $targetdir/$file $dir/$file
-		    ;;
 		put)
-		    echo "PUTTING: $file"
+		    echo "PUTTING $file"
 		    cp -p $dir/$file $targetdir/$file
 		    ;;
-		sync)
-		    echo "SYNCING: $file"
+		pdiff)
+		    echo "PDIFFING: $file"
+		    diff $targetdir/$file $dir/$file
+		    ;;
+		get)
+		    echo "GETTNG $file"
 		    cp -p $targetdir/$file $dir/$file
+		    ;;
+		gdiff)
+		    echo "GDIFFING: $file"
+		    diff $dir/$file $targetdir/$file
 		    ;;
 		esac
 	    else
