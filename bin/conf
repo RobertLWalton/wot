@@ -2,7 +2,7 @@
 
 ## File: 	conf
 ## Author:	Bob Walton (walton@acm.org)
-## Date:	Sat Mar 21 06:30:52 EDT 2009
+## Date:	Sat Mar 21 07:31:18 EDT 2009
 
 nop() {
     do_nothing=
@@ -10,14 +10,16 @@ nop() {
 
 verbose=nop
 debug=nop
+nodebug=
 if [ "$1" = "-v" ]
 then
-    verbose=echo
+    verbose=
     shift
 elif [ "$1" = "-d" ]
 then
-    verbose=echo
-    debug=echo
+    verbose=
+    debug=
+    nodebug=nop
     shift
 fi
 command="$1"
@@ -219,7 +221,7 @@ esac
 # We prepare to use tmp files
 #
 tmpfile=/tmp/conf$$-tmp
-trap "rm -f $tmpfile" EXIT
+trap "$nodebug rm -f $tmpfile" EXIT
 
 # Symbol table.
 #
@@ -251,7 +253,7 @@ for dirlist in $DIRECTORIES
 do
     targetdir=`echo $dirlist | cut -d: -f1`
     sourcedirs=`echo $dirlist | cut -s -d: -f2- | tr : ' '`
-    $verbose "TARGET DIRECTORY: $targetdir"
+    $verbose echo "TARGET DIRECTORY: $targetdir"
 
     # We find all the files in the source directories
     # and mark them done we find them.
@@ -260,7 +262,7 @@ do
     declare -a done
     for dir in $sourcedirs
     do
-	$verbose "SOURCE DIRECTORY: $dir"
+	$verbose echo "SOURCE DIRECTORY: $dir"
 	files=`find $dir -name RCS -prune \
 		    -o -name SETUP -prune \
 		    -o -name Attic -prune \
@@ -297,43 +299,46 @@ do
 	    	continue
 	    fi
 	    done[$f]=yes
-	    $verbose "FILE: $file in $dir"
+	    $verbose echo "FILE: $file in $dir"
+
+	    source=$dir/$file
+	    target=$targetdir/$file
 
 	    program=${CONF[$f]:-}
-	    if [ ! -e $targetdir/$file ]
+	    if [ ! -e $target ]
 	    then
 	        case "$command" in
 		test|pdiff|get|gdiff)
-		    echo "TARGET MISSING: $file"
+		    echo "TARGET MISSING: $file in $dir not in $targetdir"
 		    ;;
 		put)
 		    echo "PUTTING: $file"
-		    cp -p $dir/$file $targetdir/$file
+		    cp -p $source $target
 		    ;;
 		esac
 	    elif [ "$program" = "" ]
 	    then
-		if ! cmp -s $dir/$file $targetdir/$file
+		if ! cmp -s $source $target
 		then
 		    case "$command" in
 		    test)
-			echo "DIFFERS: $file"
+			echo "DIFFERS: $file in $dir"
 			;;
 		    put)
-			echo "PUTTING $file"
-			cp -p $dir/$file $targetdir/$file
+			echo "PUTTING $file in $dir"
+			cp -p $source $target
 			;;
 		    pdiff)
-			echo "PDIFFING: $file"
-			diff $targetdir/$file $dir/$file
+			echo "PDIFFING: $file in $dir"
+			diff $target $source
 			;;
 		    get)
-			echo "GETTNG $file"
-			cp -p $targetdir/$file $dir/$file
+			echo "GETTNG $file in $dir"
+			cp -p $target $source
 			;;
 		    gdiff)
-			echo "GDIFFING: $file"
-			diff $dir/$file $targetdir/$file
+			echo "GDIFFING: $file in $dir"
+			diff $source $target
 			;;
 		    esac
 		fi
@@ -344,24 +349,25 @@ do
 		if [ $command = put -o $command = pdiff -o $command = test ]
 		then
 		    c=put
-		    des="$targetdir/$file"
+		    des="$target"
 		else
 		    c=get
-		    des="$dir/$file"
+		    des="$source"
 		fi
 
-		if [ $verbose = nop ]
+		if [ "$verbose" = nop ]
 		then
 		    v=0
 		else
 		    v=1
 		fi
 
-		$debug $program $c $file \
-		                $dir/$file $targetdir/$file $tmpfile \
-		                $v ${HOST:-NONE}
+		$debug echo $program \
+		            $c $file \
+			    $source $target $tmpfile \
+			    $v ${HOST:-NONE}
 		if $program $c $file \
-		            $dir/$file $targetdir/$file $tmpfile \
+		            $source $target $tmpfile \
 		            $v ${HOST:-NONE}
 		then
 		    do_nothing=
@@ -375,30 +381,30 @@ do
 		then
 		    do_nothing=
 		else
-		    case "$1" in
+		    case "$command" in
 		    test)
-			echo "DIFFERS: $file"
+			echo "DIFFERS: $file in $dir"
 			;;
 		    put)
-			echo "PUTTING $file"
+			echo "PUTTING $file in $dir"
 			cp -p $tmpfile "$target"
 			;;
 		    pdiff)
-			echo "PDIFFING: $file"
+			echo "PDIFFING: $file in $dir"
 			diff "$target" $tmpfile
 			;;
 		    get)
-			echo "GETTNG $file"
+			echo "GETTING $file in $dir"
 			cp -p $tmpfile "$source"
 			;;
 		    gdiff)
-			echo "GDIFFING: $file"
+			echo "GDIFFING: $file in $dir"
 			diff "$source" $tmpfile
 			;;
 		    esac
 		fi
 
-		rm -f $tmpfile
+		$nodebug rm -f $tmpfile
 	    fi
 	done
     done
