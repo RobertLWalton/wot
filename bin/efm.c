@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Fri Dec 19 13:48:58 EST 2008
+** Date:	Sat Mar 21 15:37:18 EDT 2009
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,15 +11,15 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2008/12/19 09:43:54 $
+**   $Date: 2009/03/21 19:37:48 $
 **   $RCSfile: efm.c,v $
-**   $Revision: 1.70 $
+**   $Revision: 1.71 $
 */
 
 #define _XOPEN_SOURCE
 #define _XOPEN_SOURCE_EXTENDED
 #define crypt CRYPT
-    // We redefine crypt
+    /* We redefine crypt */
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -36,7 +36,7 @@
 #include <sys/wait.h>
 #include <time.h>
 #undef crypt
-    // We redefine crypt
+    /* We redefine crypt */
 
 const char * documentation [] = {
 "efm -doc",

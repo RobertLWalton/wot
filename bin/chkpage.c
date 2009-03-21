@@ -3,7 +3,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	chkpage.c
-** Date:	Fri Dec 19 04:09:59 EST 2008
+** Date:	Sat Mar 21 15:37:32 EDT 2009
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -12,42 +12,42 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2008/12/19 09:43:54 $
+**   $Date: 2009/03/21 19:37:48 $
 **   $RCSfile: chkpage.c,v $
-**   $Revision: 1.3 $
+**   $Revision: 1.4 $
 */
 
 #include <stdlib.h>
 #include <stdio.h>
 
-char documentation [] =
-"chkpage [-cCC] [-lLL] [filename ...]\n"
-"\n"
+const char * documentation [] = {
+"chkpage [-cCC] [-lLL] [filename ...]",
+"",
 "    Checks that files contain lines with no more than"
-		" CC\n"
-"    columns and pages with no more than LL lines.\n"
-"\n"
+		" CC",
+"    columns and pages with no more than LL lines.",
+"",
 "    If no filenames are given, the standard input"
-		" is\n"
-"    checked.\n"
-"\n"
-"    CC defaults to 80 columns and LL to 58 lines.\n"
-"\n"
-"    This program interprets newline as a line sepa-,\n"
-"    rator, horizontal tab as going to the next tab\n"
-"    stop, form feed as starting both a new page and\n"
-"    a new line, and carriage return as going back to\n"
-"    the first column without starting a new line.\n"
-"    All other control characters are illegal.  Tab\n"
-"    stops are set every 8 columns.  All this is con-\n"
-"    sistent with common UNIX print programs.\n"
-"\n"
-"    Too long lines, lines overflowing a page, lines\n"
-"    containing illegal characters, and a non-empty\n"
-"    last line that does not end with a line feed or\n"
-"    form feed are output.  Nothing is output if the\n"
-"    files are all OK.\n"
-;
+		" is",
+"    checked.",
+"",
+"    CC defaults to 80 columns and LL to 58 lines.",
+"",
+"    This program interprets newline as a line sepa-,",
+"    rator, horizontal tab as going to the next tab",
+"    stop, form feed as starting both a new page and",
+"    a new line, and carriage return as going back to",
+"    the first column without starting a new line.",
+"    All other control characters are illegal.  Tab",
+"    stops are set every 8 columns.  All this is con-",
+"    sistent with common UNIX print programs.",
+"",
+"    Too long lines, lines overflowing a page, lines",
+"    containing illegal characters, and a non-empty",
+"    last line that does not end with a line feed or",
+"    form feed are output.  Nothing is output if the",
+"    files are all OK.",
+NULL };
 
 void checkfile
     ( FILE * in, char * name,
@@ -217,7 +217,8 @@ int main ( int argc, char ** argv )
 	}
 	else
 	{
-	    printf ( documentation );
+	    const char ** d = documentation;
+	    for ( ; * d; ++ d ) printf ( "%s\n", * d );
 	    exit (1);
 	}
 
