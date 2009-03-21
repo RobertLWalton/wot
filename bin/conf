@@ -2,7 +2,7 @@
 
 ## File: 	conf
 ## Author:	Bob Walton (walton@acm.org)
-## Date:	Sat Mar 21 07:31:18 EDT 2009
+## Date:	Sat Mar 21 12:09:14 EDT 2009
 
 nop() {
     do_nothing=
@@ -28,14 +28,11 @@ shift
 case "$command" in
 -doc*)
 	echo '
-conf [-v] test|put|get|pdiff|gdiff [FILE-OR-SUBDIRECTORY ...]
+conf [-v] put|get|ptest|gtest|pdiff|gdiff [FILE-OR-SUBDIRECTORY ...]
 
     Finds the differences between copies of system files in the source
     directories and copies in the target directory.  The -v option makes
     operation verbose.  Exactly one of the following must be given:
-
-      test      The files that would change if they were put are listed.
-		By default this is tested by cmp(1).
 
       put	The source files are used to update the target files.
       		By default this is done by `cp -p'"'"'.  The target files
@@ -44,6 +41,10 @@ conf [-v] test|put|get|pdiff|gdiff [FILE-OR-SUBDIRECTORY ...]
       get	The target files are used to update the source files.
       		By default this is done by `cp -p'"'"'.  The source files
 		must pre-exist this command.
+
+      ptest     List the files that would be changed by put.
+
+      gtest     List the files that would be changed by get.
 
       pdiff	Perform a diff on the current target file and the file
       		that would replace it if a put were done.  By default
@@ -115,8 +116,8 @@ conf [-v] test|put|get|pdiff|gdiff [FILE-OR-SUBDIRECTORY ...]
 		COMMAND		Is `put'"'"' or `get'"'"'
 				according to the map:
 
-				put, pdiff, test -> put
-				get, gdiff       -> get
+				put, pdiff, ptest -> put
+				get, gdiff, gtest -> get
 
 		FILE		Is the relative file name, and is
 				for error messages.
@@ -130,10 +131,7 @@ conf [-v] test|put|get|pdiff|gdiff [FILE-OR-SUBDIRECTORY ...]
 
 	    The execution of PPP should create a TMPFILE that will
 	    be used to replace TARGETFILE for a `put'"'"' command
-	    (or diffed with TARGETFILE for a `pdiff'"'"' command)
-	    or to replace SOURCEFILE for a `get'"'"' command
-	    (or diffed with SOURCEFILE for a `gdiff'"'"' command)
-	    or just compared with TARGETFILE for a `test'"'"' command.
+	    or to replace SOURCEFILE for a `get'"'"' command.
 				
 	    PPP can be an external program or a bash function.
 	    The following are default values as indicated:
@@ -209,7 +207,7 @@ conf [-v] test|put|get|pdiff|gdiff [FILE-OR-SUBDIRECTORY ...]
 
     exit 1
     ;;
-test|put|get|pdiff|gdiff)
+put|get|ptest|gtest|pdiff|gdiff)
     do_noting=
     ;;
 *)
@@ -308,7 +306,7 @@ do
 	    if [ ! -e $target ]
 	    then
 	        case "$command" in
-		test|pdiff|get|gdiff)
+		ptest|pdiff|get|gtest|gdiff)
 		    echo "TARGET MISSING: $file in $dir not in $targetdir"
 		    ;;
 		put)
@@ -321,7 +319,7 @@ do
 		if ! cmp -s $source $target
 		then
 		    case "$command" in
-		    test)
+		    ptest|gtest)
 			echo "DIFFERS: $file in $dir"
 			;;
 		    put)
@@ -346,7 +344,7 @@ do
 		# Identify the command and the destination file
 		# des of the copy.
 		#
-		if [ $command = put -o $command = pdiff -o $command = test ]
+		if [ $command = put -o $command = pdiff -o $command = ptest ]
 		then
 		    c=put
 		    des="$target"
@@ -382,7 +380,7 @@ do
 		    do_nothing=
 		else
 		    case "$command" in
-		    test)
+		    ptest|gtest)
 			echo "DIFFERS: $file in $dir"
 			;;
 		    put)
