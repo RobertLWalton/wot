@@ -2,16 +2,22 @@
 
 ## File: 	conf
 ## Author:	Bob Walton (walton@acm.org)
-## Date:	Fri Mar 20 08:47:23 EDT 2009
+## Date:	Sat Mar 21 06:30:52 EDT 2009
 
 nop() {
     do_nothing=
 }
 
 verbose=nop
+debug=nop
 if [ "$1" = "-v" ]
 then
     verbose=echo
+    shift
+elif [ "$1" = "-d" ]
+then
+    verbose=echo
+    debug=echo
     shift
 fi
 command="$1"
@@ -92,25 +98,45 @@ conf [-v] test|put|get|pdiff|gdiff [FILE-OR-SUBDIRECTORY ...]
 
 	    DIRECTORIES=/:/root/conf/`hostname -s`:/root/conf/default
 
-	CONF[$file]=NNN
-	    This is the name NNN of a program or bash function such that
-	    the above commands are executed respectively by:
+	CONF[$file]='"'"'PPP AAA ...'"'"'
+	    If this is defined for a given $file, then the man action
+	    of this program is done by calling
 
-	    	NNN test  file sourcefile targetfile
-	    	NNN put   file sourcefile targetfile
-	    	NNN get   file sourcefile targetfile
-	    	NNN pdiff file sourcefile targetfile
-	    	NNN gdiff file sourcefile targetfile
+	        PPP AAA ... COMMAND FILE \
+		    SOURCEFILE TARGETFILE TMPFILE \
+		    VERBOSE HOST
 
+	    where
+	    
+	        PPP AAA ...	Names a program and initial arguments.
 
-	    where `file'"'"' is the file name relative to its
-	    containing source and target directory, whereas
-	    sourcefile and targetfile are the directory names
-	    with `file'"'"' appended.
+		COMMAND		Is `put'"'"' or `get'"'"'
+				according to the map:
 
+				put, pdiff, test -> put
+				get, gdiff       -> get
+
+		FILE		Is the relative file name, and is
+				for error messages.
+
+		SOURCEFILE	The source file name.
+
+		TARGETFILE	The target file name.
+
+		TMPFILE		The name of a temporary file
+				to be created and written by PPP.
+
+	    The execution of PPP should create a TMPFILE that will
+	    be used to replace TARGETFILE for a `put'"'"' command
+	    (or diffed with TARGETFILE for a `pdiff'"'"' command)
+	    or to replace SOURCEFILE for a `get'"'"' command
+	    (or diffed with SOURCEFILE for a `gdiff'"'"' command)
+	    or just compared with TARGETFILE for a `test'"'"' command.
+				
+	    PPP can be an external program or a bash function.
 	    The following are default values as indicated:
 
-	    CONF[etc/passwd]=passwd_conf
+	    CONF[etc/passwd]=conf_helper passwd
 	        File lines are compared and updated individually, with
 		lines being identified by account name.  For put and
 		pdiff it is assumed that the source file takes precedence
@@ -122,7 +148,7 @@ conf [-v] test|put|get|pdiff|gdiff [FILE-OR-SUBDIRECTORY ...]
 		Otherwise for the shell name the target has precedence
 		and for all other fields in the source has precedence.
 
-	    CONF[etc/shadow]=shadow_conf
+	    CONF[etc/shadow]=conf_helper shadow
 	        File lines are compared and updated individually, with
 		lines being identified by account name.  For put and
 		pdiff it is assumed that the source file takes precedence
@@ -169,7 +195,7 @@ conf [-v] test|put|get|pdiff|gdiff [FILE-OR-SUBDIRECTORY ...]
 		target that is not in the source is used to create a line
 		in the source with its password prepended by !HOST!.
 
-	    CONF[etc/cups/printers.conf]=printers_conf
+	    CONF[etc/cups/printers.conf]=conf_helper printers.conf
 	        The target takes precedence for lines beginning with
 		any of:
 
@@ -193,7 +219,7 @@ esac
 # We prepare to use tmp files
 #
 tmpfile=/tmp/conf$$-tmp
-trap "rm -f $tmpfile" HUP INT QUIT TERM EXIT
+trap "rm -f $tmpfile" EXIT
 
 # Symbol table.
 #
@@ -214,151 +240,10 @@ symbol() {
     return $size
 }
 
-passwd_conf() {
-
-    if cmp -s "$3" "$4"
-    then
-    	return
-    fi
-    local command="$1"
-    local file="$2"
-    local source="$3"
-    local target="$4"
-
-    # Identify the command and the destination file
-    # des of the copy.
-    #
-    if [ $command = put -o $command = pdiff ]
-    then
-	c=put
-	des="$target"
-    else
-        c=get
-	des="$source"
-    fi
-
-    if [ $verbose = nop ]
-    then
-        v=0
-    else
-        v=1
-    fi
-
-    $verbose conf_passwd_shadow $v ${HOST:-NONE} passwd $c \
-        $file $source $target $tmpfile
-    conf_passwd_shadow $v ${HOST:-NONE} passwd $c \
-        $file $source $target $tmpfile
-
-    # If tmpfile equals des file return
-    #
-    if cmp -s $tmpfile $des
-    then
-        rm -f $tmpfile
-	return
-    fi
-
-    case "$1" in
-    test)
-	echo "DIFFERS: $file"
-	;;
-    put)
-	echo "PUTTING $file"
-    	cp -p $tmpfile "$target"
-	;;
-    pdiff)
-    	echo "PDIFFING: $file"
-	diff "$target" $tmpfile
-	;;
-    get)
-	echo "GETTNG $file"
-    	cp -p $tmpfile "$source"
-	;;
-    gdiff)
-    	echo "GDIFFING: $file"
-	diff "$source" $tmpfile
-	;;
-    esac
-
-    rm -f $tmpfile
-}
 symbol etc/passwd
-CONF[$?]=passwd_conf
-
-shadow_conf() {
-
-    if [ -z "$HOST" ]
-    then
-        echo "ERROR: the variable HOST is not defined"
-	exit 2
-    fi
-
-    if cmp -s "$3" "$4"
-    then
-    	return
-    fi
-    local command="$1"
-    local file="$2"
-    local source="$3"
-    local target="$4"
-
-    # Identify the command and the destination file
-    # des of the copy.
-    #
-    if [ $command = put -o $command = pdiff ]
-    then
-	c=put
-	des="$target"
-    else
-        c=get
-	des="$source"
-    fi
-
-    if [ $verbose = nop ]
-    then
-        v=0
-    else
-        v=1
-    fi
-
-    $verbose conf_passwd_shadow $v $HOST shadow $c \
-        $file $source $target $tmpfile
-    conf_passwd_shadow $v $HOST shadow $c \
-        $file $source $target $tmpfile
-
-    # If tmpfile equals des file return
-    #
-    if cmp -s $tmpfile $des
-    then
-        rm -f $tmpfile
-	return
-    fi
-
-    case "$1" in
-    test)
-	echo "DIFFERS: $file"
-	;;
-    put)
-	echo "PUTTING $file"
-    	cp -p $tmpfile "$target"
-	;;
-    pdiff)
-    	echo "PDIFFING: $file"
-	diff "$target" $tmpfile
-	;;
-    get)
-	echo "GETTNG $file"
-    	cp -p $tmpfile "$source"
-	;;
-    gdiff)
-    	echo "GDIFFING: $file"
-	diff "$source" $tmpfile
-	;;
-    esac
-
-    rm -f $tmpfile
-}
+CONF[$?]='conf_helper passwd'
 symbol etc/shadow
-CONF[$?]=shadow_conf
+CONF[$?]='conf_helper shadow'
 
 . ${CONFRC:=$HOME/conf/confrc}
 
@@ -418,7 +303,7 @@ do
 	    if [ ! -e $targetdir/$file ]
 	    then
 	        case "$command" in
-		test|diff|fulldiff|sync)
+		test|pdiff|get|gdiff)
 		    echo "TARGET MISSING: $file"
 		    ;;
 		put)
@@ -426,34 +311,94 @@ do
 		    cp -p $dir/$file $targetdir/$file
 		    ;;
 		esac
-	    elif cmp -s $dir/$file $targetdir/$file
-	    then
-	        do_nothing=
 	    elif [ "$program" = "" ]
 	    then
-		case "$command" in
-		test)
-		    echo "DIFFERS: $file"
-		    ;;
-		put)
-		    echo "PUTTING $file"
-		    cp -p $dir/$file $targetdir/$file
-		    ;;
-		pdiff)
-		    echo "PDIFFING: $file"
-		    diff $targetdir/$file $dir/$file
-		    ;;
-		get)
-		    echo "GETTNG $file"
-		    cp -p $targetdir/$file $dir/$file
-		    ;;
-		gdiff)
-		    echo "GDIFFING: $file"
-		    diff $dir/$file $targetdir/$file
-		    ;;
-		esac
+		if ! cmp -s $dir/$file $targetdir/$file
+		then
+		    case "$command" in
+		    test)
+			echo "DIFFERS: $file"
+			;;
+		    put)
+			echo "PUTTING $file"
+			cp -p $dir/$file $targetdir/$file
+			;;
+		    pdiff)
+			echo "PDIFFING: $file"
+			diff $targetdir/$file $dir/$file
+			;;
+		    get)
+			echo "GETTNG $file"
+			cp -p $targetdir/$file $dir/$file
+			;;
+		    gdiff)
+			echo "GDIFFING: $file"
+			diff $dir/$file $targetdir/$file
+			;;
+		    esac
+		fi
 	    else
-		$program $command $file $dir/$file $targetdir/$file
+		# Identify the command and the destination file
+		# des of the copy.
+		#
+		if [ $command = put -o $command = pdiff -o $command = test ]
+		then
+		    c=put
+		    des="$targetdir/$file"
+		else
+		    c=get
+		    des="$dir/$file"
+		fi
+
+		if [ $verbose = nop ]
+		then
+		    v=0
+		else
+		    v=1
+		fi
+
+		$debug $program $c $file \
+		                $dir/$file $targetdir/$file $tmpfile \
+		                $v ${HOST:-NONE}
+		if $program $c $file \
+		            $dir/$file $targetdir/$file $tmpfile \
+		            $v ${HOST:-NONE}
+		then
+		    do_nothing=
+		else
+		    exit 2
+		fi
+
+		# If tmpfile equals des file return
+		#
+		if cmp -s $tmpfile $des
+		then
+		    do_nothing=
+		else
+		    case "$1" in
+		    test)
+			echo "DIFFERS: $file"
+			;;
+		    put)
+			echo "PUTTING $file"
+			cp -p $tmpfile "$target"
+			;;
+		    pdiff)
+			echo "PDIFFING: $file"
+			diff "$target" $tmpfile
+			;;
+		    get)
+			echo "GETTNG $file"
+			cp -p $tmpfile "$source"
+			;;
+		    gdiff)
+			echo "GDIFFING: $file"
+			diff "$source" $tmpfile
+			;;
+		    esac
+		fi
+
+		rm -f $tmpfile
 	    fi
 	done
     done

@@ -1,9 +1,9 @@
-/* Helper program for the conf program conf_passwd and
- * conf_shadow functions.
+/* Helper program for the conf program, written in C
+ * to achieve acceptable speed.
  *
- * File:	conf_passwd_shadow.c
+ * File:	conf_helper.c
  * Author:	Bob Walton (walton@deas.harvard.edu)
- * Date:	Fri Mar 20 06:46:30 EDT 2009
+ * Date:	Sat Mar 21 05:52:14 EDT 2009
  *
  * The authors have placed this program in the public
  * domain; they make no warranty and accept no liability
@@ -12,9 +12,9 @@
  * RCS Info (may not be true date or author):
  *
  *   $Author: root $
- *   $Date: 2009/03/20 12:53:02 $
+ *   $Date: 2009/03/21 11:19:38 $
  *   $RCSfile: conf_helper.c,v $
- *   $Revision: 1.3 $
+ *   $Revision: 1.4 $
  */
 
 #include <stdlib.h>
@@ -22,11 +22,14 @@
 #include <string.h>
 #include <assert.h>
 
-/* conf_passwd_shadow VERBOSE HOST TYPE COMMAND FILE \
- *		      SOURCEFILE TARGETFILE TMPFILE
+/* tmpfile is declared in stdio so we need to
+ * rename it. */
+#define tmpfile TMPFILE
+
+/* conf_helper TYPE COMMAND FILE \
+ *                  SOURCEFILE TARGETFILE TMPFILE \
+ *		    VERBOSE HOST
  *
- * VERBOSE:	0 or 1
- * HOST		HOST variable value from `conf' program
  * TYPE		passwd or shadow
  * COMMAND	put or get
  * FILE		name of file relative to directories
@@ -34,6 +37,8 @@
  * SOURCEFILE	source file name
  * TARGETFILE	target file name
  * TMPFILE	temporary file name provided by `conf'
+ * VERBOSE:	0 or 1
+ * HOST		HOST variable value from `conf' program
  *
 /* This program accepts the COMMANDs `put' and `get' and
  * copies the SOURCEFILE or TARGERFILE, repectively, to
@@ -44,6 +49,153 @@
  * of the passwd_conf and shadow_conf functions in that
  * program.
  */
+
+/* Global parameters shared amoung subroutines. */
+
+/* Program arguments */
+static const char * TYPE;
+static const char * command;
+static const char * file;
+static const char * source;
+static const char * target;
+static const char * tmpfile;
+static const char * HOST;
+static int verbose;
+    
+#   define vprintf if ( verbose ) printf
+
+/* True if "put" command and false if "get". */
+static int isput;
+
+/* Derived parameters:
+ *
+ *   src	Source of copy. == source for put,
+ *				== target for get.
+ *   des	Destination of copy. == target for put,
+ *				     == source for get.
+ *   srcf	FILE * values for src, des, tmpfile
+ *   desf
+ *   tmpf
+ */
+static const char * src;
+static const char * des;
+static FILE * desf;
+static FILE * srcf;
+static FILE * tmpf;
+
+/* Buffer to hold input lines */
+static char buffer [10002];
+
+/* Functions to handle different TYPES */
+static void passwd_and_shadow ( void );
+
+/* Function to open one of the files and handle
+ * error message on failure.  Arguments as per
+ * fopen, with only "r" and "w" modes allowed.
+ */
+static FILE * openf
+	( const char * fname, const char * mode )
+{
+    FILE * result = fopen ( fname, mode );
+    if ( result == NULL )
+    {
+        printf ( "ERROR: could not open %s for %s\n",
+		 fname, ( mode[0] == 'w' ?
+		 	  "writing" : "reading" ) );
+	exit ( 2 );
+    }
+    return result;
+}
+
+/* Function to read a line into `buffer'.  Returns
+ * NULL on EOF and puts removes the line feed like gets.
+ * Handles line too long errors.  fname is file name
+ * for error message.
+ */
+static char * readf
+	( FILE * f, const char * fname )
+{
+    char * result =
+        fgets ( buffer, sizeof ( buffer ), f );
+    int length;
+    if ( result == NULL ) return result;
+    buffer[sizeof(buffer)-1] = 0;
+    length = strlen ( buffer );
+    if ( length > sizeof ( buffer ) - 2 )
+    {
+        printf ( "ERROR: line too long in %s\n",
+		 fname );
+	exit ( 2 );
+    }
+    assert ( length > 0 );
+    buffer[length-1] = 0;
+    return buffer;
+}
+
+/* Main program.  Sets up common data and calls function
+ * to process TYPE.
+ */
+int main ( int argc, char ** argv )
+{
+    if ( argc < 9 )
+    {
+    	printf ( "conf_helper"
+	         " TYPE COMMAND FILE"
+		 " SOURCEFILE TARGETFILE TMPFILE"
+	         " VERBOSE HOST\n" );
+	exit ( 2 );
+    }
+
+    TYPE    = argv[1];
+    command = argv[2];
+    file    = argv[3];
+    source  = argv[4];
+    target  = argv[5];
+    tmpfile = argv[6];
+    verbose = ( argv[7][0] == '1' );
+    HOST    = argv[8];
+
+    /* Figure out which is the source file (src) for the
+     * copy and which is the ultimate destination file
+     * (des) that the tmpfile is to replace.
+     */
+    if ( strcmp ( command, "put" ) == 0 )
+        isput = 1;
+    else if ( strcmp ( command, "get" ) == 0 )
+        isput = 0;
+    else
+    {
+        printf ( "ERROR: unrecognized COMMAND: %s\n",
+	         command );
+	exit ( 2 );
+    }
+
+    if ( isput )
+    {
+        src = source;
+	des = target;
+    }
+    else
+    {	src = target;
+    	des = source;
+    }
+
+    /* Dispatch on TYPE.
+     */
+    if ( strcmp ( TYPE, "passwd" ) == 0 )
+        passwd_and_shadow();
+    else if ( strcmp ( TYPE, "shadow" ) == 0 )
+        passwd_and_shadow();
+    else
+    {
+        printf ( "ERROR: unrecognized TYPE: %s\n",
+	         TYPE );
+	exit ( 2 );
+    }
+    return 0;
+}
+
+/* Data and functions for passwd and shadow. */
 
 /* Field pointer.
  */
@@ -57,16 +209,16 @@ typedef struct fpointer_struct fpointer;
 
 /* Initialize a field pointer to a buffer pointer.
  */
-void init ( fpointer * fpp, char * bufferp )
+void fpinit ( fpointer * fpp, char * bufferp )
 {
     fpp->cp = bufferp;
     fpp->present = ( * bufferp != 0 );
 }
-#define INIT(fp,bufferp) init ( & fp, bufferp )
+#define INIT(fp,bufferp) fpinit ( & fp, bufferp )
 
 /* Skip a field.  Set the char after the field to NUL.
  */
-void skip ( fpointer * fpp )
+static void fpskip ( fpointer * fpp )
 {
     char * cp = fpp->cp;
     if ( ! fpp->present ) return;
@@ -75,29 +227,28 @@ void skip ( fpointer * fpp )
     if ( fpp->present ) * cp ++ = 0;
     fpp->cp = cp;
 }
-#define SKIP(fp) skip(&(fp))
+#define SKIP(fp) fpskip(&(fp))
 
 /* Ditto but print the field to tmpf preceded by a ':',
  * if the field is present.
  */
-FILE * tmpf;
-void print ( fpointer * fpp )
+static void fpprint ( fpointer * fpp )
 {
     char * cp = fpp->cp;
     if ( ! fpp->present ) return;
-    skip ( fpp );
+    fpskip ( fpp );
     fprintf ( tmpf, ":%s", cp );
 }
-#define PRINT(fp) print(&(fp))
+#define PRINT(fp) fpprint(&(fp))
 
 /* Print the rest of the fields and an end of line.
  */
-void printrest ( fpointer * fpp )
+static void fpprintrest ( fpointer * fpp )
 {
     while ( fpp->present ) PRINT ( * fpp );
     fprintf ( tmpf, "\n" );
 }
-#define PRINTREST(fp) printrest ( &(fp) )
+#define PRINTREST(fp) fpprintrest ( &(fp) )
 
 
 /* List of file lines that contain information to be
@@ -122,11 +273,11 @@ typedef struct line_struct line;
 /* Lines are changed together from lastline via previous
  * member.
  */
-line * lastline = NULL;
+static line * lastline = NULL;
 
 /* Return line with given account or NUL if none.
  */
-line * find ( const char * account )
+static line * find ( const char * account )
 {
     line * result = lastline;
     while ( result )
@@ -140,11 +291,12 @@ line * find ( const char * account )
 
 /* Insert line.
  */
-void insert ( const char * linep, const char * des )
+static void insert
+	( const char * linep, const char * des )
 {
     line * newline =
         (line *) malloc ( sizeof ( line ) );
-    char * p = malloc ( strlen ( linep ) + 1 );
+    char * p = (char *) malloc ( strlen ( linep ) + 1 );
     strcpy ( p, linep );
     INIT ( newline->rest, p );
     newline->account = p;
@@ -159,118 +311,29 @@ void insert ( const char * linep, const char * des )
     newline->previous = lastline;
     lastline = newline;
 }
-    
-/* Line buffer and function to read into it.
- * Returns NULL on EOF like fgets.  fname is
- * for error message.
- */
-static char buffer [10002];
-char * read ( FILE * f, const char * fname )
-{
-    char * result =
-        fgets ( buffer, sizeof ( buffer ), f );
-    int length;
-    if ( result == NULL ) return result;
-    buffer[sizeof(buffer)-1] = 0;
-    length = strlen ( buffer );
-    if ( length > sizeof ( buffer ) - 2 )
-    {
-        printf ( "ERROR: line too long in %s\n",
-		 fname );
-	exit ( 2 );
-    }
-    assert ( length > 0 );
-    buffer[length-1] = 0;
-    return buffer;
-}
 
-int main ( int argc, char ** argv )
+static void passwd_and_shadow ( void )
 {
-    int verbose;
-    const char * HOST;
-    const char * TYPE;
-    const char * command;
-    const char * file;
-    const char * source;
-    const char * target;
-    const char * tmpfile;
-    const char * src;
-    const char * des;
-    FILE * desf;
-    FILE * srcf;
-    /* FILE * tmpf;	This is global. */
-    int isput;
     int ispasswd;
     int hostlength;
 
-    if ( argc < 9 )
-    {
-    	printf ( "conf_passwd_shadow VERBOSE HOST"
-	         " TYPE COMMAND FILE SOURCEFILE"
-		 " TARGETFILE TMPFILE\n" );
-	exit ( 2 );
-    }
-
-    verbose = ( argv[1][0] == '1' );
-    HOST    = argv[2];
-    TYPE    = argv[3];
-    command = argv[4];
-    file    = argv[5];
-    source  = argv[6];
-    target  = argv[7];
-    tmpfile = argv[8];
-    
-#   define vprintf if ( verbose ) printf
-
-    /* Figure out which is the source file (src) for the
-     * copy and which is the ultimate destination file
-     * (des) that the tmpfile is to replace.
-     */
-    if ( strcmp ( command, "put" ) == 0 )
-    {
-        src = source;
-	des = target;
-    }
-    else
-    {	src = target;
-    	des = source;
-    }
 
     /* Read the des file and insert its lines into the
      * line list.
      */ 
-    desf = fopen ( des, "r" );
-    if ( desf == NULL )
-    {
-        printf ( "ERROR: cannot open %s for reading\n",
-		 des );
-	exit ( 2 );
-    }
-    while ( read ( desf, des ) )
+    desf = openf ( des, "r" );
+    while ( readf ( desf, des ) )
         insert ( buffer, des );
     fclose ( desf );
 
     /* Copy src to tmpfile inserting fields as necessary
      * from des.
      */
-    srcf = fopen ( src, "r" );
-    if ( srcf == NULL )
-    {
-        printf ( "ERROR: cannot open %s for reading\n",
-		 src );
-	exit ( 2 );
-    }
-    tmpf = fopen ( tmpfile, "w" );
-    if ( tmpf == NULL )
-    {
-        printf ( "ERROR: cannot open %s for writing\n",
-		 tmpfile );
-	exit ( 2 );
-    }
-    isput = ( strcmp ( command, "put" ) == 0 );
+    srcf = openf ( src, "r" );
+    tmpf = openf ( tmpfile, "w" );
     ispasswd = ( strcmp ( TYPE, "passwd" ) == 0 );
     hostlength = strlen ( HOST );
-    while ( read ( srcf, src ) )
+    while ( readf ( srcf, src ) )
     {
 	line * desline;
         fpointer p;
@@ -555,6 +618,4 @@ int main ( int argc, char ** argv )
     }
     fclose ( srcf );
     fclose ( tmpf );
-
-    return 0;
 }
