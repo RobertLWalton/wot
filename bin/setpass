@@ -1,0 +1,56 @@
+#!/bin/sh
+
+case "$1" in
+-doc*)
+	echo "setpass FILE
+
+Takes a file with lines of the form
+
+	account:password:...
+
+and sets the password's of the accounts.  If no
+/home/account directory exists, first makes the
+account using "'`'"usersadd'."
+	exit 1;;
+esac
+
+if test `id -un` != root; then
+    echo current uid is not root
+    exit 1
+fi
+
+file="$1"
+if [ ! -r "$file" ]
+then
+    echo "ERROR: cannot read $file"
+    exit 1
+fi
+
+exec 3<"$file"
+while read <&3
+do
+    if expr "$REPLY" : '[ 	]*#' >/dev/null
+    then
+	continue
+    fi
+    account=`echo "$REPLY" | cut -d: -f1`
+    password=`echo "$REPLY" | cut -s -d: -f2`
+    if [ -z "$password" -o "$password" = none ]
+    then
+        continue
+    fi
+
+    if [ ! -d /home/$account ]
+    then
+    	echo useradd $account
+	useradd $account
+    fi
+
+    echo passwd "$account" "($password)"
+    (sleep 2; echo "$password"; \
+     sleep 2; echo "$password" ) | passwd "$account"
+
+done
+
+exec 3<&-
+exit 0
