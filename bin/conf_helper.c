@@ -3,7 +3,7 @@
  *
  * File:	conf_helper.c
  * Author:	Bob Walton (walton@deas.harvard.edu)
- * Date:	Sat Mar 21 05:52:14 EDT 2009
+ * Date:	Sun Mar 22 13:05:26 EDT 2009
  *
  * The authors have placed this program in the public
  * domain; they make no warranty and accept no liability
@@ -11,10 +11,10 @@
  *
  * RCS Info (may not be true date or author):
  *
- *   $Author: root $
- *   $Date: 2009/03/21 11:19:38 $
+ *   $Author: walton $
+ *   $Date: 2009/03/22 17:16:27 $
  *   $RCSfile: conf_helper.c,v $
- *   $Revision: 1.4 $
+ *   $Revision: 1.5 $
  */
 
 #include <stdlib.h>
@@ -50,7 +50,7 @@
  * program.
  */
 
-/* Global parameters shared amoung subroutines. */
+/* Global parameters shared among subroutines. */
 
 /* Program arguments */
 static const char * TYPE;
@@ -71,8 +71,9 @@ static int isput;
  *
  *   src	Source of copy. == source for put,
  *				== target for get.
- *   des	Destination of copy. == target for put,
- *				     == source for get.
+ *   des	Ultimate destination of copy.
+ *				== target for put,
+ *			        == source for get.
  *   srcf	FILE * values for src, des, tmpfile
  *   desf
  *   tmpf
@@ -108,7 +109,7 @@ static FILE * openf
 }
 
 /* Function to read a line into `buffer'.  Returns
- * NULL on EOF and puts removes the line feed like gets.
+ * NULL on EOF and removes the line feed like `gets'.
  * Handles line too long errors.  fname is file name
  * for error message.
  */
@@ -137,6 +138,10 @@ static char * readf
  */
 int main ( int argc, char ** argv )
 {
+    /* Note that more arguments may be added later, and
+     * this program should still work if there are
+     * excess arguments.
+     */
     if ( argc < 9 )
     {
     	printf ( "conf_helper"
@@ -214,7 +219,7 @@ void fpinit ( fpointer * fpp, char * bufferp )
     fpp->cp = bufferp;
     fpp->present = ( * bufferp != 0 );
 }
-#define INIT(fp,bufferp) fpinit ( & fp, bufferp )
+#define INIT(fp,bufferp) fpinit ( &(fp), bufferp )
 
 /* Skip a field.  Set the char after the field to NUL.
  */
@@ -270,7 +275,7 @@ struct line_struct
 };
 typedef struct line_struct line;
 
-/* Lines are changed together from lastline via previous
+/* Lines are chained together from lastline via previous
  * member.
  */
 static line * lastline = NULL;
@@ -289,7 +294,7 @@ static line * find ( const char * account )
     return NULL;
 }
 
-/* Insert line.
+/* Insert line.  Filename des is for error message.
  */
 static void insert
 	( const char * linep, const char * des )
@@ -317,14 +322,17 @@ static void passwd_and_shadow ( void )
     int ispasswd;
     int hostlength;
 
-
     /* Read the des file and insert its lines into the
      * line list.
      */ 
-    desf = openf ( des, "r" );
-    while ( readf ( desf, des ) )
-        insert ( buffer, des );
-    fclose ( desf );
+    lastline = NULL;
+    desf = fopen ( des, "r" ); /* File may be missing. */
+    if ( desf != NULL )
+    {
+	while ( readf ( desf, des ) )
+	    insert ( buffer, des );
+	fclose ( desf );
+    }
 
     /* Copy src to tmpfile inserting fields as necessary
      * from des.
@@ -340,7 +348,7 @@ static void passwd_and_shadow ( void )
 	INIT ( p, buffer );
 	SKIP ( p );
 	desline = find ( buffer );
-#	define q desline->rest
+#	define q (desline->rest)
 
 	/* p points at src field, q at des field */
 
@@ -462,7 +470,15 @@ static void passwd_and_shadow ( void )
 		}
 		else /* is get */
 		{
-		    assert ( ! hostlistexists );
+		    if ( hostlistexists )
+		    {
+		        printf ( "ERROR: account %s"
+			         " in target file %s"
+				 " has a host list\n",
+				 buffer, src );
+			exit ( 2 );
+		    }
+
 		    h = p.cp;
 		    SKIP ( p );
 		    fprintf
