@@ -4,7 +4,7 @@
 #
 # File:		conf
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sun Mar 22 14:17:33 EDT 2009
+# Date:		Sun Mar 22 14:20:26 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/22 18:18:55 $
+#   $Date: 2009/03/22 18:28:19 $
 #   $RCSfile: conf,v $
-#   $Revision: 1.12 $
+#   $Revision: 1.13 $
 
 # The undocumented -d option is used for debugging.
 # WARNING: This option leaves the last tmp file
@@ -389,6 +389,7 @@ do
 		if [ ! -e $target ]
 		then
 		    echo "PUTTING $file in $dir"
+		    rm -f $target
 		    cp -p $source $target
 		elif ! cmp -s $source $target
 		then
@@ -398,6 +399,7 @@ do
 			;;
 		    put)
 			echo "PUTTING $file in $dir"
+			rm -f $target
 			cp -p $source $target
 			;;
 		    pdiff)
@@ -406,6 +408,7 @@ do
 			;;
 		    get)
 			echo "GETTING $file in $dir"
+			rm -f $source
 			cp -p $target $source
 			;;
 		    gdiff)
@@ -463,6 +466,7 @@ do
 			;;
 		    put)
 			echo "PUTTING $file in $dir"
+			rm -f $target
 			cp -p $tmpfile "$target"
 			;;
 		    pdiff)
@@ -471,6 +475,7 @@ do
 			;;
 		    get)
 			echo "GETTING $file in $dir"
+			rm -f $source
 			cp -p $tmpfile "$source"
 			;;
 		    gdiff)
