@@ -4,7 +4,7 @@
 #
 # File:		conf
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sun Mar 22 08:28:08 EDT 2009
+# Date:		Sun Mar 22 14:17:33 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/22 17:05:07 $
+#   $Date: 2009/03/22 18:18:55 $
 #   $RCSfile: conf,v $
-#   $Revision: 1.11 $
+#   $Revision: 1.12 $
 
 # The undocumented -d option is used for debugging.
 # WARNING: This option leaves the last tmp file
@@ -96,6 +96,9 @@ conf [-v] COMMAND [FILE-PATTERN ...]
     directories.  The / character is NOT specially
     treated in a file name, so * can match across
     directory boundaries.
+
+    Files inside RCS, CVS, ATTIC, or SETUP subdirec-
+    tories are never considered.
 
     There may be more than one target directory and for
     each an associated list of source directories.  All
@@ -333,8 +336,9 @@ do
     do
 	$verbose echo "SOURCE DIRECTORY: $dir"
 	files=`find $dir -name RCS -prune \
+		    -o -name CVS -prune \
 		    -o -name SETUP -prune \
-		    -o -name Attic -prune \
+		    -o -name ATTIC -prune \
 		    -o -type f -printf '%P\n'`
 	for file in $files
 	do
