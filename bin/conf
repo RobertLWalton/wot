@@ -1,8 +1,25 @@
 #!/bin/sh
+#
+# Manage system configuration files.
+#
+# File:		conf
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Sun Mar 22 08:28:08 EDT 2009
+#
+# The authors have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+#
+# RCS Info (may not be true date or author):
+#
+#   $Author: walton $
+#   $Date: 2009/03/22 17:05:07 $
+#   $RCSfile: conf,v $
+#   $Revision: 1.11 $
 
-## File: 	conf
-## Author:	Bob Walton (walton@acm.org)
-## Date:	Sat Mar 21 12:09:14 EDT 2009
+# The undocumented -d option is used for debugging.
+# WARNING: This option leaves the last tmp file
+#          unremoved.
 
 nop() {
     do_nothing=
@@ -28,52 +45,70 @@ shift
 case "$command" in
 -doc*)
 	echo '
-conf [-v] put|get|ptest|gtest|pdiff|gdiff [FILE-OR-SUBDIRECTORY ...]
+conf [-v] COMMAND [FILE-PATTERN ...]
 
-    Finds the differences between copies of system files in the source
-    directories and copies in the target directory.  The -v option makes
-    operation verbose.  Exactly one of the following must be given:
+    Finds the differences between copies of system files
+    in the source directories and copies in the target
+    directory.  The -v option makes operation verbose.
+    The COMMAND is one of:
 
-      put	The source files are used to update the target files.
-      		By default this is done by `cp -p'"'"'.  The target files
-		need not pre-exist.
+      put	The source files are used to update the
+                target files.  By default this is done
+		by `cp -p'"'"'.  The target files need
+		not pre-exist.
 
-      get	The target files are used to update the source files.
-      		By default this is done by `cp -p'"'"'.  The source files
-		must pre-exist this command.
+      get	The target files are used to update the
+      		source files.  By default this is done
+		by `cp -p'"'"'.  The source files must
+		pre-exist this command.
 
-      ptest     List the files that would be changed by put.
+      ptest     List the files that would be changed by
+      		put.
 
-      gtest     List the files that would be changed by get.
+      gtest     List the files that would be changed by
+      		get.
 
-      pdiff	Perform a diff on the current target file and the file
-      		that would replace it if a put were done.  By default
-      		default this is computed by `diff target source'"'"'.
+      pdiff	Perform a diff on the current target
+      		file and the file that would replace it
+		if a put were done.  By default this is
+		computed by `diff target source'"'"'.
 
-      gdiff	Perform a diff on the current source file and the file
-      		that would replace it if a get were done.  By default
-      		default this is computed by `diff source targer'"'"'.
+      gdiff	Perform a diff on the current source
+      		file and the file that would replace it
+		if a get were done.  By default this is
+		computed by `diff source target'"'"'.
 
-    The source directories are a list of one or more directories.  If a
-    file appears in several of these, only the first directory containing
-    the file is is considered, and it hides the subsequent directories for
-    that file.  Conf never creates new files in the source directories:
-    sync always operates to update an existing file in a source directory.
+    The source directories are a list of one or more
+    directories.  If a file appears in several of these,
+    only the first directory containing the file is
+    considered, and it hides the subsequent directories
+    for that file.  Conf never creates new files in the
+    source directories: `get'"'"' always operates to
+    update an existing file in a source directory.
 
-    Only FILES that are arguments or within SUBDIRECTORIES that are
-    arguments are considered, unless there are no FILES or SUBDIRECTORIES
-    arguments, in which case all files in the source directories are
-    considered.  The FILES and SUBDIRECTORY arguments are names relative
-    to the source directories.
+    Only file whose names match a FILE-PATTERN argument
+    are considered, unless there are no FILE-PATTERN
+    arguments, in which case all files in the source
+    directories are considered.  The FILE-PATTERNS
+    can contain the special characters *?[], but these
+    must be quoted in the command.  The file names
+    matched to these are relative to the source
+    directories.  The / character is NOT specially
+    treated in a file name, so * can match across
+    directory boundaries.
 
-    There may be more than one target directory and for each an associated
-    list of source directories.  All will be considered.
+    There may be more than one target directory and for
+    each an associated list of source directories.  All
+    will be considered.
 
-    The conf program begins by sourcing the ~/conf/conf.rc file, unless
-    the CONFRC environment variable is defined, in which case the file
-    named in that directory is sourced.  The sourced file should define
-    the following global variables.  Note that since arrays with string
-    subscripts are not allowed in bash, these are fudged by using
+    Conf begins by sourcing the ~/conf/confrc file,
+    unless the CONFRC environment variable is defined,
+    in which case the file named in that variable is
+    sourced.  The sourced file should define the
+    following global variables.
+    
+    Note that since arrays with string subscripts are
+    not allowed in bash, these are fudged by using
 
     	XXX[YYY]
 
@@ -82,28 +117,35 @@ conf [-v] put|get|ptest|gtest|pdiff|gdiff [FILE-OR-SUBDIRECTORY ...]
     	symbol YYY
 	XXX[$?]
 
-    In other words, to find the element of the array XXX that corresponds
-    to a string index YYY, first call the symbol function, and then use its
-    returned status as the index into XXX.
+    In other words, to find the element of the array XXX
+    that corresponds to a string index YYY, first call
+    the `symbol'"'"' function, and then use its returned
+    status as the index into XXX.
 
 	HOST
-	    The name of the current host computer, in a form sufficient
-	    to distiguish it from other computers being maintained by
-	    the same conf files.  Usually the short hostname: example:
+	    The name of the current host computer, in a
+	    form sufficient to distiguish it from other
+	    computers being maintained by the same conf
+	    files.  Usually the short hostname: example:
 
 	    HOST=`hostname -s`
 
     	DIRECTORIES
-	    This is a list each element of which is a : separated list
-	    of directories.  For each element the first directory
-	    listed is the target directory and the remaining are the
-	    source directories in the order they are searched.  Example:
+	    This is a list each element of which is a :
+	    separated list of directories.  For each
+	    element the first directory listed is the
+	    target directory and the remaining are the
+	    source directories in the order they are
+	    searched.  Example:
 
-	    DIRECTORIES=/:/root/conf/`hostname -s`:/root/conf/default
+	    HOST=`hostname -s`
+	    DIRECTORIES=/:$HOME/conf/$HOST
+	    DIRECTORIES=$DIRECTORIES:$HOME/conf/default
 
 	CONF[$file]='"'"'PPP AAA ...'"'"'
-	    If this is defined for a given $file, then the man action
-	    of this program is done by calling
+	    If this is defined for a given $file, then
+	    the main action of conf is done when conf
+	    calls
 
 	        PPP AAA ... COMMAND FILE \
 		    SOURCEFILE TARGETFILE TMPFILE \
@@ -111,107 +153,135 @@ conf [-v] put|get|ptest|gtest|pdiff|gdiff [FILE-OR-SUBDIRECTORY ...]
 
 	    where
 	    
-	        PPP AAA ...	Names a program and initial arguments.
+	      PPP AAA ...  Names a program and
+			   initial arguments.
 
-		COMMAND		Is `put'"'"' or `get'"'"'
-				according to the map:
+	      COMMAND	   Is `put'"'"' or `get'"'"'
+			   according to the map:
 
-				put, pdiff, ptest -> put
-				get, gdiff, gtest -> get
+			   put, pdiff, ptest -> put
+			   get, gdiff, gtest -> get
 
-		FILE		Is the relative file name, and is
-				for error messages.
+	      FILE	   Is the relative file name,
+	      		   and is for error messages.
 
-		SOURCEFILE	The source file name.
+	      SOURCEFILE   The source file name.
 
-		TARGETFILE	The target file name.
+	      TARGETFILE   The target file name.
 
-		TMPFILE		The name of a temporary file
-				to be created and written by PPP.
+	      TMPFILE	   The name of a temporary file
+			   to be created and written by
+			   PPP.
 
-	    The execution of PPP should create a TMPFILE that will
-	    be used to replace TARGETFILE for a `put'"'"' command
-	    or to replace SOURCEFILE for a `get'"'"' command.
+	    The execution of PPP should create a TMPFILE
+	    that will be used to replace TARGETFILE for
+	    a `put'"'"' command or to replace SOURCEFILE
+	    for a `get'"'"' command.
 				
-	    PPP can be an external program or a bash function.
-	    The following are default values as indicated:
+	    PPP can be an external program or a bash
+	    function.  The following are default values
+	    as indicated:
 
 	    CONF[etc/passwd]=conf_helper passwd
-	        File lines are compared and updated individually, with
-		lines being identified by account name.  For put and
-		pdiff it is assumed that the source file takes precedence
-		for which account names, i.e., which lines, should be in
-		the files, and for the order of these lines.  For get
-		and gdiff the target file takes precedence for these
-		matters instead.
+	        File lines are compared and updated
+		individually, with lines being
+		identified by account name.  For put it
+		is assumed that the source file takes
+		precedence for which account names,
+		i.e., which lines, should be in the
+		files, and for the order of these lines.
+		For get the target file takes precedence
+		for these matters instead.
 
-		Otherwise for the shell name the target has precedence
-		and for all other fields in the source has precedence.
+		Otherwise for the shell name the target
+		has precedence and for all other fields
+		in the source has precedence.
 
 	    CONF[etc/shadow]=conf_helper shadow
-	        File lines are compared and updated individually, with
-		lines being identified by account name.  For put and
-		pdiff it is assumed that the source file takes precedence
-		for which account names, i.e., which lines, should be in
-		the files, and for the order of these lines.  For get
-		and gdiff the target file takes precedence for these
-		matters instead.
+	        File lines are compared and updated
+		individually, with lines being
+		identified by account name.  For put it
+		is assumed that the source file takes
+		precedence for which account names,
+		i.e., which lines, should be in the
+		files, and for the order of these lines.
+		For get the target file takes precedence
+		for these matters instead.
 
-		The password field in the source file has special syntax
-		and consists of a sequence of the form:
+		The password field in the source file
+		has the form:
 
 		    !host!host!...!password
 
-		indicating that the account is enabled on the listed
-		hosts (which are matched to the HOST variable value)
-		and disabled on other hosts.  Furthermore the password
-		should be set on the first listed host and propagated
-		to the other hosts.
+		indicating that the account is enabled
+		on the listed hosts (which are matched
+		to the HOST variable value) and disabled
+		on other hosts.  Furthermore the
+		password should be set on the first
+		listed host and propagated to the other
+		hosts.
 
-		If the current HOST is the first host listed in the
-		source, the target password takes precedence and should
-		be copied to the source password after the host list.
-		If the current HOST is listed but not first, the source
-		password should be copied to the target.  If the current
-		HOST is not listed in the source, but there are listed
-		hosts, the target should be set to !!.  If there are
-		no listed hosts in the source, the source password takes
+		If the current HOST is the first host
+		listed in the source, the target
+		password takes precedence and should
+		be copied to the source password after
+		the host list.  If the current HOST is
+		listed but not first, the source
+		password should be copied to the target.
+		If the current HOST is not listed in the
+		source, but there are listed hosts, the
+		target should be set to the password
+		from the source prefixed by !!.  If
+		there are no listed hosts in the source,
+		the source password is copied to the
+		target.
+
+		Note that the source password itself can
+		begin with a sequence of !'"'"'s, as in
+		
+			!somehost!!!$1$89ce4A89B3
+		and
+		
+			!somehost!!!
+
+		For fields giving the date of the last
+		password change and date when the
+		account was last disabled, the target
+		takes precedence if the current HOST is
+		the first host listed in the source, and
+		otherwise the source takes precedence.
+		For all other fields the source takes
 		precedence.
 
-		Note that the source password itself can begin with !,
-		as in !somehost!!!$1$89ce4A89B3 and !somehost!!!.
+		For put, a line in the source that is
+		not in the target is used to create a
+		line in the target, resetting the
+		password in the line as above, according
+		to whether or not HOST is listed in the
+		source line or there is no host list in
+		the source line.  For get, a line in the
+		target that is not in the source is used
+		to create a line in the source with its
+		password prepended by !HOST!.
 
-		For fields giving the date of the last password change
-		and date when the account was last disabled, the target
-		takes precedence if the current HOST is the first host
-		listed in the source, and otherwise the source takes
-		precedence.  For all other fields the source takes
-		precedence.
-
-		For put, a line in the source that is not in the target is
-		used to create a line in the target, resetting the
-		password in the line as above, according to whether or not
-		HOST is listed in the source line.  For get, a line in the
-		target that is not in the source is used to create a line
-		in the source with its password prepended by !HOST!.
-
-	    CONF[etc/cups/printers.conf]=conf_helper printers.conf
-	        The target takes precedence for lines beginning with
-		any of:
+	    CONF[etc/cups/printers.conf]=\
+	    		conf_helper printers.conf
+	        The target takes precedence for lines
+		beginning with any of:
 
 			#
 			State
 			Accepting
 
-		For all other lines the source takes precedence.'
+		For all other lines the source takes
+		precedence.'
 
     exit 1
     ;;
 put|get|ptest|gtest|pdiff|gdiff)
-    do_noting=
     ;;
 *)
-    echo "Undefined command: $command"
+    echo "ERROR: undefined command: $command"
     exit 2
     ;;
 esac
@@ -245,12 +315,13 @@ CONF[$?]='conf_helper passwd'
 symbol etc/shadow
 CONF[$?]='conf_helper shadow'
 
-. ${CONFRC:=$HOME/conf/confrc}
+. ${CONFRC:-$HOME/conf/confrc}
 
 for dirlist in $DIRECTORIES
 do
     targetdir=`echo $dirlist | cut -d: -f1`
-    sourcedirs=`echo $dirlist | cut -s -d: -f2- | tr : ' '`
+    sourcedirs=`echo $dirlist | cut -s -d: -f2- \
+    			      | tr : ' '`
     $verbose echo "TARGET DIRECTORY: $targetdir"
 
     # We find all the files in the source directories
@@ -267,10 +338,12 @@ do
 		    -o -type f -printf '%P\n'`
 	for file in $files
 	do
-	    # If there are arguments beyond the command, require
-	    # that some argument equal file, or argument/ be a
-	    # prefix of file.  We assume *, ?, [ are not in the
-	    # argument.
+	    # If there are arguments beyond the command,
+	    # require that some argument match the file
+	    # name as per glob.  Note '*', '?', and '['
+	    # must be quoted when given in the argument,
+	    # and `/' is NOT a special character in the
+	    # file name.
 	    #
 	    if [ $# -gt 0 ]
 	    then
@@ -278,7 +351,7 @@ do
 		for arg in "$@"
 		do
 		    case "$file" in
-		    $arg|$arg/*) found=1;;
+		    $arg) found=1;;
 		    esac
 		done
 		if [ $found = 0 ]
@@ -303,20 +376,17 @@ do
 	    target=$targetdir/$file
 
 	    program=${CONF[$f]:-}
-	    if [ ! -e $target ]
+	    if [ ! -e $target -a $command != put ]
 	    then
-	        case "$command" in
-		ptest|pdiff|get|gtest|gdiff)
-		    echo "TARGET MISSING: $file in $dir not in $targetdir"
-		    ;;
-		put)
-		    echo "PUTTING: $file"
-		    cp -p $source $target
-		    ;;
-		esac
+		echo "TARGET MISSING: $file in $dir" \
+		     "not in $targetdir"
 	    elif [ "$program" = "" ]
 	    then
-		if ! cmp -s $source $target
+		if [ ! -e $target ]
+		then
+		    echo "PUTTING $file in $dir"
+		    cp -p $source $target
+		elif ! cmp -s $source $target
 		then
 		    case "$command" in
 		    ptest|gtest)
@@ -331,7 +401,7 @@ do
 			diff $target $source
 			;;
 		    get)
-			echo "GETTNG $file in $dir"
+			echo "GETTING $file in $dir"
 			cp -p $target $source
 			;;
 		    gdiff)
@@ -341,10 +411,12 @@ do
 		    esac
 		fi
 	    else
-		# Identify the command and the destination file
-		# des of the copy.
+		# Identify the command and the
+		# destination file des of the copy.
 		#
-		if [ $command = put -o $command = pdiff -o $command = ptest ]
+		if [ $command = put \
+		     -o $command = pdiff \
+		          -o $command = ptest ]
 		then
 		    c=put
 		    des="$target"
@@ -360,25 +432,27 @@ do
 		    v=1
 		fi
 
+		if [ "${HOST:-}" = "" ]
+		then
+		    echo "ERROR: HOST variable not set"
+		    exit 2
+		fi
+
 		$debug echo $program \
 		            $c $file \
 			    $source $target $tmpfile \
-			    $v ${HOST:-NONE}
-		if $program $c $file \
-		            $source $target $tmpfile \
-		            $v ${HOST:-NONE}
+			    $v $HOST
+		if ! $program $c $file \
+		              $source $target $tmpfile \
+		              $v $HOST
 		then
-		    do_nothing=
-		else
 		    exit 2
 		fi
 
 		# If tmpfile equals des file return
 		#
-		if cmp -s $tmpfile $des
+		if ! cmp -s $tmpfile $des
 		then
-		    do_nothing=
-		else
 		    case "$command" in
 		    ptest|gtest)
 			echo "DIFFERS: $file in $dir"
