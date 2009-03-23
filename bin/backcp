@@ -4,7 +4,7 @@
 #
 # File:		backcp
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Mon Mar 23 08:00:27 EDT 2009
+# Date:		Mon Mar 23 11:26:55 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/23 15:25:27 $
+#   $Date: 2009/03/23 15:38:29 $
 #   $RCSfile: backcp,v $
-#   $Revision: 1.1 $
+#   $Revision: 1.2 $
 
 case "$1" in
 -doc*)
@@ -43,7 +43,7 @@ backcp exec ACCOUNT ID_FILE COMMAND FILE
 	    exit 2
 	fi
 	rm -rf PARENT/FILE
-	(cd PARENT; mkdir -p "`dirname 'FILE'`")
+	(cd PARENT; mkdir -p "`dirname "FILE"`")
     	head -c SIZEm - >PARENT/FILE
 	(cd PARENT; md5sum FILE)
 
@@ -168,7 +168,7 @@ protect)
 	     "$command"
 	exit 2
     fi
-    if [ "${command[1]} != backcp ]
+    if [ "${command[1]}" != backcp ]
     then
         echo "ERROR: command is not backcp in:" \
 	     "$command"
@@ -199,7 +199,7 @@ exec)
     ;;
 
 *)
-    echo "ERROR: undefined command: $command"
+    echo "ERROR: undefined command: $1"
     exit 2
     ;;
 esac
@@ -213,10 +213,10 @@ copyto)
 	echo "ERROR: $used MB > $CAPACITY MB"
 	exit 2
     fi
-    rm -rf "$PARENT/$FILE"
-    (cd "$PARENT"; mkdir -p "`dirname "$FILE"`")
-    head -c "${SIZE}m" - >"$PARENT/$FILE"
-    (cd "$PARENT"; md5sum "$FILE")
+    rm -rf "$PARENT/$FILE" \
+       && (cd "$PARENT"; mkdir -p "`dirname "$FILE"`") \
+       && head -c "${SIZE}m" - >"$PARENT/$FILE" \
+       && (cd "$PARENT"; md5sum "$FILE")
     ;;
 
 copyfrom)
