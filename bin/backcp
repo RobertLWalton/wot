@@ -1,0 +1,237 @@
+#!/bin/sh
+#
+# Secure backup copier.
+#
+# File:		backcp
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Mon Mar 23 08:00:27 EDT 2009
+#
+# The authors have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+#
+# RCS Info (may not be true date or author):
+#
+#   $Author: walton $
+#   $Date: 2009/03/23 15:25:27 $
+#   $RCSfile: backcp,v $
+#   $Revision: 1.1 $
+
+case "$1" in
+-doc*)
+	echo '
+backcp copyto FILE
+backcp copyfrom FILE
+backcp md5sum FILE
+backcp remove FILE
+backcp list FILE
+backcp protect PARENT SIZE CAPACITY
+backcp exec ACCOUNT ID_FILE COMMAND FILE
+
+    Except for last two commands, these commands have
+    simple equivalents:
+
+    copyto FILE
+        ## If size conditions are met, copy the standard
+	## input to PARENT/FILE and return the md5sum
+	## program output for the PARENT/FILE copy.
+	##
+	used=`du -s -B 1MB PARENT | cut -f1`
+	if [ $used -gt CAPACITY ]
+	then
+	    echo "ERROR: $used MB > CAPACITY MB"
+	    exit 2
+	fi
+	rm -rf PARENT/FILE
+	(cd PARENT; mkdir -p "`dirname 'FILE'`")
+    	head -c SIZEm - >PARENT/FILE
+	(cd PARENT; md5sum FILE)
+
+    copyfrom FILE
+        cat <PARENT/FILE
+
+    md5sum FILE
+        (cd PARENT; md5sum FILE)
+
+    remove FILE
+    	rm -rf PARENT/FILE
+
+    list FILE
+    	(cd PARENT; ls -lR FILE)
+
+    PARENT, SIZE, and CAPACITY are default or
+    environment variables set as follows:
+
+	Environment
+	Variable	Default	  Use
+
+        BACKCP_PARENT	.	  Parent directory.
+
+	BACKCP_SIZE	256	  Max file size in MB.
+
+	BACKCP_CAPACITY	1024	  Max PARENT du size
+				  in MB.
+
+
+    The `protect'"'"' command is intended only for use
+    as the ssh authorized_keys file option:
+
+    	command="backcp protect PARENT SIZE CAPACITY"
+
+    This is put at the beginning of an authorized_keys
+    file line, and causes any use of the public key
+    on that line to be restricted as follows.
+    
+    First, the command to be executed by ssh using the
+    public key must be of the form
+
+    	backcp COMMAND FILE
+
+    Second, the command is rejected with an error if
+    FILE contains the string `..'"'"'.
+
+    Third, the command is run with the environment
+    variables set from the parameters to the
+    `backcp protect ...'"'"' command.
+
+    To use all this, first make a key pair by executing
+
+    	ssh-keygen -N "" -f backup_id
+
+    The private key will be in th file backup_id, and
+    the public key will be in the file backup_id.pub.
+    Because of the -N "" option, the private key will
+    NOT be protected by a password.
+
+    Then copy backup_id.pub to a line in the
+    .ssh/authorized_keys file of the account AAA@BBB
+    where the backup PARENT directory is located,
+    and preface that line with the `command="..." '"'"'
+    option above, choosing values for PARENT, SIZE,
+    and CAPACITY, and putting one space character after
+    this preface.
+    
+    Now if you execute
+
+    	backcp exec AAA@BBB backup_id COMMAND FILE
+
+    it will have the same effect as executing
+
+    	backcp COMMAND FILE
+
+    remotely in the account AAA@BBB with the PARENT,
+    SIZE, and CAPACITY you set in the authorized_keys
+    line.  Example usages are:
+
+      backcp exec AAA@BBB backup_id copyto \
+	     REMOTE_FILE < LOCAL_FILE
+      backcp exec AAA@BBB backup_id copyfrom \
+	     REMOTE_FILE > LOCAL_FILE
+      backcp exec AAA@BBB backup_id md5sum REMOTE_FILE
+      backcp exec AAA@BBB backup_id list REMOTE_FILE
+      backcp exec AAA@BBB backup_id remove REMOTE_FILE
+'
+    exit 1
+    ;;
+
+copyto|copyfrom|remove|md5sum|list)
+    if [ $# -ne 2 ]
+    then
+        echo "ERROR: missing or extra argument"
+	exit 2
+    fi
+    PARENT="${BACKCP_PARENT:-.}"
+    SIZE="${BACKCP_SIZE:-256}"
+    CAPACITY="${BACKCP_CAPACITY:-1024}"
+    FILE="$2"
+    ## Fall through to finish command.
+    ;;
+
+protect)
+    if [ $# -ne 4 ]
+    then
+        echo "ERROR: backcp protect:" \
+	     "missing or extra argument"
+	exit 2
+    fi
+    if [ "${SSH_COMMAND:-}" = "" ]
+    then
+	echo "ERROR: backcp protect:" \
+	     " not executed from" \
+	     ".ssh/authorized_keys line"
+        exit 2
+    fi
+    command=(${SSH_COMMAND:-})
+    if [ ${#command} -ne 3 ]
+    then
+        echo "ERROR: missing or extra argument in:" \
+	     "$command"
+	exit 2
+    fi
+    if [ "${command[1]} != backcp ]
+    then
+        echo "ERROR: command is not backcp in:" \
+	     "$command"
+	exit 2
+    fi
+    case "${command[3]}" in
+    *..*)
+        echo "ERROR: file name contains .. in:" \
+	     "$command"
+	exit 2
+	;;
+    esac
+    BACKCP_PARENT="$2";   export BACKCP_PARENT
+    BACKCP_SIZE="$3";     export BACKCP_SIZE
+    BACKCP_CAPACITY="$4"; export BACKCP_CAPACITY
+    exec backcp "${command[2]}" "${command[3]}"
+    ;;
+
+exec)
+    if [ $# -ne 5 ]
+    then
+        echo "ERROR: missing or extra argument"
+	exit 2
+    fi
+    unset SSH_AUTH_SOCK
+    exec ssh -o PasswordAuthentication=no -T -x \
+             -i "$3" "$2" backcp "$4" "$5"
+    ;;
+
+*)
+    echo "ERROR: undefined command: $command"
+    exit 2
+    ;;
+esac
+
+case "$1" in
+
+copyto)
+    used="`du -s -B 1MB "$PARENT" | cut -f1`"
+    if [ $used -gt "$CAPACITY" ]
+    then
+	echo "ERROR: $used MB > $CAPACITY MB"
+	exit 2
+    fi
+    rm -rf "$PARENT/$FILE"
+    (cd "$PARENT"; mkdir -p "`dirname "$FILE"`")
+    head -c "${SIZE}m" - >"$PARENT/$FILE"
+    (cd "$PARENT"; md5sum "$FILE")
+    ;;
+
+copyfrom)
+    cat <"$PARENT/$FILE"
+    ;;
+
+md5sum)
+    (cd "$PARENT"; md5sum "$FILE")
+    ;;
+
+remove)
+    rm -rf "$PARENT/$FILE"
+    ;;
+
+list)
+    (cd "$PARENT"; ls -lR "$FILE")
+    ;;
+esac
