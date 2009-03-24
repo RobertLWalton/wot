@@ -1,4 +1,4 @@
-#/bin/csh -f
+#!/bin/csh -f
 source ~/.lsbackuprc
 echo rsync -av --delete $argv[2-]:q $argv[1]:q/ \
     ${LINKACCOUNT}@${LINKSTATION}:walton3/$argv[1]:q
