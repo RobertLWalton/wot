@@ -1,10 +1,10 @@
-#! /bin/csh -f
+#/bin/sh
 #
-# Check whether current CVS checkout is up to date.
+# Make the current CVS checkout up to date.
 #
 # File:		cvsup
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Tue Jun 24 02:53:29 EDT 2003
+# Date:		Wed Mar 25 03:39:31 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,60 +13,78 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2003/06/24 07:08:27 $
+#   $Date: 2009/03/25 12:03:31 $
 #   $RCSfile: cvsup,v $
-#   $Revision: 1.3 $
+#   $Revision: 1.4 $
 
-switch ( "$1" )
+case "$1" in
 
-   case -doc*:
+-doc*)
+    echo '
+cvsup [file-or-directory ...]
 
-   	echo "\
-cvsup [file-or-directory ...]\
-\
-    Update the current directory and its" \
-    	"subdirectories,\
-    or the listed files and directories (and subdirec-\
-    tories of these directories).\
-\
-    The "'`'"cvsutd' command can be used to print out\
-    the same thing without actually changing any files\
-    or directories.\
-\
-    Some of the possible printed messages are:\
-\
-    ? filename	File is not known to CVS.\
-    U filename	File copied from repository.\
-    P filename	File patched from repository.\
-    M filename	File is more recent than the version of\
-    		the file in the repository.  The file\
-		is not altered.\
-    C filename	File is a modification of a repository\
-    		version of the file that is NOT the\
-		most recent version of the file in the\
-		repository.  The most recent version in\
-		the repository is merged into the file\
-		by the rcsmerge(1) command.  If there\
-		are overlapping changes, a warning is\
-		printed, and both changes are inserted\
-		in the file, between lines containing\
-		"'`'"<<<<<<<' and "'`'">>>>>>>'.\
-\
-		BEWARE: even non-overlapping changes\
-		may conflict and cause the file to be\
-		defective.  Use "'`'"cvs diff' to exa-\
-		mine changes from previous versions.\
-\
-    A filename	File has been "'`'"cvs add'ed but not\
-    		yet been committed to the repository.\
-    R filename	File has been "'`'"cvs remove'd but\
-    		this remove has not yet been commited\
-		to the repository.\
-"
+    Update the listed files and directories (and sub-
+    directories of these directories), or if no file or
+    directories are listed, update all the files and
+    subdirectories of the current directory, by checking
+    out the files from the repository so as to create
+    local copies of these files where no local copies
+    exist and patch (update) local copies where the
+    local copies are older than the repository versions.
 
+    Ignores files whose local copies are the same as
+    their repository versions.  If the local file
+    exists and has been modified since it was checked
+    out, announces this and takes appropriate action:
+    see the M and C flags below.
 
+    The `cvsutd'"'"' command can be used to print out
+    the same thing without actually changing any files
+    or directories.
+
+    Some of the possible printed messages are:
+
+    ? filename	File is not known to CVS.
+    U filename	Local file did not exist and has been
+    		copied from the repository.
+    P filename	Local file has NOT been modified since
+    		it was checked out, but a more recent
+		version has since been checked into
+		the repository (by someone else).  The
+		local file is patched so it is now the
+		same as the most recent repository file.
+    M filename	Local file has been modified since it
+    		was checked out, and the version of the
+		local file that was checked out is still
+		the latest version in the repository.
+		The local file is not altered.
+    C filename	Local file is a modification of a repo-
+    		sitory version of the file that is NOT
+		the most recent version of the file in
+		the repository.  The most recent version
+		in the repository (provided by someone
+		else) is merged into the local file by
+		the rcsmerge(1) command.  If there are
+		overlapping changes, a warning is
+		printed, and both changes are inserted
+		in the file, between lines containing
+		`<<<<<<<'"'"' and `>>>>>>>'"'"'.
+
+		BEWARE: even non-overlapping changes
+		may conflict and cause the file to be
+		defective.  Use `cvsdiff'"'"' to exa-
+		mine changes from previous versions.
+
+    A filename	File has been `cvsadd'"'"'ed but not yet
+    		been `cvscom'"'"'mited to the reposi-
+		tory.
+    R filename	File has been `cvs remove'"'"'d but
+    		this remove has not yet been commited
+		to the repository.  If you use
+		`cvsrm'"'"' and `cvsattic'"'"' you
+		should never see this.'
     	exit 1
-	breaksw
-endsw
+	;;
+esac
 
-cvs update -d -P $argv:q |& grep -v ': Updating'
+cvs update -d -P "$@" 2>&1 | grep -v ': Updating'
