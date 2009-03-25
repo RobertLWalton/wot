@@ -2,7 +2,7 @@ CVS HELP
 
 File:		cvs.help
 Author:		Bob Walton (walton@deas.harvard.edu)
-Date:		Sat Jun 28 04:25:10 EDT 2003
+Date:		Tue Mar 24 07:58:32 EDT 2009
 
 Purpose: CVS implements a system for storing past and
 present versions of a file "foo" in another file
@@ -16,8 +16,8 @@ repository, or from any remote system that can log into
 such an account using rlogin or ssh.  CVS is standardly
 installed in modern UNIX systems, and it is possible to
 install CVS under other operating systems.  The web site
-for CVS is www.cvshome.org, and this has free downloads
-for common operating systems.
+for CVS is http://cvs.nongnu.org/, and this has free
+downloads for common operating systems.
 
 CVS is very useful for a single person who works on
 several different computers that do not have a shared
