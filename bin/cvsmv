@@ -1,10 +1,10 @@
-#! /bin/csh -fe
+#!/bin/sh
 #
-# Move (rename) a CVS ,v repository file.
+# Move (rename) a copy of a CVS repository file.
 #
 # File:		cvsmv
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Fri Jul 11 11:21:03 EDT 2008
+# Date:		Wed Mar 25 02:38:44 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,38 +13,95 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2008/07/11 15:28:34 $
+#   $Date: 2009/03/25 07:30:52 $
 #   $RCSfile: cvsmv,v $
-#   $Revision: 1.3 $
+#   $Revision: 1.4 $
 
-switch ( "$1" )
+# Redirect all error output to the standard output.
+#
+exec 2>&1
 
-   case -doc*:
+case "$1" in
+-doc*)
+    echo '
+cvsmv file1 file2
 
-   	echo "\
-cvsmv file1 file2\
-\
-    First cvs commit file1, then move (rename) the CVS\
-    repository file file1,v to give it the name\
-    file2,v, and then cvs update file1 and file2 in the\
-    current directory, effectively copying file1 to\
-    file2 and also removing file1 in the current\
-    directory.  End by setting the user write mode bit\
-    on file2.\
-"
-    	exit 1
-	breaksw
-endsw
+    First commit file1 and then move (rename) it to 
+    file2.  Lastly make file2 user writable if file1 was
+    writable before it was committed.
+
+    More specifically, after file1 is committed then
+    the CVS repository file1,v is moved to the CVS
+    repository file2,v.  After the move a cvs update is
+    performed on both file1 and file2, which removes
+    file1 and makes a local copy of file2.  Lastly
+    this copy is made user writable if file1 was
+    writable before it was committed.'
+    exit 1
+    ;;
+esac
+
+if [ ! -f "$1" ]
+then
+    echo "ERROR $1 is NOT an ordinary file"
+    exit 2
+elif [ -e "$2" ]
+then
+    echo "ERROR $2 already exists"
+    exit 2
+elif [ ! -d "`dirname "$1"`/CVS ]
+then
+    echo "ERROR $1 is NOT in a CVS directory"
+    exit 2
+elif [ ! -d "`dirname "$2"`/CVS ]
+then
+    echo "ERROR $2 is NOT in a CVS directory"
+    exit 2
+fi
+
+w=no
+if [ -w "$1" ]
+then
+    w=yes
+fi
 
 echo cvs commit -m update "$1"
 cvs commit -m update "$1"
-set root=`cat CVS/Root`
-set account=`expr "$root" : '\([^:]*\):' `
-set root=`expr "$root" : '[^:]*:\(.*\)$' `
-set repository="$root/`cat CVS/Repository`"
-echo ssh "$account" mv "$repository/$1,v" "$repository/$2,v"
-ssh "$account" mv "$repository/$1,v" "$repository/$2,v"
+
+root="`cat CVS/Root`"
+repository="`cat CVS/Repository`"
+case "$root" in
+*:*)
+    account="`expr "$root" : '\([^:]*\):' `"
+    root="`expr "$root" : '[^:]*:\(.*\)$' `"
+    dir="$root/$repository"
+    echo ssh "$account" mv "$dir/$1,v" "$dir/$2,v"
+    if ! ssh "$account" mv "$dir/$1,v" "$dir/$2,v"
+    then
+    	echo "ERROR: move inside repository failed"
+    	exit 2
+    fi
+    ;;
+/*)
+    dir="$root/$repository"
+    echo mv "$dir/$1,v" "$dir/$2,v"
+    if ! mv "$dir/$1,v" "$dir/$2,v"
+    then
+    	echo "ERROR: move inside repository failed"
+    	exit 2
+    fi
+    ;;
+*)
+    echo "ERROR: bad CVS/Root value: $root"
+    exit 2
+    ;;
+esac
+
 echo cvs update "$1" "$2"
 cvs update "$1" "$2"
-echo chmod u+w "$2"
-chmod u+w "$2"
+
+if [ w = yes ]
+then
+    echo chmod u+w "$2"
+    chmod u+w "$2"
+fi

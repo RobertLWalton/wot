@@ -13,9 +13,13 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/24 14:12:33 $
+#   $Date: 2009/03/25 07:30:52 $
 #   $RCSfile: cvsout,v $
-#   $Revision: 1.3 $
+#   $Revision: 1.4 $
+
+# Redirect all error output to the standard output.
+#
+exec 2>&1
 
 n=no
 e=no
