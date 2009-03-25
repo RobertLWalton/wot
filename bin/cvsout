@@ -4,7 +4,7 @@
 #
 # File:		cvsout
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Tue Mar 24 08:38:10 EDT 2009
+# Date:		Wed Mar 25 13:11:58 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/25 07:30:52 $
+#   $Date: 2009/03/25 18:05:14 $
 #   $RCSfile: cvsout,v $
-#   $Revision: 1.4 $
+#   $Revision: 1.5 $
 
 # Redirect all error output to the standard output.
 #
@@ -30,7 +30,10 @@ case "$1" in
     echo '
 cvsout [-n|-e|-ne|-en] repository directory
 
-    Checkout a directory from a repository.
+    Checkout a directory from a repository, in the case
+    that the local copy of this directory will NOT
+    itself be inside a local directory that has been
+    checked out.
 
     The repository argument is of the form
 
@@ -40,6 +43,9 @@ cvsout [-n|-e|-ne|-en] repository directory
     host on which the account resides, and DDD is the
     ABSOLUTE pathname of the root directory holding the
     repository within the account AAA@HHH.
+
+    If DDD is in the current account, `AAA@HHH:'"'"'
+    should be omitted.
     
     Then `directory'"'"' is both the name of the subdir-
     ctory of DDD being checked out, relative to DDD, and
@@ -47,9 +53,6 @@ cvsout [-n|-e|-ne|-en] repository directory
     tory, relative to the current directory.  AFTER
     checkout you can rename the local checked out copy
     directory if you like.
-
-    If DDD is in the current account, `AAA@HHH:'"'"'
-    should be omitted.
 
     All the contents of a directory being checked out
     will be checked out, recursively.
@@ -140,6 +143,12 @@ elif [ $e = yes -a ! -d "$directory" ]
 then
     echo "ERROR: local directory does not exist" \
          "but -e option given: $directory"
+    exit 2
+elif [ -d "`dirname "$directory"`/CVS" ]
+then
+    echo "ERROR: $directory is inside a local CVS" \
+         "directory"
+    echo "       maybe you should use cvsup instead"
     exit 2
 fi
 

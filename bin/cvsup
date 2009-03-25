@@ -4,7 +4,7 @@
 #
 # File:		cvsup
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Wed Mar 25 03:39:31 EDT 2009
+# Date:		Wed Mar 25 13:37:05 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/25 12:03:31 $
+#   $Date: 2009/03/25 18:05:14 $
 #   $RCSfile: cvsup,v $
-#   $Revision: 1.4 $
+#   $Revision: 1.5 $
 
 case "$1" in
 
@@ -23,14 +23,15 @@ case "$1" in
     echo '
 cvsup [file-or-directory ...]
 
-    Update the listed files and directories (and sub-
-    directories of these directories), or if no file or
-    directories are listed, update all the files and
-    subdirectories of the current directory, by checking
-    out the files from the repository so as to create
-    local copies of these files where no local copies
-    exist and patch (update) local copies where the
-    local copies are older than the repository versions.
+    Update the given files and directories (and all
+    files and subdirectories in these directories), or
+    if none given, update all the files and subdirec-
+    tories of the current directory, by checking out the
+    latest versions of the files from the repository so
+    as to create local copies of these files where no
+    local copies exist and patch (update) local copies
+    where the local copies are older than the repository
+    versions.
 
     Ignores files whose local copies are the same as
     their repository versions.  If the local file
@@ -44,20 +45,31 @@ cvsup [file-or-directory ...]
 
     Some of the possible printed messages are:
 
-    ? filename	File is not known to CVS.
+    ? filename	Local file is not known to CVS.  If you
+    		want files in the current directory to
+		be invisible to CVS, make a ./.cvsignore
+		file each line of which is an pattern
+		(as per sh(1)); and check in that file.
+		The file names matched by a ./.cvsignore
+		pattern will be ignored by CVS and not
+		listed in lines like this.
+
     U filename	Local file did not exist and has been
     		copied from the repository.
+
     P filename	Local file has NOT been modified since
     		it was checked out, but a more recent
 		version has since been checked into
 		the repository (by someone else).  The
 		local file is patched so it is now the
 		same as the most recent repository file.
+
     M filename	Local file has been modified since it
     		was checked out, and the version of the
 		local file that was checked out is still
 		the latest version in the repository.
 		The local file is not altered.
+
     C filename	Local file is a modification of a repo-
     		sitory version of the file that is NOT
 		the most recent version of the file in
@@ -78,6 +90,7 @@ cvsup [file-or-directory ...]
     A filename	File has been `cvsadd'"'"'ed but not yet
     		been `cvscom'"'"'mited to the reposi-
 		tory.
+
     R filename	File has been `cvs remove'"'"'d but
     		this remove has not yet been commited
 		to the repository.  If you use

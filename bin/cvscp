@@ -4,7 +4,7 @@
 #
 # File:		cvscp
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Wed Mar 25 02:33:27 EDT 2009
+# Date:		Wed Mar 25 11:40:33 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/25 07:30:52 $
+#   $Date: 2009/03/25 18:05:14 $
 #   $RCSfile: cvscp,v $
-#   $Revision: 1.4 $
+#   $Revision: 1.5 $
 
 # Redirect all error output to the standard output.
 #
@@ -26,16 +26,16 @@ case "$1" in
     echo '
 cvscp file1 file2
 
-    First commit file1 and then make a copy of it
-    named file2 that has the same revision history as
-    file1.  Lastly make file2 user writable if file1 was
-    writable before it was committed.
+    First commit (as per cvscom) file1 and then make a
+    copy of it named file2 that has the same revision
+    history as file1.  Lastly make file2 user writable
+    if file1 was writable before it was committed.
 
     More specifically, after file1 is committed then
     the CVS repository file1,v is copied to the CVS
     repository file2,v.  After the copy a cvs update is
     performed on file2 to make a local copy.  Lastly
-    this copy is made user writable if file1 was
+    this local copy is made user writable if file1 was
     writable before it was committed.'
     exit 1
     ;;

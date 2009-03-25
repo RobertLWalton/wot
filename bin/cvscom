@@ -4,7 +4,7 @@
 #
 # File:		cvscom
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Wed Mar 25 08:19:34 EDT 2009
+# Date:		Wed Mar 25 12:59:34 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/25 12:20:42 $
+#   $Date: 2009/03/25 18:05:14 $
 #   $RCSfile: cvscom,v $
-#   $Revision: 1.5 $
+#   $Revision: 1.6 $
 
 # Redirect all error output to the standard output.
 #
@@ -28,8 +28,9 @@ cvscom [file_or_directory ...]
 
     Commit (check in) all the listed files and director-
     ies, or if none given, all the files in the current
-    directory and its subdirectories.  Files already
-    checked in are ignored.'
+    directory and its subdirectories.  Files that have
+    not been modified since they were last checked out
+    (by cvsup) or in (by cvscom) are ignored.'
     exit 1
     ;;
 esac
