@@ -1,0 +1,129 @@
+#!/bin/sh
+#
+# Remove files from a CVS repository.
+#
+# File:		cvsrm
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Thu Mar 26 12:25:10 EDT 2009
+#
+# The authors have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+#
+# RCS Info (may not be true date or author):
+#
+#   $Author: walton $
+#   $Date: 2009/03/26 19:58:33 $
+#   $RCSfile: cvsexpunge,v $
+#   $Revision: 1.1 $
+
+# Redirect all error output to the standard output.
+#
+exec 2>&1
+
+f=no
+case "$1" in
+-doc*)
+    echo '
+cvsrm [-f] file ...
+
+    Remove files from both the local directories and the
+    repository.  Once removed, these files CANNOT be re-
+    covered.  A local copy of a file must exist in order
+    to remove the file from the repository.
+
+    More specifically, each file is removed both from
+    the repository and local directory, and then `cvs
+    update file'"'"' is executed to remove local CVS
+    records of the file.
+
+    Without the -f option, the user is asked to approve
+    each file removal.'
+    exit 1
+    ;;
+-f)
+    f=yes
+    shift
+    ;;
+esac
+
+for file in "$@"
+do
+    fdir="`dirname "$file"`"
+    fbase="`basename "$file"`"
+    if [ ! -f "$file" ]
+    then
+	echo "ERROR $file is NOT an ordinary file;" \
+	     "skipping"
+	continue
+    elif [ ! -d "$fdir/CVS" ]
+    then
+	echo "ERROR $file is NOT in a CVS controlled" \
+	     "directory; skipping"
+	continue
+    elif ! (cd $fdir; \
+            cvs log $fbase >/dev/null 2>/dev/null)
+    then
+	echo "ERROR: $file is not in repository;" \
+	     "skipping"
+	continue
+    fi
+
+    if [ $f = no ]
+    then
+    	echo -n "remove $file (y or n)? "
+	if ! read || [ "$REPLY" != y ]
+	then
+	    continue
+	fi
+    fi
+
+    root="`cat "$fdir/CVS/Root"`"
+    repository="`cat "$fdir/CVS/Repository"`"
+    case "$root" in
+    *:*)
+	account="`expr "$root" : '\([^:]*\):' `"
+	root="`expr "$root" : '[^:]*:\(.*\)$' `"
+	rdir="$root/$repository"
+	case "$root" in
+	/*) ;;
+	*)  echo "ERROR: bad $file CVS/Root value" \
+	         "$root; skipping"
+	    continue
+	    ;;
+	esac
+	if ! ssh "$account" test -f "$rdir/$fbase,v"
+	then
+	    ## Added but not committed
+	    echo "(cd $fdir; cvs remove -f $fbase)"
+	    (cd $fdir; cvs remove -f $fbase)
+	else
+	    echo ssh "$account" rm -f "$rdir/$fbase,v"
+	    ssh "$account" rm -f "$rdir/$fbase,v"
+	    rm -f $file
+	    echo "(cd $fdir; cvs update $fbase)"
+	    (cd $fdir; cvs update $fbase)
+	fi
+	;;
+    /*)
+	rdir="$root/$repository"
+	if [ ! -f "$rdir/$fbase,v" ]
+	then
+	    ## Added but not committed.
+	    echo "(cd $fdir; cvs remove -f $fbase)"
+	    (cd $fdir; cvs remove -f $fbase)
+	else
+	    rm -f "$rdir/$fbase,v"
+	    rm -f $file
+	    echo "(cd $fdir; cvs update $fbase)"
+	    (cd $fdir; cvs update $fbase)
+	fi
+	;;
+    *)
+	echo "ERROR: bad $file CVS/Root value $root;" \
+	     "skipping"
+	continue
+	;;
+    esac
+
+done
