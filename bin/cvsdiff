@@ -4,7 +4,7 @@
 #
 # File:		cvsdiff
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Wed Mar 25 11:46:41 EDT 2009
+# Date:		Thu Mar 26 11:02:27 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/25 18:05:14 $
+#   $Date: 2009/03/26 15:06:46 $
 #   $RCSfile: cvsdiff,v $
-#   $Revision: 1.4 $
+#   $Revision: 1.5 $
 
 # Redirect all error output to the standard output.
 #
@@ -31,12 +31,20 @@ cvsdiff [options] [file_or_directory ...]
     the given files and all files and subdirectories in
     each given directory, or if none given, of all the
     files and subdirectories in the current directory.
+
+    Note that it is common to use `cvsdiff | less'"'"',
+    as all cvs standard error output is piped by cvsdiff
+    to the standard output, so it is unnecessary to do
+    anything special with the standard error output.
+
     Some options are:
 
     -rX.Y	Diff with repository version X.Y instead
     		of with the last version YOU checked
 		out or in.  Use cvslog to see list of
-		committed versions and their dates.
+		committed versions and their dates for
+		particular files (each file is differ-
+		ent).
 
     -rHEAD	Diff with the last version checked in
     		by anyone, i.e., the latest version in
@@ -45,10 +53,6 @@ cvsdiff [options] [file_or_directory ...]
 
     -rT		Diff with the repository version that
     		was given tag T (see cvstag).
-
-    -l		With no files given, diff only the files
-    		in the current directory and ignore its
-		subdirectories (suppress recursion).
 
     diff(1)	You can use standard diff(1) options,
     option	such as -b, -w, --minimal.'

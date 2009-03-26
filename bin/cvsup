@@ -4,7 +4,7 @@
 #
 # File:		cvsup
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Wed Mar 25 13:37:05 EDT 2009
+# Date:		Thu Mar 26 11:02:40 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/25 18:05:14 $
+#   $Date: 2009/03/26 15:06:46 $
 #   $RCSfile: cvsup,v $
-#   $Revision: 1.5 $
+#   $Revision: 1.6 $
 
 case "$1" in
 
@@ -33,15 +33,15 @@ cvsup [file-or-directory ...]
     where the local copies are older than the repository
     versions.
 
-    Ignores files whose local copies are the same as
-    their repository versions.  If the local file
-    exists and has been modified since it was checked
-    out, announces this and takes appropriate action:
-    see the M and C flags below.
+    Ignores files whose local copy is an unmodified copy
+    of the latest version of the file in the repository.
+    If the local file has been modified since it was
+    checked out, cvsup announces this and takes
+    appropriate action: see the M and C flags below.
 
     The `cvsutd'"'"' command can be used to print out
-    the same thing without actually changing any files
-    or directories.
+    the same thing as cvsup but without actually chang-
+    ing any files or directories.
 
     Some of the possible printed messages are:
 
