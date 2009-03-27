@@ -1,0 +1,47 @@
+#!/bin/sh
+#
+# Get information about files.
+#
+# File:		cvslog
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Fri Mar 27 08:57:08 EDT 2009
+#
+# The authors have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+#
+# RCS Info (may not be true date or author):
+#
+#   $Author: walton $
+#   $Date: 2009/03/27 13:16:29 $
+#   $RCSfile: cvslog,v $
+#   $Revision: 1.1 $
+
+# Redirect all error output to the standard output.
+#
+exec 2>&1
+
+case "$1" in
+-doc*)
+    echo '
+cvslog [-h] [file_or_directory ...]
+
+    Get information about the given files and files in
+    the given directories, or if none given, all the
+    files in the current directory and its subdirector-
+    ies.  The -h option gives just the information
+    header for each file, and does not give information
+    (like the date) of each particular revision.'
+    exit 1
+    ;;
+esac
+
+ignored=''
+ignored="$ignored"'|branch:'
+ignored="$ignored"'|locks: strict'
+ignored="$ignored"'|access list:'
+ignored="$ignored"'|symbolic names:'
+ignored="$ignored"'|keyword substitution: kv'
+ignored="$ignored"'|description:'
+ignored="$ignored"'|update'
+cvs log "$@" 2>&1 | egrep -v '^('"$ignored"')$'
