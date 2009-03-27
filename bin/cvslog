@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/27 13:16:29 $
+#   $Date: 2009/03/27 13:56:23 $
 #   $RCSfile: cvslog,v $
-#   $Revision: 1.1 $
+#   $Revision: 1.2 $
 
 # Redirect all error output to the standard output.
 #
@@ -44,4 +44,6 @@ ignored="$ignored"'|symbolic names:'
 ignored="$ignored"'|keyword substitution: kv'
 ignored="$ignored"'|description:'
 ignored="$ignored"'|update'
-cvs log "$@" 2>&1 | egrep -v '^('"$ignored"')$'
+cvs log "$@" 2>&1 | egrep -v '^('"$ignored"')$' \
+    | sed -e '/^RCS file: .*\/Attic\/[^\/]*,v$/a\
+THIS FILE HAS BEEN REMOVED TO THE ATTIC'

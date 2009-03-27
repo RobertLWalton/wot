@@ -4,7 +4,7 @@
 #
 # File:		cvsrm
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Thu Mar 26 12:25:10 EDT 2009
+# Date:		Fri Mar 27 06:41:59 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/26 19:58:33 $
+#   $Date: 2009/03/27 13:56:23 $
 #   $RCSfile: cvsexpunge,v $
-#   $Revision: 1.1 $
+#   $Revision: 1.2 $
 
 # Redirect all error output to the standard output.
 #
@@ -38,7 +38,13 @@ cvsrm [-f] file ...
     records of the file.
 
     Without the -f option, the user is asked to approve
-    each file removal.'
+    each file removal.
+
+    Cvsrm does not require that the current directory
+    be under CVS control or that given files be in the
+    same repository.  Directories cannot be removed by
+    cvsrm.'
+
     exit 1
     ;;
 -f)
@@ -49,25 +55,53 @@ esac
 
 for file in "$@"
 do
-    fdir="`dirname "$file"`"
-    fbase="`basename "$file"`"
+    dir="`dirname "$file"`"
+    base="`basename "$file"`"
     if [ ! -f "$file" ]
     then
 	echo "ERROR $file is NOT an ordinary file;" \
 	     "skipping"
 	continue
-    elif [ ! -d "$fdir/CVS" ]
+    elif [ ! -d "$dir/CVS" ]
     then
-	echo "ERROR $file is NOT in a CVS controlled" \
+	echo "ERROR $dir is NOT a CVS controlled" \
 	     "directory; skipping"
 	continue
-    elif ! (cd $fdir; \
-            cvs log $fbase >/dev/null 2>/dev/null)
+    elif ! (cd "$dir"; \
+            cvs log "$base" >/dev/null 2>/dev/null)
     then
 	echo "ERROR: $file is not in repository;" \
 	     "skipping"
 	continue
     fi
+
+    root="`cat "$dir/CVS/Root"`"
+    repository="`cat "$dir/CVS/Repository"`"
+    rdir="$root"
+    raccount=
+    case "$root" in
+    *:*)
+	raccount="`expr "$root" : '\([^:]*\):' `"
+	rdir="`expr "$root" : '[^:]*:\(.*\)$' `"
+	;;
+    esac
+    rdir="$rdir/$repository"
+    case "$raccount" in
+    *@*)
+	;;
+    *)
+	echo "ERROR: bad $dir/CVS/Root: $root"
+	exit 2
+	;;
+    esac
+    case "$rdir" in
+    /*)
+	;;
+    *)
+	echo "ERROR: bad $dir/CVS/Root: $root"
+	exit 2
+	;;
+    esac
 
     if [ $f = no ]
     then
@@ -78,51 +112,56 @@ do
 	fi
     fi
 
-    root="`cat "$fdir/CVS/Root"`"
-    repository="`cat "$fdir/CVS/Repository"`"
-    case "$root" in
-    *:*)
-	account="`expr "$root" : '\([^:]*\):' `"
-	root="`expr "$root" : '[^:]*:\(.*\)$' `"
-	rdir="$root/$repository"
-	case "$root" in
-	/*) ;;
-	*)  echo "ERROR: bad $file CVS/Root value" \
-	         "$root; skipping"
-	    continue
-	    ;;
-	esac
-	if ! ssh "$account" test -f "$rdir/$fbase,v"
+    case "$raccount" in
+    "")
+	if [ -f "$rdir/$base,v" ]
 	then
-	    ## Added but not committed
-	    echo "(cd $fdir; cvs remove -f $fbase)"
-	    (cd $fdir; cvs remove -f $fbase)
+	    echo rm -f "$rdir/$base,v"
+	    rm -f "$rdir/$base,v"
+	    echo rm -f "$file"
+	    rm -f "$file"
+	    echo "(cd $dir; cvs update $base)"
+	    (cd "$dir"; cvs update "$base")
+	elif [ -f "$rdir/Attic/$base,v" ]
+	then
+	    ## in the Attic
+	    echo rm -f "$rdir/Attic/$base,v"
+	    rm -f "$rdir/Attic/$base,v"
+	    echo rm -f "$file"
+	    rm -f "$file"
+	    echo "(cd $dir; cvs update $base)"
+	    (cd "$dir"; cvs update "$base")
 	else
-	    echo ssh "$account" rm -f "$rdir/$fbase,v"
-	    ssh "$account" rm -f "$rdir/$fbase,v"
-	    rm -f $file
-	    echo "(cd $fdir; cvs update $fbase)"
-	    (cd $fdir; cvs update $fbase)
-	fi
-	;;
-    /*)
-	rdir="$root/$repository"
-	if [ ! -f "$rdir/$fbase,v" ]
-	then
 	    ## Added but not committed.
-	    echo "(cd $fdir; cvs remove -f $fbase)"
-	    (cd $fdir; cvs remove -f $fbase)
-	else
-	    rm -f "$rdir/$fbase,v"
-	    rm -f $file
-	    echo "(cd $fdir; cvs update $fbase)"
-	    (cd $fdir; cvs update $fbase)
+	    echo "(cd $dir; cvs remove -f $base)"
+	    (cd $dir; cvs remove -f $base)
 	fi
 	;;
     *)
-	echo "ERROR: bad $file CVS/Root value $root;" \
-	     "skipping"
-	continue
+	if ssh "$raccount" test -f "$rdir/$base,v"
+	then
+	    echo ssh "$raccount" rm -f "$rdir/$base,v"
+	    ssh "$raccount" rm -f "$rdir/$base,v"
+	    echo rm -f "$file"
+	    rm -f "$file"
+	    echo "(cd $dir; cvs update $base)"
+	    (cd "$dir"; cvs update "$base")
+	elif ssh "$raccount" test -f \
+	         "$rdir/Attic/$base,v"
+	then
+	    ## in the Attic
+	    echo ssh "$raccount" \
+	         rm -f "$rdir/Attic/$base,v"
+	    ssh "$raccount" rm -f "$rdir/Attic/$base,v"
+	    echo rm -f "$file"
+	    rm -f "$file"
+	    echo "(cd $dir; cvs update $base)"
+	    (cd "$dir"; cvs update "$base")
+	else
+	    ## Added but not committed
+	    echo "(cd $dir; cvs remove -f $base)"
+	    (cd $dir; cvs remove -f $base)
+	fi
 	;;
     esac
 

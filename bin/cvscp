@@ -4,7 +4,7 @@
 #
 # File:		cvscp
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Wed Mar 25 11:40:33 EDT 2009
+# Date:		Fri Mar 27 06:42:13 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/25 18:05:14 $
+#   $Date: 2009/03/27 13:56:23 $
 #   $RCSfile: cvscp,v $
-#   $Revision: 1.5 $
+#   $Revision: 1.6 $
 
 # Redirect all error output to the standard output.
 #
@@ -36,10 +36,20 @@ cvscp file1 file2
     repository file2,v.  After the copy a cvs update is
     performed on file2 to make a local copy.  Lastly
     this local copy is made user writable if file1 was
-    writable before it was committed.'
+    writable before it was committed.
+
+    For cvscp the current directory need not be under
+    CVS control and the two files may be in different
+    CVS repositories as long as both are in the same
+    account.'
     exit 1
     ;;
 esac
+
+dir1="`dirname "$1"`"
+base1="`basename "$1"`"
+dir2="`dirname "$2"`"
+base2="`basename "$2"`"
 
 if [ ! -f "$1" ]
 then
@@ -49,13 +59,13 @@ elif [ -e "$2" ]
 then
     echo "ERROR $2 already exists"
     exit 2
-elif [ ! -d "`dirname "$1"`/CVS ]
+elif [ ! -d "$dir1/CVS" ]
 then
-    echo "ERROR $1 is NOT in a CVS directory"
+    echo "ERROR $dir1 is NOT under CVS control"
     exit 2
-elif [ ! -d "`dirname "$2"`/CVS ]
+elif [ ! -d "$dir2/CVS" ]
 then
-    echo "ERROR $2 is NOT in a CVS directory"
+    echo "ERROR $dir2 is NOT under CVS control"
     exit 2
 fi
 
@@ -65,40 +75,96 @@ then
     w=yes
 fi
 
-echo cvs commit -m update "$1"
-cvs commit -m update "$1"
+echo "(cd $dir1; cvs commit -m update $base1)"
+(cd "$dir1"; cvs commit -m update "$base1")
 
-root="`cat CVS/Root`"
-repository="`cat CVS/Repository`"
-case "$root" in
+root1="`cat "$dir1/CVS/Root"`"
+repository1="`cat "$dir1/CVS/Repository"`"
+rdir1="$root1"
+raccount1=
+case "$root1" in
 *:*)
-    account="`expr "$root" : '\([^:]*\):' `"
-    root="`expr "$root" : '[^:]*:\(.*\)$' `"
-    dir="$root/$repository"
-    echo ssh "$account" cp -p "$dir/$1,v" "$dir/$2,v"
-    if ! ssh "$account" cp -p "$dir/$1,v" "$dir/$2,v"
-    then
-    	echo "ERROR: copy inside repository failed"
-    	exit 2
-    fi
+    raccount1="`expr "$root1" : '\([^:]*\):' `"
+    rdir1="`expr "$root1" : '[^:]*:\(.*\)$' `"
     ;;
+esac
+rdir1="$rdir1/$repository1"
+case "$raccount1" in
+*@*)
+    ;;
+*)
+    echo "ERROR: bad $dir1/CVS/Root: $root1"
+    exit 2
+    ;;
+esac
+case "$rdir1" in
 /*)
-    dir="$root/$repository"
-    echo cp -p "$dir/$1,v" "$dir/$2,v"
-    if ! cp -p "$dir/$1,v" "$dir/$2,v"
+    ;;
+*)
+    echo "ERROR: bad $dir1/CVS/Root: $root1"
+    exit 2
+    ;;
+esac
+
+root2="`cat "$dir2/CVS/Root"`"
+repository2="`cat "$dir2/CVS/Repository"`"
+rdir2="$root2"
+raccount2=
+case "$root2" in
+*:*)
+    raccount2="`expr "$root2" : '\([^:]*\):' `"
+    rdir2="`expr "$root2" : '[^:]*:\(.*\)$' `"
+    ;;
+esac
+rdir2="$rdir2/$repository2"
+case "$raccount2" in
+*@*)
+    ;;
+*)
+    echo "ERROR: bad $dir2/CVS/Root: $root2"
+    exit 2
+    ;;
+esac
+case "$rdir2" in
+/*)
+    ;;
+*)
+    echo "ERROR: bad $dir2/CVS/Root: $root2"
+    exit 2
+    ;;
+esac
+
+if [ "$raccount1" != "$raccount2" ]
+then
+    echo "ERROR: $dir1/CVS/Root account ($raccount1)" \
+         "!= $dir2/CVS/Root account ($raccount2)"
+    exit 2
+fi
+
+
+rfile1="$rdir1/$base1,v"
+rfile2="$rdir2/$base2,v"
+case "$raccount1" in
+"")
+    echo cp -p "$rfile1" "$rfile1"
+    if ! cp -p "$rfile1" "$rfile1"
     then
     	echo "ERROR: copy inside repository failed"
     	exit 2
     fi
     ;;
 *)
-    echo "ERROR: bad CVS/Root value: $root"
-    exit 2
+    echo ssh "$raccount1" cp -p "$rfile1" "$rfile2"
+    if ! ssh "$raccount1" cp -p "$rfile1" "$rfile2"
+    then
+    	echo "ERROR: copy inside repository failed"
+    	exit 2
+    fi
     ;;
 esac
 
-echo cvs update "$2"
-cvs update "$2"
+echo "(cd $dir2; cvs update $base2)"
+(cd "$dir2"; cvs update "$base2")
 
 if [ w = yes ]
 then
