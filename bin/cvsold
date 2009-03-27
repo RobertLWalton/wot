@@ -1,0 +1,42 @@
+#/bin/sh
+#
+# Get an old revision of a file.
+#
+# File:		cvsold
+# Author:	Bob Walton <walton@deas.harvard.edu>
+# Date:		Fri Mar 27 11:22:08 EDT 2009
+#
+# The authors have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+#
+# RCS Info (may not be true date or author):
+#
+#   $Author: walton $
+#   $Date: 2009/03/27 15:29:12 $
+#   $RCSfile: cvsold,v $
+#   $Revision: 1.1 $
+
+case "$1" in
+
+-doc*)
+    echo '
+cvsold rX.Y file
+
+    Get revision rX.Y of the file and save it in
+    file.rX.Y.  This can be used to get old revisions
+    of files for examination.'
+    	exit 1
+	;;
+esac
+
+case "$1" in
+r*) ;;
+*)  echo "ERROR: bad revision format: $1"
+    exit 2
+    ;;
+esac
+
+rm -f "$2.$1"
+cvs update "-$1" "$2" > "$2.$1"
+echo "$2.$1 created"
