@@ -1,4 +1,45 @@
 #!/bin/sh
+#
+# Make files writable by the current user.
+#
+# File:		mine
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Sun Mar 29 17:01:00 EDT 2009
+#
+# The authors have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+#
+# RCS Info (may not be true date or author):
+#
+#   $Author: walton $
+#   $Date: 2009/03/29 21:08:33 $
+#   $RCSfile: mine,v $
+#   $Revision: 1.4 $
+
+# Redirect all error output to the standard output.
+#
+exec 2>&1
+
+f=no
+case "$1" in
+-doc*)
+    echo '
+mine [-f] file ...
+
+    Make the files writable by the current user.  It is
+    an error if the files are symbolic links, or if the
+    files are not owned by the current user.
+
+    However with the -f option files not owned by the
+    current user are replaced by files that are owned
+    by the current user.'
+    exit 1
+    ;;
+-f)
+    f=yes
+    shift
+esac
 
 for file in "$@"
 do
@@ -9,6 +50,9 @@ do
     then
         echo "chmod u+w $file"
 	chmod u+w "$file"
+    elif [ $f = no ]
+    then
+        echo "$file is not owned by the current user"
     else
         tmpfile="$file-mine-tmp-$$"
 	rm -f "$tmpfile"
