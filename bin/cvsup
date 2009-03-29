@@ -4,7 +4,7 @@
 #
 # File:		cvsup
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Thu Mar 26 11:02:40 EDT 2009
+# Date:		Sun Mar 29 16:11:44 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/26 15:06:46 $
+#   $Date: 2009/03/29 20:12:14 $
 #   $RCSfile: cvsup,v $
-#   $Revision: 1.6 $
+#   $Revision: 1.7 $
 
 case "$1" in
 
@@ -29,9 +29,8 @@ cvsup [file-or-directory ...]
     tories of the current directory, by checking out the
     latest versions of the files from the repository so
     as to create local copies of these files where no
-    local copies exist and patch (update) local copies
-    where the local copies are older than the repository
-    versions.
+    local copies exist and patch (update) existing local
+    copies that are older than the repository versions.
 
     Ignores files whose local copy is an unmodified copy
     of the latest version of the file in the repository.
@@ -47,22 +46,20 @@ cvsup [file-or-directory ...]
 
     ? filename	Local file is not known to CVS.  If you
     		want files in the current directory to
-		be invisible to CVS, make a ./.cvsignore
-		file each line of which is an pattern
-		(as per sh(1)); and check in that file.
-		The file names matched by a ./.cvsignore
-		pattern will be ignored by CVS and not
-		listed in lines like this.
+		be invisible to CVS so they are not
+		listed in lines like these, use
+		cvsignore.
 
     U filename	Local file did not exist and has been
     		copied from the repository.
 
-    P filename	Local file has NOT been modified since
-    		it was checked out, but a more recent
-		version has since been checked into
-		the repository (by someone else).  The
-		local file is patched so it is now the
-		same as the most recent repository file.
+    P filename	Existing local file has NOT been modi-
+    		fied since it was checked out, but a
+		more recent version has since been
+		checked into the repository (by someone
+		else).  The local file is patched so it
+		is now the same as the most recent repo-
+		sitory file.
 
     M filename	Local file has been modified since it
     		was checked out, and the version of the
@@ -84,8 +81,9 @@ cvsup [file-or-directory ...]
 
 		BEWARE: even non-overlapping changes
 		may conflict and cause the file to be
-		defective.  Use `cvsdiff'"'"' to exa-
-		mine changes from previous versions.
+		defective.  Use `cvsdiff -rHEAD'"'"' to
+		examine changes from the lastest repo-
+		sitory version.
 
     A filename	File has been `cvsadd'"'"'ed but not yet
     		been `cvscom'"'"'mited to the reposi-
