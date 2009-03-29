@@ -1,3 +1,48 @@
 #!/bin/sh
+#
+# Put files in a CVS repository in the Attic.
+#
+# File:		cvsattic
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Fri Mar 27 06:41:59 EDT 2009
+#
+# The authors have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+#
+# RCS Info (may not be true date or author):
+#
+#   $Author: walton $
+#   $Date: 2009/03/29 11:26:26 $
+#   $RCSfile: cvsrm,v $
+#   $Revision: 1.2 $
+
+# Redirect all error output to the standard output.
+#
+exec 2>&1
+
+f=no
+case "$1" in
+-doc*)
+    echo '
+cvsattic file ...
+
+    Put files in a CVS repository in the Attic.  Once
+    there, these files are as if they are removed,
+    except that versions of them may be obtained via
+    cvsold, they will continue to be listed by cvslog,
+    and versions can continue to be obtained via cvsout
+    with an -rTAG option.  This is useful if the files
+    are part of some previously tagged version of a
+    project, but if not, then perhaps the files should
+    be completely expunged from the repository by cvsrm
+    instead of being put in the Attic.'
+
+    exit 1
+    ;;
+esac
+
+echo cvs remove -f "$@"
 cvs remove -f "$@"
+echo cvs commit -m update "$@"
 cvs commit -m update "$@"
