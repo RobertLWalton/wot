@@ -4,7 +4,7 @@
 #
 # File:		cvsold
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Fri Mar 27 11:22:08 EDT 2009
+# Date:		Sun Mar 29 08:30:13 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,19 +13,21 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/27 15:29:12 $
+#   $Date: 2009/03/29 15:30:25 $
 #   $RCSfile: cvsold,v $
-#   $Revision: 1.1 $
+#   $Revision: 1.2 $
 
 case "$1" in
 
 -doc*)
     echo '
-cvsold rX.Y file
+cvsold [rX.Y|rT] file
 
-    Get revision rX.Y of the file and save it in
-    file.rX.Y.  This can be used to get old revisions
-    of files for examination.'
+    Get revision rX.Y or rT (where T is a tag) of the
+    file and save it in file.rX.Y (or file.rT).  This
+    can be used to get old revisions of files for
+    examination.  You should NOT attempt to modify
+    these old revisions.'
     	exit 1
 	;;
 esac
@@ -39,4 +41,5 @@ esac
 
 rm -f "$2.$1"
 cvs update "-$1" "$2" > "$2.$1"
-echo "$2.$1 created"
+echo chmod a-w "$2.$1"
+chmod a-w "$2.$1"

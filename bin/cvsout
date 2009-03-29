@@ -4,7 +4,7 @@
 #
 # File:		cvsout
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Fri Mar 27 08:48:21 EDT 2009
+# Date:		Sun Mar 29 09:50:38 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/27 13:56:23 $
+#   $Date: 2009/03/29 15:30:25 $
 #   $RCSfile: cvsout,v $
-#   $Revision: 1.6 $
+#   $Revision: 1.7 $
 
 # Redirect all error output to the standard output.
 #
@@ -23,18 +23,18 @@ exec 2>&1
 
 n=no
 e=no
-P=-P
+r=
 case "$1" in
 
 -doc*)
 
     echo '
-cvsout [-n|-e|-ne|-en] repository directory
+cvsout [-n|-e|-ne|-en|-rT] repository directory
 
-    Checkout a directory from a repository, in the case
-    that the local copy of this directory will NOT
-    itself be inside a local directory that has been
-    checked out.
+    Checkout a project directory from a repository, in
+    the case that the local copy of this directory
+    will NOT itself be inside a local directory that
+    has been checked out.
 
     The repository argument is of the form
 
@@ -53,10 +53,16 @@ cvsout [-n|-e|-ne|-en] repository directory
     ALSO the name of the local checked out copy direc-
     tory, relative to the current directory.  AFTER
     checkout you can rename the local checked out copy
-    directory if you like.
+    directory if you like with mv(1).
 
     All the contents of a directory being checked out
     will be checked out, recursively.
+
+    The -rT option, if given, checks out the project
+    version that has tag T (see cvstag).  If this is
+    done, the checked out files should NOT be modified
+    and then checked back in (i.e., cvscom should NOT
+    be used on them).
 
     Normally `directory'"'"' must exist in the reposi-
     tory but must NOT exist locally, and it will be
@@ -65,7 +71,9 @@ cvsout [-n|-e|-ne|-en] repository directory
     If the -e option is given, the directory must pre-
     exist locally, but it also must NOT contain any
     contents with the same names as contents being
-    checked out.
+    checked out.  The pre-existing contents of the
+    existing directory are NOT entered into the reposi-
+    tory: use cvsadd to do this.
 
     If the -n option is given the directory must not
     exist in the repository, and will be created there.
@@ -74,21 +82,20 @@ cvsout [-n|-e|-ne|-en] repository directory
 
     The -ne or -en options combine the action of -e and
     -n and can be used to make an existing directory
-    into a repository directory.  The contents of the
-    existing directory are NOT entered into the
-    repository: use cvsadd to do this.
+    into a repository directory.
 
-    This command should NOT be used if the directory is
-    or will be a previously checked out directory or
-    inside a previously checked out directory.  In
-    that case use cvsdir instead.'
+    This command may not be used if the directory is
+    within a directory under CVS control.  To add a new
+    subdirectory of such a directory to the repository
+    use mkdir and cvsadd instead; to check out a subdi-
+    rectory of such a directory if the subdirectory is
+    already in the repository, use cvsup.'
 
     exit 1
     ;;
 -n)
     shift
     n=yes
-    P=
     ;;
 -e)
     shift
@@ -98,8 +105,10 @@ cvsout [-n|-e|-ne|-en] repository directory
     shift
     n=yes
     e=yes
-    P=
     ;;
+-r*)
+    r="$1"
+    shift
 esac
 
 if [ $# -ne 2 ]
@@ -123,8 +132,8 @@ case "$repository" in
     esac
     case "$root" in
     /?*)	aok=yes;;
-    *)	echo "ERROR: non-absolute root directory" \
-             "name: $root"
+    *)	echo "ERROR: non-absolute root directory:" \
+             "$root"
         exit 2;;
     esac
     ;;
@@ -132,7 +141,8 @@ case "$repository" in
     remote=no
     ;;
 *)
-    echo "ERROR: bad repository format: $repository"
+    echo "ERROR: non-absolute root directory:" \
+         "$repository"
     exit 2
     ;;
 esac
@@ -149,9 +159,15 @@ then
     exit 2
 elif [ -d "`dirname "$directory"`/CVS" ]
 then
-    echo "ERROR: $directory is inside a local CVS" \
-         "directory"
-    echo "       maybe you should use cvsup instead"
+    echo "ERROR: $directory is inside a local" \
+         "directory that is under CVS control"
+    if [ $n = yes ]
+    then
+	echo "       maybe you should use mkdir and" \
+	     "then cvsadd instead"
+    else
+	echo "       maybe you should use cvsup instead"
+    fi
     exit 2
 fi
 
@@ -162,19 +178,20 @@ then
     	echo mkdir "repository/$directory"
     	if ! mkdir "repository/$directory"
 	then
-	    echo "ERROR $repository/$directory" \
-	         "already exists"
+	    echo "ERROR during mkdir"
 	    exit 2
 	fi
     else
     	echo ssh "$account" mkdir "$root/$directory"
     	if ! ssh "$account" mkdir "$root/$directory"
 	then
-	    echo "ERROR $repository:$directory" \
-	         "already exists"
+	    echo "ERROR during mkdir"
 	    exit 2
 	fi
     fi
 fi
 
-cvs -d "$repository" checkout $P "$directory"
+echo cvs -d "$repository" checkout $r "$directory"
+cvs -d "$repository" checkout $r "$directory"
+echo "(cd $directory; cvs update -P)"
+(cd "$directory"; cvs update -P)
