@@ -1,0 +1,87 @@
+#!/bin/sh
+#
+# Make a file or set of files ignored by CVS.
+#
+# File:		cvsignore
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Sun Mar 29 15:06:48 EDT 2009
+#
+# The authors have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+#
+# RCS Info (may not be true date or author):
+#
+#   $Author: walton $
+#   $Date: 2009/03/29 19:26:44 $
+#   $RCSfile: cvsignore,v $
+#   $Revision: 1.1 $
+
+# Redirect all error output to the standard output.
+#
+exec 2>&1
+
+case "$1" in
+-doc*)
+    echo '
+cvsignore
+cvsignore file_or_pattern ...
+
+    Make the listed files ignored by CVS so they will
+    not appear in `? filename'"'"' lines when cvsutd
+    or cvscom is run.  Patterns with `*'"'"',' \
+    	'`?'"'"', and `[...]'"'"'
+    may also be given, but must be quoted.  The files
+    to be ignored must be in the current directory.
+
+    If no files or patterns are given, the current list
+    of ignored files and patterns is printed.
+
+    Specifically the listed files and patterns are added
+    as lines to the ./.cvsignore file and that file is
+    checked in.  You can also edit and cvscom this file
+    if you like to un-ignore files or adjust patterns.
+    Printing the currently ignored files and patterns is
+    equivalent to printing the ./.cvsignore file.'
+    exit 1
+    ;;
+esac
+
+if [ $# -eq 0 ]
+then
+    if [ -f .cvsignore ]
+    then
+        cat .cvsignore
+    else
+        echo "There are NO ignored files or patterns"
+    fi
+    exit 0
+fi
+
+if [ -f .cvsignore ]
+then
+    echo chmod u+w .cvsignore
+    chmod u+w .cvsignore
+else
+    echo echo -n '>' .cvsignore
+    echo -n > .cvsignore
+    echo cvs add .cvsignore
+    cvs add .cvsignore
+fi
+
+for name in "$@"
+do
+    case "$name" in
+    */*)
+        echo "ERROR: $name contains a slash (/):" \
+	     "skipped"
+	continue
+	;;
+    esac
+
+    echo echo '"'"$name"'"' '>>' .cvsignore
+    echo "$name" >> .cvsignore
+done
+
+echo cvs commit -m update .cvsignore
+cvs commit -m update .cvsignore
