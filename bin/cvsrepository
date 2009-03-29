@@ -1,0 +1,64 @@
+#!/bin/sh
+#
+# Change the repository of checked out CVS directories.
+#
+# File:		cvsrepo
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Wed Mar 25 12:59:34 EDT 2009
+#
+# The authors have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+#
+# RCS Info (may not be true date or author):
+#
+#   $Author: walton $
+#   $Date: 2009/03/29 20:51:33 $
+#   $RCSfile: cvsrepository,v $
+#   $Revision: 1.1 $
+
+# Redirect all error output to the standard output.
+#
+exec 2>&1
+
+case "$1" in
+-doc*)
+    echo '
+cvsrepository
+cvsrepository pattern replacement
+
+    Print (with no arguments) or change (with two argu-
+    ments) the CVS repository of the current directory.
+
+    When the repository is changed, the pattern and
+    replacement are as per the sed(1) substitute (s)
+    command.  The changes affect both the current dir-
+    ectory and all subdirectories of it, recursively.'
+    exit 1
+    ;;
+esac
+
+if [ ! -f CVS/Root ]
+then
+    echo "ERROR: current directory is not under CVS" \
+         "control"
+    exit 2
+fi
+
+if [ $# -eq 0 ]
+then
+    cat CVS/Root
+    exit 0
+fi
+
+for d in `find . -name CVS -print`
+do
+    if [ ! -f "$d/Root" ]
+    then
+        echo "ERROR: $d/Root does not exist; skipping"
+        continue
+    fi
+    echo -n "$d/Root: "
+    sed -e "/$1/s/$1/$2/" -i "$d/Root"
+    cat "$d/Root"
+done
