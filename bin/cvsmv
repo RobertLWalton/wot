@@ -4,7 +4,7 @@
 #
 # File:		cvsmv
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sun Mar 29 07:28:26 EDT 2009
+# Date:		Mon Mar 30 08:24:05 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/29 15:30:24 $
+#   $Date: 2009/03/30 18:18:20 $
 #   $RCSfile: cvsmv,v $
-#   $Revision: 1.6 $
+#   $Revision: 1.7 $
 
 # Redirect all error output to the standard output.
 #
@@ -141,7 +141,6 @@ then
          "!= $dir2/CVS/Root account ($raccount2)"
     exit 2
 fi
-
 
 rfile1="$rdir1/$base1,v"
 rfile2="$rdir2/$base2,v"
