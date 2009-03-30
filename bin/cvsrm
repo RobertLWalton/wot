@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-# Put files in a CVS repository in the Attic.
+# Remove files in a CVS repository (to the Attic).
 #
-# File:		cvsattic
+# File:		cvsrm
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Fri Mar 27 06:41:59 EDT 2009
+# Date:		Mon Mar 30 08:26:16 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/29 11:26:26 $
+#   $Date: 2009/03/30 12:30:36 $
 #   $RCSfile: cvsrm,v $
-#   $Revision: 1.2 $
+#   $Revision: 1.3 $
 
 # Redirect all error output to the standard output.
 #
@@ -25,18 +25,18 @@ f=no
 case "$1" in
 -doc*)
     echo '
-cvsattic file ...
+cvsrm file ...
 
-    Put files in a CVS repository in the Attic.  Once
-    there, these files are as if they are removed,
-    except that versions of them may be obtained via
-    cvsold, they will continue to be listed by cvslog,
-    and versions can continue to be obtained via cvsout
-    with an -rTAG option.  This is useful if the files
-    are part of some previously tagged version of a
-    project, but if not, then perhaps the files should
-    be completely expunged from the repository by cvsrm
-    instead of being put in the Attic.'
+    Remove files in a CVS repository to the Attic.  Once
+    there, these files behave as if they are not in the
+    repository, except that tagged revisions of the
+    files may be obtained via cvsout -rtag, file revi-
+    sions may be obtained by cvsold, and the files will
+    continue to be listed by cvslog.  This is useful if
+    the files are part of some previously tagged project
+    revision, but if not, then perhaps the files should
+    be completely expunged from the repository by
+    cvsexpunge instead of being removed to the Attic.'
 
     exit 1
     ;;
@@ -44,5 +44,6 @@ esac
 
 echo cvs remove -f "$@"
 cvs remove -f "$@"
+
 echo cvs commit -m update "$@"
 cvs commit -m update "$@"
