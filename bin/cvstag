@@ -1,0 +1,83 @@
+#!/bin/sh
+#
+# Tag all project files.
+#
+# File:		cvstag
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Mon Mar 30 07:30:55 EDT 2009
+#
+# The authors have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+#
+# RCS Info (may not be true date or author):
+#
+#   $Author: walton $
+#   $Date: 2009/03/30 12:11:00 $
+#   $RCSfile: cvstag,v $
+#   $Revision: 1.1 $
+
+# Redirect all error output to the standard output.
+#
+exec 2>&1
+
+case "$1" in
+-doc*)
+    echo '
+cvstag tag
+
+    First commit (as per cvscom), then update (as per
+    cvsup), and then tag all current project file revi-
+    sions with the given tag.  The tag can be any symbol
+    not beginning with a digit.
+
+    Specifically, a tag on a file is an abbreviation for
+    a particular revision of the file.  By tagging the
+    current revisions of all files in a project, you
+    tag a revision of the project as a whole.  This pro-
+    ject revision can then be checked out with cvsout
+    using the -rtag option, in order to recover the
+    tagged revision of the project.'
+    exit 1
+    ;;
+esac
+
+if [ $# -ne 1 ]
+then
+    echo "ERROR: too few or too many arguments"
+    exit 2
+elif [ ! -d ./CVS ]
+then
+    echo "ERROR: current directory is not under" \
+         "CVS control"
+    exit 2
+fi
+
+case "$1" in
+[0-9]*)
+    echo "ERROR: tag cannot begin with a digit"
+    exit 2
+    ;;
+esac
+
+if [ -d ../CVS ]
+then
+    echo "WARNING: You are in a subdirectory of" \
+         "a directory under CVS control."
+    echo "Maybe you are not in a project root" \
+    	 "directory."
+    echo -n "Do you want to continue (y or n)? "
+    if ! read || [ "$REPLY" != y ]
+    then
+        exit 1
+    fi
+fi
+
+echo cvs commit -m update
+cvs commit -m update
+
+echo cvs update -d -P
+cvs update -d -P
+
+echo cvs tag -F
+cvs tag -F
