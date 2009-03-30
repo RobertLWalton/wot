@@ -1,25 +1,332 @@
-CVS HELP
+CVS HELP		    Mon Mar 30 02:18:47 EDT 2009
 
-File:		cvs.help
-Author:		Bob Walton (walton@deas.harvard.edu)
-Date:		Tue Mar 24 07:58:32 EDT 2009
+Purpose
+-------
 
-Purpose: CVS implements a system for storing past and
-present versions of a file "foo" in another file
-"foo,v" that is located in a CVS repository.  In storing
-many versions of "foo" in "foo,v", CVS stores mostly
-just the differences between versions, thus saving much
-storage space compared to a normal file system.  The CVS
-repository can be accessed from any account that can
-read and write the files and directories of the
-repository, or from any remote system that can log into
-such an account using rlogin or ssh.  CVS is standardly
-installed in modern UNIX systems, and it is possible to
-install CVS under other operating systems.  The web site
-for CVS is http://cvs.nongnu.org/, and this has free
-downloads for common operating systems.
+CVS implements a `source code control system'.  The idea
+is that you create a file FFF, and then check it into a
+CVS repository.  This creates a file FFF,v in the repo-
+sitory that holds a copy of the first `revision' of the
+file, revision 1.1. or r1.1.  You then modify the file
+and check it in again, storing the second revision,
+r1.2.  This process continues indefinitely.  The file
+FFF,v holds ALL the revisions of the file FFF; it stores
+the differences between successive revisions, rather
+than the revisions themselves, in order to save space.
 
-CVS is very useful for a single person who works on
+The greatest use of a CVS repository lies in the fact
+that the account containing the repository does NOT have
+to be the same as the account in which you work on the
+files.  You can put the repository in a repository
+account, and then from a different working account any-
+where in the world, you can check out a complete
+project's worth of files with a single command, use and
+modify the project files, and then check all the modi-
+fied files back into the repository with a single com-
+mand before you log out of the working account.  Then
+later you can go to a different working account and
+repeat the process, always having the most recent
+revision of the files available.
+
+Two or more people can also work on the same project
+using separate working accounts, as long as they do not
+modify the same file at the same time.
+
+There are some other uses of a source code control
+system.  A common one is to compute the diff listing
+between your current working modified files and the
+last revisions checked into the repository.  This allows
+you to proof read your changes and be sure you have not
+done something stupid.  An you also know that if you do
+make some horrible change, you can always get older
+revisions out of the repository and undo the change.
+
+CVS is standardly installed in modern UNIX systems, and
+it is possible to install CVS under other operating sys-
+tems.  The web site for CVS is http://cvs.nongnu.org/,
+which has free downloads for common operating systems.
+
+In this help file we will explain how to use CVS using
+some small programs from the WOT library.  We will also
+give rough equivalents for some of these commands in
+case you do not have the WOT programs.
+
+Note on SSH and CVS Environment Variables
+---- -- --- --- --- ----------- ---------
+
+To use CVS you must be able to communicate between all
+your accounts using SSH.  You should be able to do so
+without typing a password every time you execute a
+command in one account from another account, so you need
+to read the ssh-agent.help file.
+
+You also need to set the following two CVS environment
+variables:
+
+    In the bash Shell:
+
+	CVS_RSH=ssh; export CVS_RSH
+	CVSREAD=; export CVSREAD
+
+    In the csh (tcsh) Shell:
+
+	setenv CVS_RSH=ssh
+	setenv CVSREAD=
+
+The CVS_RSH variable instructs CVS to use SSH.  The
+CVSREAD variable causes all your local files to be made
+read only whenever you check them into the repository.
+This prevents one of the dangers of CVS: that you will
+accidentally modify a file, and then when you check all
+the project files into the repository with a single
+command when you log out of the working account, you
+will check the accidentally modified file into the
+repository along with the intentionally modified files.
+With CVSREAD, in order to modify a file, you must first
+indicate your intention to do so by making the file
+writable.
+
+
+Creating A Repository
+-------- - ---------
+
+A repository in account AAA on host computer HHH is a
+directory; assume the absolute path name of the
+directory is /DDD.  To create the repository:
+
+	log into AAA
+	cvs -d /DDD init
+
+
+Creating/Checking-Out a Project
+--------------------- - -------
+
+To create a project directory PPP and check it out
+execute:
+
+	cvsout -n AAA@HHH:/DDD PPP
+
+The -n indicates this is a new project directory that
+does not previously exist.  To just check an existing
+project directory out use
+
+	cvsout AAA@HHH:/DDD PPP
+
+In your working account the project directory will be
+./PPP, which must not previously exist.  You can rename
+it if you like.
+
+The CVS equivalents to the WOT commands are:
+
+    cvsout -n AAA@HHH:/DDD PPP
+
+	ssh AAA@HHH mkdir /DDD/PPP
+	cvs -d AAA@HHH:/DDD checkout PPP
+	(cd PPP; cvs update -P)
+
+    cvsout AAA@HHH:/DDD PPP
+
+	cvs -d AAA@HHH:/DDD checkout PPP
+	(cd PPP; cvs update -P)
+
+
+Creating New Project Subdirectories and Files
+-------- --- ------- -------------- --- -----
+
+To create a new project subdirectory SSS,
+
+	mkdir SSS
+	cvsadd SSS
+
+To create a new project file FFF,
+
+	<create FFF with an editor>
+	cvsadd FFF
+
+Cvsadd checks a new directory into the repository, BUT,
+it does NOT check a new file into the repository.
+
+The CVS equivalent to the WOT command is:
+
+	cvsadd SSS:	cvs add SSS
+
+
+Checking File Revisions Into the Repository
+-------- ---- --------- ---- --- ----------
+
+To check file FFF into the repository:
+
+	cvscom FFF
+
+(com stands for `commit' which is another word for
+`check-in').
+
+The file will be made readonly.
+
+To modify an existing file and check the revision
+back in
+
+	mine FFF
+	<edit FFF>
+	cvscom FFF
+
+Here `mine' is a WOT shorthand for `chmod u+w' that
+makes the file writable.
+
+However, you do NOT have to check in each file of a
+project individually.  To check in ALL the files in the
+project that you have modified since they were last
+checked in,
+
+	cd PPP
+	cvscom
+
+where PPP is the project directory in the working
+account.
+
+The CVS equivalents of the WOT commands are:
+
+    cvscom FFF:		cvs commit -m update FFF
+    cvscom:		cvs commit -m update
+    mine FFF:		chmod u+w FFF
+
+
+Checking Out Revisions from a Repository
+-------- --- --------- ---- - ----------
+
+Often when you log into a working account you find an
+old version of project PPP already checked out.  To
+make this version up to date,
+
+	cd PPP
+	cvsup
+
+This replaces local copies of files with the latest
+revisions of the files in the repository, thus moving
+work you did more recently in other working accounts
+to your current working account.
+
+To make just one file FFF in a subdirectory SSS of PPP
+up to date,
+
+	cd PPP/SSS
+	cvsup FFF
+
+To make just the files in a just subdirectory SSS and
+its subdirectories (recursively) up to date,
+
+	cd PPP/SSS
+	cvsup
+
+The cvsup command tells you what it is doing by output-
+ting lines like:
+
+    ? FFF	Local file FFF has not been added to
+    		the project.
+    P FFF	Local file FFF has been made up-to-date
+    		by patching it.
+    U FFF	Repository file FFF did not exist
+    		locally and has been created by copying
+		it from the repository
+    M FFF	Local file FFF is a modification of the
+    		most recent revision in the repository.
+		The local file was not changed.
+    C FFF	IMPORTANT: if you see this do
+    		`cvsup -doc' for more information.
+		It means the local and the repository
+		versions of the file conflict.
+
+To find you whether our files are up-to-date use
+
+	cd PPP
+	cvsutd
+
+Cvsutd is identical in function to cvsup, except it does
+not modify any files, and just produces the listing
+above, which can be used to tell you which files would
+be changed by cvsup, and also, via the `?' and `M'
+lines, which files would be affected by `cvsadd' and
+`cvscom'.
+
+It can be useful to suppress `? FFF' lines from the
+cvsutd listing so you do not have to continually read
+them to see if something is amiss.  You can do this by
+
+	cd <the directory containing FFF>
+	cvsignore FFF
+
+Here FFF should be a file you expect to NEVER check into
+CVS.
+
+In place of FFF you can use a pattern which will sup-
+press `? FFF' lines for file whose names match the pat-
+tern.  For example
+
+	cvsignore '*.ps'
+
+You have to quote the pattern.  If you want stop
+ignoring a file see `cvsignore -doc'.
+
+The CVS equivalents of the WOT commands are:
+
+    cvsup:		cvs update -d -P
+    cvsup FFF:		cvs update -d -P FFF
+    cvsutd		cvs -n update -d -P
+    cvsignore FFF:	<Add the line `FFF' to the
+    			 ./.cvsignore file and check
+			 ./.cvsignore into CVS>
+
+
+Making Diff Listings
+------ ---- --------
+
+You can make a diff listing of the local file FFF with
+the last revision of the file you checked in with cvscom
+or checked out with cvsup by:
+
+    cvsdiff FFF | less
+
+You can make a diff listing of all the files in the
+project PPP by
+
+    cd PPP
+    cvsdiff | less
+
+and all the files in a subdirectory SSS of the project,
+and its subdirectories (recursively), by
+
+    cd PPP/SSS
+    cvsdiff | less
+
+If instead of a diff with the last revision you checked
+in or out you want a diff with the latest revision of
+the file in the repository, use
+
+    cvsdiff -rHEAD FFF | less
+
+and similarly for the project and subdirectory, using
+-rHEAD as a cvsdiff option changes the repository
+revision to the latest revision in the repository for
+each file.  This is useful if you are about to cvsup
+and want to see what changes you are about to incorpor-
+ate in the local files.
+
+You can also give any diff(1) options to cvsdiff, such
+as -b, -w, and --minimal.
+
+The CVS equivalents of the WOT commands are:
+
+    cvsdiff OPTIONS FFF:      cvs diff OPTIONS FFF 2>&1
+    cvsdiff OPTIONS:          cvs diff OPTIONS 2>&1
+
+
+
+
+
+
+	
+
+
 several different computers that do not have a shared
 file system, or who works on a computer whose file
 system is not regularly backed up.  By placing a CVS
@@ -566,3 +873,18 @@ Changing repository location.
        directory and its subdirectories, and if
        necessary also editing all the CVS/Repository
        files in these directories.
+
+File:		cvs.help
+Author:		Bob Walton (walton@seas.harvard.edu)
+Date:		See date at top of file.
+
+The authors have placed this file in the public domain;
+they make no warranty and accept no liability for this
+file.
+
+RCS Info (may not be true date or author):
+
+    $Author: walton $
+    $Date: 2009/03/30 18:34:01 $
+    $RCSfile: cvs.help,v $
+    $Revision: 1.18 $
