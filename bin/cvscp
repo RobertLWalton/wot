@@ -4,7 +4,7 @@
 #
 # File:		cvscp
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Tue Mar 31 10:22:21 EDT 2009
+# Date:		Tue Mar 31 11:28:52 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/31 14:34:12 $
+#   $Date: 2009/03/31 15:29:30 $
 #   $RCSfile: cvscp,v $
-#   $Revision: 1.8 $
+#   $Revision: 1.9 $
 
 # Redirect all error output to the standard output.
 #
@@ -78,7 +78,11 @@ then
 fi
 
 echo "(cd $dir1; cvs commit -m update $base1)"
-(cd "$dir1"; cvs commit -m update "$base1")
+if ! (cd "$dir1"; cvs commit -m update "$base1")
+then
+    echo "ERROR: while committing $dir1/$base1"
+    exit 2
+fi
 
 root1="`cat "$dir1/CVS/Root"`"
 repository1="`cat "$dir1/CVS/Repository"`"
