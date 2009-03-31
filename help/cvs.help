@@ -1,4 +1,4 @@
-CVS HELP		    Mon Mar 30 02:18:47 EDT 2009
+CVS HELP		    Tue Mar 31 07:36:16 EDT 2009
 
 Purpose
 -------
@@ -37,7 +37,7 @@ system.  A common one is to compute the diff listing
 between your current working modified files and the
 last revisions checked into the repository.  This allows
 you to proof read your changes and be sure you have not
-done something stupid.  An you also know that if you do
+done something stupid.  And you also know that if you do
 make some horrible change, you can always get older
 revisions out of the repository and undo the change.
 
@@ -48,8 +48,8 @@ which has free downloads for common operating systems.
 
 In this help file we will explain how to use CVS using
 some small programs from the WOT library.  We will also
-give rough equivalents for some of these commands in
-case you do not have the WOT programs.
+give rough equivalents for these WOT commands in case
+you do not have the WOT programs.
 
 Note on SSH and CVS Environment Variables
 ---- -- --- --- --- ----------- ---------
@@ -57,8 +57,9 @@ Note on SSH and CVS Environment Variables
 To use CVS you must be able to communicate between all
 your accounts using SSH.  You should be able to do so
 without typing a password every time you execute a
-command in one account from another account, so you need
-to read the ssh-agent.help file.
+command in one account from another account, so if you
+are not already doing this using ssh-agent, then you
+need to read the ssh-agent.help file.
 
 You also need to set the following two CVS environment
 variables:
@@ -75,20 +76,20 @@ variables:
 
 The CVS_RSH variable instructs CVS to use SSH.  The
 CVSREAD variable causes all your local files to be made
-read only whenever you check them into the repository.
-This prevents one of the dangers of CVS: that you will
-accidentally modify a file, and then when you check all
-the project files into the repository with a single
-command when you log out of the working account, you
-will check the accidentally modified file into the
-repository along with the intentionally modified files.
-With CVSREAD, in order to modify a file, you must first
-indicate your intention to do so by making the file
-writable.
+read only whenever you check them into or out of the
+repository.  This prevents one of the dangers of CVS:
+that you will accidentally modify a file, and then when
+you check all the project files into the repository with
+a single command while loggin out of the working
+account, you will check the accidentally modified file
+into the repository along with your intentionally
+modified files.  With CVSREAD, in order to modify a
+file, you must first indicate your intention to do so
+by making the file writable.
 
 
 Creating A Repository
--------- - ---------
+-------- - ----------
 
 A repository in account AAA on host computer HHH is a
 directory; assume the absolute path name of the
@@ -107,8 +108,8 @@ execute:
 	cvsout -n AAA@HHH:/DDD PPP
 
 The -n indicates this is a new project directory that
-does not previously exist.  To just check an existing
-project directory out use
+does not previously exist.  To just check out an exist-
+ing project directory use
 
 	cvsout AAA@HHH:/DDD PPP
 
@@ -116,7 +117,10 @@ In your working account the project directory will be
 ./PPP, which must not previously exist.  You can rename
 it if you like.
 
-The CVS equivalents to the WOT commands are:
+The checked out files will be made readonly (if CVSREAD
+is set: see Environment Variables above).
+
+The non-WOT equivalents to the WOT commands are:
 
     cvsout -n AAA@HHH:/DDD PPP
 
@@ -146,7 +150,7 @@ To create a new project file FFF,
 Cvsadd checks a new directory into the repository, BUT,
 it does NOT check a new file into the repository.
 
-The CVS equivalent to the WOT command is:
+The non-WOT equivalent to the WOT command is:
 
 	cvsadd SSS:	cvs add SSS
 
@@ -161,7 +165,8 @@ To check file FFF into the repository:
 (com stands for `commit' which is another word for
 `check-in').
 
-The file will be made readonly.
+The file will be made readonly (if CVSREAD is set: see
+Environment Variables above).
 
 To modify an existing file and check the revision
 back in
@@ -184,7 +189,7 @@ checked in,
 where PPP is the project directory in the working
 account.
 
-The CVS equivalents of the WOT commands are:
+The non-WOT equivalents of the WOT commands are:
 
     cvscom FFF:		cvs commit -m update FFF
     cvscom:		cvs commit -m update
@@ -225,9 +230,9 @@ ting lines like:
     		the project.
     P FFF	Local file FFF has been made up-to-date
     		by patching it.
-    U FFF	Repository file FFF did not exist
-    		locally and has been created by copying
-		it from the repository
+    U FFF	Repository file FFF did not exist local-
+    		ly and has been created by copying it
+		from the repository.
     M FFF	Local file FFF is a modification of the
     		most recent revision in the repository.
 		The local file was not changed.
@@ -256,25 +261,27 @@ them to see if something is amiss.  You can do this by
 	cvsignore FFF
 
 Here FFF should be a file you expect to NEVER check into
-CVS.
+CVS.  It is not an error if this file ceases to exist,
+is remade, etc.; it will continue to be ignored.
 
 In place of FFF you can use a pattern which will sup-
-press `? FFF' lines for file whose names match the pat-
+press `? FFF' lines for files whose names match the pat-
 tern.  For example
 
 	cvsignore '*.ps'
 
-You have to quote the pattern.  If you want stop
+You have to quote the pattern.  If you want to stop
 ignoring a file see `cvsignore -doc'.
 
-The CVS equivalents of the WOT commands are:
+The non-WOT equivalents of the WOT commands are:
 
     cvsup:		cvs update -d -P
     cvsup FFF:		cvs update -d -P FFF
     cvsutd		cvs -n update -d -P
     cvsignore FFF:	<Add the line `FFF' to the
     			 ./.cvsignore file and check
-			 ./.cvsignore into CVS>
+			 ./.cvsignore into the
+			 repository>
 
 
 Making Diff Listings
@@ -304,43 +311,145 @@ the file in the repository, use
 
     cvsdiff -rHEAD FFF | less
 
-and similarly for the project and subdirectory, using
+and similarly for the project or a subdirectory.  Using
 -rHEAD as a cvsdiff option changes the repository
 revision to the latest revision in the repository for
 each file.  This is useful if you are about to cvsup
 and want to see what changes you are about to incorpor-
 ate in the local files.
 
-You can also give any diff(1) options to cvsdiff, such
-as -b, -w, and --minimal.
+You can also give diff(1) options to cvsdiff, such as
+-b, -w, and --minimal.
 
-The CVS equivalents of the WOT commands are:
+The non-WOT equivalents of the WOT commands are:
 
     cvsdiff OPTIONS FFF:      cvs diff OPTIONS FFF 2>&1
     cvsdiff OPTIONS:          cvs diff OPTIONS 2>&1
 
 
+Tagging Project Revisions
+------- ------- ---------
+
+Suppose you have gotten your project PPP to a stage
+where it works fairly well, and you want to save the
+current state of the project, for possible future
+reference.  You can do this with
+
+	cd PPP
+	cvstag TTT
+
+This will associates a tag TTT, or symbolic name, with
+the current revision of every file in the project.
+Later, after the files have been revised further, the
+TTT revisions can be referenced to see what the files
+were like when `cvstag TTT' command was executed.
+
+A good use of this is generating diff listings of files
+with their revisions that have the TTT flag.  This can
+be done by giving the -rTTT option to cvsdiff.  For
+example, 
+
+	cd PPP
+	cvsdiff -rTTT | less
+
+will generate a diff listing for every project file
+that has been modified since the `cvstag TTT' command
+with the revision of the file at the time the `cvstag
+TTT' command was executed.
+
+Another use is recovering the entire project state as
+it was at the time of the `cvstag TTT' command.  This
+can be done by
+
+	cd <some directory not under CVS control>
+	cvsout -rTTT AAA@HHH:/DDD PPP
+
+Note, however, that the files so checked out should NOT
+be modified and checked back in: they are for reference
+only.
+
+You can rename a tag by
+
+	cvs PPP
+	cvstagmv OLDTAG NEWTAG
+
+and remove a tag by
+
+	cvs PPP
+	cvstagrm TAG
+
+You can also tag all the files in a subdirectory of the
+project by using `cd PPP/SSS' instead of `cd PPP'.
 
 
+The non-WOT equivalents of the WOT commands are:
+
+    cvstag TTT		cvsrm TTT <see below>
+    			cvs tag TTT
+    cvstagrm TTT	mkdir TMPDIR
+    			cd TMPDIR
+			cvs -d AAA@HHH:/DDD \
+			    checkout -rTTT PPP
+			cd PPP
+			cvs tag -d TTT
+			rm -rf TMPDIR
+    cvstagmv OOO NNN	cvsrm NNN <see above>
+    			mkdir TMPDIR
+			cd TMPDIR
+			cvs -d AAA@HHH:/DDD \
+			    checkout -rOOO PPP
+			cd PPP
+			cvs tag -d OOO
+			cvs tag NNN
+			rm -rf TMPDIR
+
+    Note: The only correct way to remove or rename a tag
+    is to check out the tagged revision of the project
+    into a temporary directory, remove or rename the tag
+    in that revision, and delete the temporary directory
+    and the corresponding revision.  Otherwise files in
+    the Attic (see below) are not handled correctly.
 
 
-	
+Removing, Copying, and Moving a File
+--------- -------- --- ------ - ----
+
+To remove a file FFF from the project,
+
+	cvsrm FFF
+
+This actually puts FFF in the Attic of its containing
+directory.  The file then appears as if it has been
+removed from the repository, unless one of its revisions
+has a tag TTT, in which case CVS command that have the
+-rTTT option and still refer to that revision.
+
+If you want to completely expunge a file from the
+repository you can
+
+	cvsexpunge FFF
+
+This gets rid of all trace of the file.  However, it is
+a bad idea to do this if the file has any tagged
+revisions (see cvslog below).
+
+If you want to move (rename) a file use
+
+	cvsmv OLDNAME NEWNAME
+
+and if you want to make a copy use
+
+	cvscp SOURCE TARGET
+
+Renaming a file is equivalent to copying it and then
+cvsrm'ing the OLDNAME.  Copying a file FFF copies the
+FFF,v file in the repository so the revision history
+of the TARGET is that same as the revision history of
+the SOURCE; but, all the SOURCE tags are removed from
+the TARGET.
 
 
-several different computers that do not have a shared
-file system, or who works on a computer whose file
-system is not regularly backed up.  By placing a CVS
-repository on a backed up computer, it is easy to work
-on a project on many different non-backed up computers;
-just checkout the project whenever you start a work
-session and check it back in when you finish the
-session.
-
-CVS is useful for cooperative projects where many people
-work on the same set of files.  It permits more than one
-person to work on the same file in parallel, and merges
-the results, though some human intervention is required
-for checking and cleanup of the merge.
+TBD
 
 CVS uses RCS to maintain the ",v" files.  Like RCS, CVS
 is also useful for backing up files in case you acci-
@@ -885,6 +994,6 @@ file.
 RCS Info (may not be true date or author):
 
     $Author: walton $
-    $Date: 2009/03/30 18:34:01 $
+    $Date: 2009/03/31 14:20:32 $
     $RCSfile: cvs.help,v $
-    $Revision: 1.18 $
+    $Revision: 1.19 $
