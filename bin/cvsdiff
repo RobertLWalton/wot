@@ -4,7 +4,7 @@
 #
 # File:		cvsdiff
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sun Mar 29 07:33:25 EDT 2009
+# Date:		Tue Mar 31 07:37:08 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/29 15:30:24 $
+#   $Date: 2009/03/31 11:42:07 $
 #   $RCSfile: cvsdiff,v $
-#   $Revision: 1.6 $
+#   $Revision: 1.7 $
 
 # Redirect all error output to the standard output.
 #
@@ -26,11 +26,12 @@ case "$1" in
     echo '
 cvsdiff [options] [file_or_directory ...]
 
-    Make a diff listing with the latest version that YOU
-    last checked out or in (as per cvsup or cvscom) of
-    the given files and all files and subdirectories in
-    each given directory, or if none given, of all the
-    files and subdirectories in the current directory.
+    Make a diff listing with the latest revision that
+    YOU last checked out or in (as per cvsup or cvscom)
+    of the given files and all files and subdirectories
+    in each given directory, or if none given, of all
+    the files and subdirectories in the current direc-
+    tory.
 
     Note that it is common to use `cvsdiff | less'"'"',
     as all cvs standard error output is piped by cvsdiff
@@ -38,23 +39,23 @@ cvsdiff [options] [file_or_directory ...]
     anything special with the standard error output.
     Also note that if you just want to see a list of
     files that are different from their most recent
-    repository versions, cvsutd is better than cvsdiff.
+    repository revisions, cvsutd is better than cvsdiff.
 
     Some options are:
 
-    -rX.Y	Diff with repository version X.Y instead
-    		of with the last version YOU checked
-		out or in.  Use cvslog to see list of
-		committed versions and their dates for
-		particular files (each file is differ-
-		ent).
+    -rX.Y	Diff with repository revision X.Y
+    		instead of with the last revision YOU
+		checked out or in.  Use cvslog to see
+		list of committed revisions and their
+		dates for particular files (each file is
+		different).
 
-    -rHEAD	Diff with the last version checked in
-    		by anyone, i.e., the latest version in
-		the repository, instead of with the
-		last version YOU checked out or in.
+    -rHEAD	Diff with the last revision checked in
+    		by anyone, i.e., the latest revision in
+		the repository, instead of with the last
+		revision YOU checked out or in.
 
-    -rT		Diff with the repository version that
+    -rT		Diff with the repository revision that
     		was given tag T (see cvstag).
 
     diff(1)	You can use standard diff(1) options,

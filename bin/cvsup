@@ -4,7 +4,7 @@
 #
 # File:		cvsup
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Tue Mar 31 05:42:17 EDT 2009
+# Date:		Tue Mar 31 07:40:16 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/31 11:01:18 $
+#   $Date: 2009/03/31 11:42:07 $
 #   $RCSfile: cvsup,v $
-#   $Revision: 1.8 $
+#   $Revision: 1.9 $
 
 P=-P
 case "$1" in
@@ -28,10 +28,10 @@ cvsup [-E] [file-or-directory ...]
     files and subdirectories in these directories), or
     if none given, update all the files and subdirec-
     tories of the current directory, by checking out the
-    latest versions of the files from the repository so
+    latest revisions of the files from the repository so
     as to create local copies of these files where no
     local copies exist and patch (update) existing local
-    copies that are older than the repository versions.
+    copies that are older than the repository revisions.
 
     Normally subdirectories that are empty in the repo-
     sitory (or whose only files are in their Attic; see
@@ -39,9 +39,9 @@ cvsup [-E] [file-or-directory ...]
     this to create such empty directories locally.
 
     Ignores files whose local copy is an unmodified copy
-    of the latest version of the file in the repository.
-    If the local file has been modified since it was
-    checked out, cvsup announces this and takes
+    of the latest revision of the file in the reposi-
+    tory.  If the local file has been modified since it
+    was checked out, cvsup announces this and takes
     appropriate action: see the M and C flags below.
 
     The `cvsutd'"'"' command can be used to print out
@@ -61,35 +61,35 @@ cvsup [-E] [file-or-directory ...]
 
     P filename	Existing local file has NOT been modi-
     		fied since it was checked out, but a
-		more recent version has since been
+		more recent revision has since been
 		checked into the repository (by someone
 		else).  The local file is patched so it
 		is now the same as the most recent repo-
 		sitory file.
 
     M filename	Local file has been modified since it
-    		was checked out, and the version of the
+    		was checked out, and the revision of the
 		local file that was checked out is still
-		the latest version in the repository.
+		the latest revision in the repository.
 		The local file is not altered.
 
     C filename	Local file is a modification of a repo-
-    		sitory version of the file that is NOT
-		the most recent version of the file in
-		the repository.  The most recent version
-		in the repository (provided by someone
-		else) is merged into the local file by
-		the rcsmerge(1) command.  If there are
-		overlapping changes, a warning is
-		printed, and both changes are inserted
-		in the file, between lines containing
-		`<<<<<<<'"'"' and `>>>>>>>'"'"'.
+    		sitory revision of the file that is NOT
+		the most recent revision of the file in
+		the repository.  The most recent revi-
+		sion in the repository (provided by
+		someone else) is merged into the local
+		file by the rcsmerge(1) command.  If
+		there are overlapping changes, a warning
+		is printed, and both changes are inser-
+		ted in the file, between lines contain-
+		ing `<<<<<<<'"'"' and `>>>>>>>'"'"'.
 
 		BEWARE: even non-overlapping changes
 		may conflict and cause the file to be
 		defective.  Use `cvsdiff -rHEAD'"'"' to
 		examine changes from the lastest repo-
-		sitory version.
+		sitory revision.
 
     A filename	File has been `cvsadd'"'"'ed but not yet
     		been `cvscom'"'"'mited to the reposi-

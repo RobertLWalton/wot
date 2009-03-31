@@ -4,7 +4,7 @@
 #
 # File:		cvstag
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Tue Mar 31 04:44:00 EDT 2009
+# Date:		Tue Mar 31 07:42:53 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/31 11:02:51 $
+#   $Date: 2009/03/31 11:43:32 $
 #   $RCSfile: cvstag,v $
-#   $Revision: 1.3 $
+#   $Revision: 1.4 $
 
 # Redirect all error output to the standard output.
 #
@@ -43,7 +43,7 @@ cvstag tag
     The only way to manipulate (e.g. remove) a tag is
     to make a temporary local copy of the current direc-
     tory and its subdirectories that have the tagged
-    version of the files checked out, and manipulate
+    revision of the files checked out, and manipulate
     (e.g. remove) the tag in that temporary local copy,
     and then delete the temporary local copy.  Otherwise
     Attic files are not properly considered.'

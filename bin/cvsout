@@ -4,7 +4,7 @@
 #
 # File:		cvsout
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Tue Mar 31 06:33:35 EDT 2009
+# Date:		Tue Mar 31 07:42:33 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/31 11:02:03 $
+#   $Date: 2009/03/31 11:43:32 $
 #   $RCSfile: cvsout,v $
-#   $Revision: 1.8 $
+#   $Revision: 1.9 $
 
 # Redirect all error output to the standard output.
 #
@@ -59,7 +59,7 @@ cvsout [-n|-e|-ne|-en|-rT] [-E] repository directory
     will be checked out, recursively.
 
     The -rT option, if given, checks out the project
-    version that has tag T (see cvstag).  If this is
+    revision that has tag T (see cvstag).  If this is
     done, the checked out files should NOT be modified
     and then checked back in (i.e., cvscom should NOT
     be used on them).
