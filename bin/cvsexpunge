@@ -4,7 +4,7 @@
 #
 # File:		cvsexpunge
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Mon Mar 30 14:18:13 EDT 2009
+# Date:		Tue Mar 31 12:22:26 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/30 18:18:20 $
+#   $Date: 2009/03/31 16:29:22 $
 #   $RCSfile: cvsexpunge,v $
-#   $Revision: 1.5 $
+#   $Revision: 1.6 $
 
 # Redirect all error output to the standard output.
 #
@@ -111,7 +111,7 @@ do
 	;;
     esac
 
-    tags=(`cvs log 2>&1 | sed -n -e '
+    tagline="`cvs log 2>&1 | sed -n -e '
 : look
 /^RCS file: /s///
 t found
@@ -141,8 +141,15 @@ x
 t loop
 p
 n
-b look' | egrep "^$rdir/(Attic/|)$base,v" \
-        | cut -d' ' -f2- `)
+b look' | egrep "^$rdir/(Attic/|)$base,v" `"
+
+    if [ "$tagline" = "" ]
+    then
+    	echo "ERROR: $file is not in repository;" \
+	     "skipping"
+	continue
+    fi
+    tags=(`echo "$tagline" | cut -s -d' ' -f2-` )
 
     if [ ${#tags[@]} -gt 0 ]
     then
