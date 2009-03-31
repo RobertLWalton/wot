@@ -1,4 +1,4 @@
-CVS HELP		    Tue Mar 31 07:36:16 EDT 2009
+CVS HELP		    Tue Mar 31 12:31:30 EDT 2009
 
 Purpose
 -------
@@ -338,16 +338,14 @@ reference.  You can do this with
 	cd PPP
 	cvstag TTT
 
-This will associates a tag TTT, or symbolic name, with
+This will associate a tag TTT, or symbolic name, with
 the current revision of every file in the project.
-Later, after the files have been revised further, the
-TTT revisions can be referenced to see what the files
-were like when `cvstag TTT' command was executed.
+Then for commands that take a `-rX.Y' option, `-rTTT'
+can be used instead to refer to the file revision that
+was current when `cvstag TTT' was executed.
 
 A good use of this is generating diff listings of files
-with their revisions that have the TTT flag.  This can
-be done by giving the -rTTT option to cvsdiff.  For
-example, 
+with their TTT tagged revisions.  For example,
 
 	cd PPP
 	cvsdiff -rTTT | less
@@ -380,7 +378,6 @@ and remove a tag by
 
 You can also tag all the files in a subdirectory of the
 project by using `cd PPP/SSS' instead of `cd PPP'.
-
 
 The non-WOT equivalents of the WOT commands are:
 
@@ -445,8 +442,60 @@ Renaming a file is equivalent to copying it and then
 cvsrm'ing the OLDNAME.  Copying a file FFF copies the
 FFF,v file in the repository so the revision history
 of the TARGET is that same as the revision history of
-the SOURCE; but, all the SOURCE tags are removed from
-the TARGET.
+the SOURCE; but, all tags are removed from the TARGET.
+
+
+Previous Revisions of a File
+-------- --------- -- - ----
+
+You can get a list of all the previous revisions of a
+file by
+
+	cvslog FILE
+
+or for all files in a directory and its subdirectories
+by
+
+	cd DIRECTORY
+	cvslog
+
+This also tells which tags refer to which revisions for
+each file.
+
+You can get an old revision of a file into the current
+directory with
+
+	cvsold -rX.Y FILE
+
+The old revision will be given the name FILE.rX.Y.  This
+also works with -rTAG in place of -rX.Y.
+
+
+Changing Repositories
+-------- ------------
+
+The repository of a CVS directory has a name of the form
+
+	AAA@HHH:/DDD
+
+(where if the repository is in the current account, the
+`AAA@HHH:' may be missing).
+
+You can find out the repository of the current directory
+by
+
+	cvsrepository
+
+You can change the repository of the current directory
+and all its subdirectories, recursively, with
+
+	cvsrepository PATTERN REPLACEMENT
+
+where PATTERN and REPLACEMENT are as per the sed(1)
+substitution (s) command.  This can be useful when a
+repository is moved, and you are uncertain whether there
+are local files that have been modified and need to be
+checked in.
 
 
 TBD
@@ -994,6 +1043,6 @@ file.
 RCS Info (may not be true date or author):
 
     $Author: walton $
-    $Date: 2009/03/31 14:20:32 $
+    $Date: 2009/03/31 17:03:05 $
     $RCSfile: cvs.help,v $
-    $Revision: 1.19 $
+    $Revision: 1.20 $
