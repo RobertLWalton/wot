@@ -4,7 +4,7 @@
 #
 # File:		cvsmv
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Mon Mar 30 08:24:05 EDT 2009
+# Date:		Tue Mar 31 11:21:46 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/30 18:18:20 $
+#   $Date: 2009/03/31 15:22:17 $
 #   $RCSfile: cvsmv,v $
-#   $Revision: 1.7 $
+#   $Revision: 1.8 $
 
 # Redirect all error output to the standard output.
 #
@@ -26,18 +26,22 @@ case "$1" in
     echo '
 cvsmv file1 file2
 
-    First commit (as per cvscom) file1 and then move
-    (rename) it to file2.  Lastly make file2 user writ-
-    able if file1 was writable before it was committed.
+    First commit (as per cvscom) file1 and then make a
+    copy of it named file2 that has the same revision
+    history as file1.  Remove tags from file2 (see
+    cvstag).  Then remove (as per cvsrm) file1.  Lastly
+    make file2 user writable if file1 was writable
+    before it was committed.
 
     More specifically, after file1 is committed then
-    the CVS repository file1,v is moved (renamed) to the
-    CVS repository file2,v.  After the move a cvs update
-    is performed on both file1 and file2, which removes
-    the local copy of file1 and makes a local copy of
-    file2.  Lastly the local copy of file2 is made user
-    writable if file1 was writable before it was commit-
-    ted.
+    the CVS repository file1,v is copied to the CVS
+    repository file2,v.  After the copy a cvs update is
+    performed on file2 to make a local copy, and tags
+    are removed from file2.  Then file1 is removed as
+    per `cvs remove -f'"'"' and committed.  Lastly' \
+    			'the local
+    copy of file2 is made user writable if file1 was
+    writable before it was committed.
 
     For cvsmv the current directory need not be under
     CVS control and the two files may be in different
@@ -146,27 +150,52 @@ rfile1="$rdir1/$base1,v"
 rfile2="$rdir2/$base2,v"
 case "$raccount1" in
 "")
-    echo mv "$rfile1" "$rfile2"
-    if ! mv "$rfile1" "$rfile2"
+    echo cp -p "$rfile1" "$rfile2"
+    if ! cp -p "$rfile1" "$rfile2"
     then
-    	echo "ERROR: move inside repository failed"
+    	echo "ERROR: copy inside repository failed"
     	exit 2
     fi
     ;;
 *)
-    echo ssh "$raccount1" mv "$rfile1" "$rfile2"
-    if ! ssh "$raccount1" mv "$rfile1" "$rfile2"
+    echo ssh "$raccount1" cp -p "$rfile1" "$rfile2"
+    if ! ssh "$raccount1" cp -p "$rfile1" "$rfile2"
     then
-    	echo "ERROR: move inside repository failed"
+    	echo "ERROR: copy inside repository failed"
     	exit 2
     fi
     ;;
 esac
 
-echo "(cd $dir1; cvs update $base1)"
-(cd "$dir1"; cvs update "$base1")
 echo "(cd $dir2; cvs update $base2)"
 (cd "$dir2"; cvs update "$base2")
+
+tags=(`(cd "$dir2"; cvs log "$base2" | sed -n -e '
+: look
+/^symbolic names:$/b readtags
+n
+b look
+: readtags
+n
+/^	\([^:]*\):.*$/s//\1/
+T done
+p
+b readtags
+: done
+n
+b done' )`)
+
+for tag in "${tags[@]}"
+do
+    echo "(cd $dir2; cvs tag -d $tag $base2)"
+    (cd "$dir2"; cvs tag -d "$tag" "$base2")
+done
+
+echo "(cd $dir1; cvs remove -f $base1)"
+(cd "$dir1"; cvs remove -f "$base1")
+
+echo "(cd $dir1; cvs commit -m update $base1)"
+(cd "$dir1"; cvs commit -m update "$base1")
 
 if [ w = yes ]
 then
