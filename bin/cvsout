@@ -4,7 +4,7 @@
 #
 # File:		cvsout
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Sun Mar 29 09:50:38 EDT 2009
+# Date:		Tue Mar 31 06:33:35 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/29 15:30:25 $
+#   $Date: 2009/03/31 11:02:03 $
 #   $RCSfile: cvsout,v $
-#   $Revision: 1.7 $
+#   $Revision: 1.8 $
 
 # Redirect all error output to the standard output.
 #
@@ -29,7 +29,7 @@ case "$1" in
 -doc*)
 
     echo '
-cvsout [-n|-e|-ne|-en|-rT] repository directory
+cvsout [-n|-e|-ne|-en|-rT] [-E] repository directory
 
     Checkout a project directory from a repository, in
     the case that the local copy of this directory
@@ -89,7 +89,12 @@ cvsout [-n|-e|-ne|-en|-rT] repository directory
     subdirectory of such a directory to the repository
     use mkdir and cvsadd instead; to check out a subdi-
     rectory of such a directory if the subdirectory is
-    already in the repository, use cvsup.'
+    already in the repository, use cvsup.
+
+    Normally project subdirectories that are empty (or
+    that have only Attic files; see cvsrm) are not
+    checked out.  The -E option causes such empty dir-
+    ectories to be checked out.'
 
     exit 1
     ;;
@@ -109,6 +114,13 @@ cvsout [-n|-e|-ne|-en|-rT] repository directory
 -r*)
     r="$1"
     shift
+esac
+
+P=-P
+case "$1" in
+-E)	P=
+	shift
+	;;
 esac
 
 if [ $# -ne 2 ]
@@ -175,8 +187,8 @@ if [ $n = yes ]
 then
     if [ $remote = no ]
     then
-    	echo mkdir "repository/$directory"
-    	if ! mkdir "repository/$directory"
+    	echo mkdir "$repository/$directory"
+    	if ! mkdir "$repository/$directory"
 	then
 	    echo "ERROR during mkdir"
 	    exit 2
@@ -193,5 +205,5 @@ fi
 
 echo cvs -d "$repository" checkout $r "$directory"
 cvs -d "$repository" checkout $r "$directory"
-echo "(cd $directory; cvs update -P)"
-(cd "$directory"; cvs update -P)
+echo "(cd $directory; cvs update $P)"
+(cd "$directory"; cvs update $P)

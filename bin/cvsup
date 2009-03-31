@@ -4,7 +4,7 @@
 #
 # File:		cvsup
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Sun Mar 29 16:11:44 EDT 2009
+# Date:		Tue Mar 31 05:42:17 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,15 +13,16 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/29 20:12:14 $
+#   $Date: 2009/03/31 11:01:18 $
 #   $RCSfile: cvsup,v $
-#   $Revision: 1.7 $
+#   $Revision: 1.8 $
 
+P=-P
 case "$1" in
 
 -doc*)
     echo '
-cvsup [file-or-directory ...]
+cvsup [-E] [file-or-directory ...]
 
     Update the given files and directories (and all
     files and subdirectories in these directories), or
@@ -31,6 +32,11 @@ cvsup [file-or-directory ...]
     as to create local copies of these files where no
     local copies exist and patch (update) existing local
     copies that are older than the repository versions.
+
+    Normally subdirectories that are empty in the repo-
+    sitory (or whose only files are in their Attic; see
+    cvsrm) are deleted locally.  The -E option changes
+    this to create such empty directories locally.
 
     Ignores files whose local copy is an unmodified copy
     of the latest version of the file in the repository.
@@ -96,6 +102,9 @@ cvsup [file-or-directory ...]
 		should never see this.'
     	exit 1
 	;;
+-E)	P=
+	shift
+	;;
 esac
 
-cvs update -d -P "$@" 2>&1 | grep -v ': Updating'
+cvs update -d $P "$@" 2>&1 | grep -v ': Updating'
