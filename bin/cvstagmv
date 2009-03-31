@@ -4,7 +4,7 @@
 #
 # File:		cvstagmv
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Tue Mar 31 05:12:16 EDT 2009
+# Date:		Tue Mar 31 10:35:37 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/31 11:02:51 $
+#   $Date: 2009/03/31 14:37:37 $
 #   $RCSfile: cvstagmv,v $
-#   $Revision: 1.1 $
+#   $Revision: 1.2 $
 
 # Redirect all error output to the standard output.
 #
@@ -53,6 +53,10 @@ case "$oldtag" in
     echo "ERROR: tag cannot begin with a digit: $oldtag"
     exit 2
     ;;
+"")
+    echo "ERROR: tag cannot be empty"
+    exit 2
+    ;;
 esac
 
 case "$newtag" in
@@ -60,7 +64,17 @@ case "$newtag" in
     echo "ERROR: tag cannot begin with a digit: $newtag"
     exit 2
     ;;
+"")
+    echo "ERROR: tag cannot be empty"
+    exit 2
+    ;;
 esac
+
+if [ "$oldtag" = "$newtag" ]
+then
+    echo "ERROR: new tag equals old tag"
+    exit 2
+fi
 
 if [ -d ../CVS ]
 then

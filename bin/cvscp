@@ -4,7 +4,7 @@
 #
 # File:		cvscp
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sun Mar 29 07:27:55 EDT 2009
+# Date:		Tue Mar 31 10:22:21 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/29 15:30:24 $
+#   $Date: 2009/03/31 14:34:12 $
 #   $RCSfile: cvscp,v $
-#   $Revision: 1.7 $
+#   $Revision: 1.8 $
 
 # Redirect all error output to the standard output.
 #
@@ -28,15 +28,17 @@ cvscp file1 file2
 
     First commit (as per cvscom) file1 and then make a
     copy of it named file2 that has the same revision
-    history as file1.  Lastly make file2 user writable
-    if file1 was writable before it was committed.
+    history as file1.  Remove tags from file2 (see
+    cvstag).  Lastly make file2 user writable if file1
+    was writable before it was committed.
 
     More specifically, after file1 is committed then
     the CVS repository file1,v is copied to the CVS
     repository file2,v.  After the copy a cvs update is
-    performed on file2 to make a local copy.  Lastly
-    this local copy is made user writable if file1 was
-    writable before it was committed.
+    performed on file2 to make a local copy, and tags
+    are removed from file2.  Lastly this local copy is
+    made user writable if file1 was writable before it
+    was committed.
 
     For cvscp the current directory need not be under
     CVS control and the two files may be in different
@@ -165,6 +167,27 @@ esac
 
 echo "(cd $dir2; cvs update $base2)"
 (cd "$dir2"; cvs update "$base2")
+
+tags=(`(cd "$dir2"; cvs log "$base2" | sed -n -e '
+: look
+/^symbolic names:$/b readtags
+n
+b look
+: readtags
+n
+/^	\([^:]*\):.*$/s//\1/
+T done
+p
+b readtags
+: done
+n
+b done' )`)
+
+for tag in "${tags[@]}"
+do
+    echo "(cd $dir2; cvs tag -d $tag $base2)"
+    (cd "$dir2"; cvs tag -d "$tag" "$base2")
+done
 
 if [ w = yes ]
 then
