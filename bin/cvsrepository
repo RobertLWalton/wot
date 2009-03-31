@@ -2,7 +2,7 @@
 #
 # Change the repository of checked out CVS directories.
 #
-# File:		cvsrepo
+# File:		cvsrepository
 # Author:	Bob Walton <walton@acm.org>
 # Date:		Wed Mar 25 12:59:34 EDT 2009
 #
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/29 20:51:33 $
+#   $Date: 2009/03/31 16:45:32 $
 #   $RCSfile: cvsrepository,v $
-#   $Revision: 1.1 $
+#   $Revision: 1.2 $
 
 # Redirect all error output to the standard output.
 #
