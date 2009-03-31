@@ -4,7 +4,7 @@
 #
 # File:		cvstag
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Tue Mar 31 07:42:53 EDT 2009
+# Date:		Tue Mar 31 12:06:50 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/31 11:43:32 $
+#   $Date: 2009/03/31 16:11:28 $
 #   $RCSfile: cvstag,v $
-#   $Revision: 1.4 $
+#   $Revision: 1.5 $
 
 # Redirect all error output to the standard output.
 #
@@ -86,10 +86,18 @@ then
 fi
 
 echo cvs commit -m update
-cvs commit -m update
+if ! cvs commit -m update
+then
+    echo "ERROR: commit failed"
+    exit 2
+fi
 
 echo cvs update -d -P
-cvs update -d -P
+if ! cvs update -d -P
+then
+    echo "ERROR: update failed"
+    exit 2
+fi
 
 # The only way to manipulate tags on Attic files is
 # to check them out.
