@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-# Move (rename) a CVS repository file.
+# Move (rename) a CVS repository file or directory.
 #
 # File:		cvsmv
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Tue Mar 31 11:29:03 EDT 2009
+# Date:		Wed Apr  1 06:53:22 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/31 15:29:30 $
+#   $Date: 2009/04/01 15:01:13 $
 #   $RCSfile: cvsmv,v $
-#   $Revision: 1.9 $
+#   $Revision: 1.10 $
 
 # Redirect all error output to the standard output.
 #
@@ -25,21 +25,38 @@ case "$1" in
 -doc*)
     echo '
 cvsmv file1 file2
+cvsmv directory1 directory2
 
-    First commit (as per cvscom) file1 and then make a
-    copy of it named file2 that has the same revision
-    history as file1.  Remove tags from file2 (see
-    cvstag).  Then remove (as per cvsrm) file1.  Lastly
-    make file2 user writable if file1 was writable
-    before it was committed.
+    When moving files, file1 is first committed (as per
+    cvscom) and then a copy named file2 is made that has
+    the same revision history as file1.  Tags are
+    removed from file2 (see cvstag).  File1 is then
+    removed as per cvsrm if it has tags or as per
+    cvsexpunge if it does not.  Lastly file2 is made
+    user writable if file1 was writable before it was
+    committed.
 
-    More specifically, after file1 is committed then
-    the CVS repository file1,v is copied to the CVS
-    repository file2,v.  After the copy a cvs update is
-    performed on file2 to make a local copy, and tags
-    are removed from file2.  Then file1 is removed as
-    per `cvs remove -f'"'"' and committed.  Lastly' \
-    			'the local
+    When moving directories, directory2 and subdirec-
+    tories of directory2 that correspond to subdirec-
+    tories of directory1 are made and cvsadd'"'"'ed
+    if they do not exist.  Then all the files in direc-
+    tory1 are cvsmv'"'"' to directory2, recursively,
+    leaving directory1 and its subdirectories empty.
+    Lastly directory1 is updated, deleting its local
+    version.  Directory1 and its subdirectories are
+    left in the repository; they may contain Attic files
+    with tags (see cvsrm), and even if not, deleting
+    them would foul up other checked out versions of
+    their containing project.
+
+    More specifically for files, after file1 is commit-
+    ted then the CVS repository file1,v is copied to the
+    CVS repository file2,v.  Then a cvs update is per-
+    formed on file2 to make a local copy, and tags are
+    removed from file2.  Next file1 is removed as per
+    `cvs remove -f'"'"' and committed, if file1 has
+    tags, or file1,v is deleted and then updated (to
+    remove local records) otherwise.  Lastly the local
     copy of file2 is made user writable if file1 was
     writable before it was committed.
 
@@ -56,21 +73,30 @@ base1="`basename "$1"`"
 dir2="`dirname "$2"`"
 base2="`basename "$2"`"
 
-if [ ! -f "$1" ]
+if [ -L "$1" ]
 then
-    echo "ERROR $1 is NOT an ordinary file"
+    echo "ERROR: $1 is a symbolic link"
     exit 2
-elif [ -e "$2" ]
+elif [ -L "$2" ]
 then
-    echo "ERROR $2 already exists"
+    echo "ERROR: $2 is a symbolic link"
+    exit 2
+elif [ ! -f "$1" -a ! -d "$1" ]
+then
+    echo "ERROR: $1 is NOT an ordinary file" \
+         "or directory"
+    exit 2
+elif [ -f "$1" -a -e "$2" ]
+then
+    echo "ERROR: $2 already exists"
     exit 2
 elif [ ! -d "$dir1/CVS" ]
 then
-    echo "ERROR $dir1 is NOT under CVS control"
+    echo "ERROR: $dir1 is NOT under CVS control"
     exit 2
 elif [ ! -d "$dir2/CVS" ]
 then
-    echo "ERROR $dir2 is NOT under CVS control"
+    echo "ERROR: $dir2 is NOT under CVS control"
     exit 2
 fi
 
@@ -150,31 +176,82 @@ then
     exit 2
 fi
 
-rfile1="$rdir1/$base1,v"
-rfile2="$rdir2/$base2,v"
-case "$raccount1" in
-"")
-    echo cp -p "$rfile1" "$rfile2"
-    if ! cp -p "$rfile1" "$rfile2"
-    then
-    	echo "ERROR: copy inside repository failed"
-    	exit 2
-    fi
-    ;;
-*)
-    echo ssh "$raccount1" cp -p "$rfile1" "$rfile2"
-    if ! ssh "$raccount1" cp -p "$rfile1" "$rfile2"
-    then
-    	echo "ERROR: copy inside repository failed"
-    	exit 2
-    fi
-    ;;
-esac
+if [ -d "$1" ]
+then
+    # Directory case
 
-echo "(cd $dir2; cvs update $base2)"
-(cd "$dir2"; cvs update "$base2")
+    echo "******** starting"
 
-tags=(`(cd "$dir2"; cvs log "$base2" | sed -n -e '
+    # Prune directory1.
+    #
+    echo "(cd $dir1; cvs update -d -P $base1)"
+    if ! (cd "$dir1"; cvs update -d -P "$base1")
+    then
+	echo "ERROR: while updating $dir1/$base1"
+	exit 2
+    fi
+
+    for cvsdir in `( cd "$1"; \
+    	             find . -type d -name CVS -print )`
+    do
+        dir="`dirname "$cvsdir"`"
+	dir="`expr "$dir" : '\.\(.*\)$' `"
+	echo "**** subdirectory ${dir:-.}"
+
+	if [ -L "$2$dir" ]
+	then
+	    echo "ERROR; $2$dir is a symbolic link;" \
+	         "skipping"
+	    continue
+	elif [ ! -e "$2$dir" ]
+	then
+	    echo mkdir "$2$dir"
+	    mkdir "$2$dir"
+	elif [ ! -d "$2$dir" ]
+	then
+	    echo "ERROR; $2$dir is not a directory;" \
+	         "skipping"
+	    continue
+	fi
+
+	echo "(cd $dir2; cvs add $base2$dir)"
+	(cd "$dir2"; cvs add "$base2$dir")
+
+	for file in `(cd "$1$dir"; \
+	              find . -maxdepth 1 \
+		             -type f -print )`
+	do
+	    echo "** file $file"
+	    if ( cd "$1$dir"; \
+	         cvs log "$file" >/dev/null 2>&1 )
+	    then
+		echo "$0" "$1$dir/$file" "$2$dir/$file"
+		"$0" "$1$dir/$file" "$2$dir/$file"
+	    else
+		echo "mv'ing file not under CVS control"
+		echo mv "$1$dir/$file" "$2$dir/$file"
+		mv "$1$dir/$file" "$2$dir/$file"
+	    fi
+	done
+    done
+
+    echo "******** finalizing"
+    # Prune $directory1
+    #
+    echo "(cd $dir1; cvs update -d -P $base1)"
+    (cd "$dir1"; cvs update -d -P "$base1")
+
+    if [ -e "$1" ]
+    then
+        echo "WARNING: $1 not emptied!"
+    fi
+
+    exit 0
+fi
+
+# Get the tags on file1.
+#
+tags=(`(cd "$dir1"; cvs log "$base1" | sed -n -e '
 : look
 /^symbolic names:$/b readtags
 n
@@ -189,20 +266,56 @@ b readtags
 n
 b done' )`)
 
+move=mv
+if [ ${#tags[@]} -gt 0 ]
+then
+    move='cp -p'
+fi
+
+rfile1="$rdir1/$base1,v"
+rfile2="$rdir2/$base2,v"
+case "$raccount1" in
+"")
+    echo $move "$rfile1" "$rfile2"
+    if ! $move "$rfile1" "$rfile2"
+    then
+    	echo "ERROR: $move inside repository failed"
+    	exit 2
+    fi
+    ;;
+*)
+    echo ssh "$raccount1" $move "$rfile1" "$rfile2"
+    if ! ssh "$raccount1" $move "$rfile1" "$rfile2"
+    then
+    	echo "ERROR: $move inside repository failed"
+    	exit 2
+    fi
+    ;;
+esac
+
+echo "(cd $dir2; cvs update $base2)"
+(cd "$dir2"; cvs update "$base2")
+
 for tag in "${tags[@]}"
 do
     echo "(cd $dir2; cvs tag -d $tag $base2)"
     (cd "$dir2"; cvs tag -d "$tag" "$base2")
 done
 
-echo "(cd $dir1; cvs remove -f $base1)"
-(cd "$dir1"; cvs remove -f "$base1")
-
-echo "(cd $dir1; cvs commit -m update $base1)"
-(cd "$dir1"; cvs commit -m update "$base1")
-
 if [ w = yes ]
 then
     echo chmod u+w "$2"
     chmod u+w "$2"
+fi
+
+if [ "$move" = mv ]
+then
+    echo "(cd $dir1; cvs update $base1)"
+    (cd "$dir1"; cvs update "$base1")
+else
+    echo "(cd $dir1; cvs remove -f $base1)"
+    (cd "$dir1"; cvs remove -f "$base1")
+
+    echo "(cd $dir1; cvs commit -m update $base1)"
+    (cd "$dir1"; cvs commit -m update "$base1")
 fi
