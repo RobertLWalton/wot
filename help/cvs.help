@@ -1,4 +1,4 @@
-CVS HELP		    Tue Mar 31 12:31:30 EDT 2009
+CVS HELP		    Wed Apr  1 14:52:08 EDT 2009
 
 Purpose
 -------
@@ -64,15 +64,15 @@ need to read the ssh-agent.help file.
 You also need to set the following two CVS environment
 variables:
 
-    In the bash Shell:
+    In the .bashrc:
 
 	CVS_RSH=ssh; export CVS_RSH
 	CVSREAD=; export CVSREAD
 
-    In the csh (tcsh) Shell:
+    In .cshrc (or .tcshrc)
 
-	setenv CVS_RSH=ssh
-	setenv CVSREAD=
+	setenv CVS_RSH ssh
+	setenv CVSREAD
 
 The CVS_RSH variable instructs CVS to use SSH.  The
 CVSREAD variable causes all your local files to be made
@@ -559,60 +559,74 @@ The non-WOT equivalents of the WOT commands are:
 	    directory and its descedent subdirectories.
 
 
-TBD
+Repository Structure
+---------- ---------
 
-CVS uses RCS to maintain the ",v" files.  Like RCS, CVS
-is also useful for backing up files in case you acci-
-dentally delete them, and for seeing what changes you
-recently made.  If the repository is remote from you,
-accessing it using CVS can be slower, however, than a
-local RCS system.  It is easy to move ",v" RCS files
-into a CVS repository and to move them out again, so it
-is easy to switch between using CVS and using RCS.  And
-it is also possible to place your CVS repository on your
-local computer and back it up on a remote machine as a
-tar file.  This can also be useful if you want to store
-only an encrypted version of your files on the remote
-computer.
-
-The CVS repository is a directory with subdirectories.
-Repository directories contain ",v" files or and sub-
-directories.  Users maintain copies of parts of the
-repository with ",v" files replaced by the files they
-log (i.e., "foo,v" replaced by "foo").  Users may check
-files in and out, and may check all the files and sub-
-directories in a subdirectory system in or out.  Check-
-ing "foo" in means storing the current version of "foo"
-in "foo,v"; checking "foo" out means copying the most
-recent version of "foo" stored in "foo,v" to the user's
-version of "foo".  The command in CVS to check files in
-is called `commit', and the command to check files out
-is called `update'.
+The CVS repository has the following structure:
 
-The subdirectory organization of the repository is the
-same as the subdirectory organization of the user of
-the repository: the differences are that where there
-is a file named "foo,v" in the repository, there is
-a file named "foo" in the associated user subdirectory,
-and that the user subdirectory has a CVS subdirectory
-used for bookkeeping.  The root of the repository has
-a CVSROOT subdirectory for bookkeeping, and the
-repository subdirectories may have Attic subdirectories
-in which ",v" files that have been `removed' from the
-repository are kept (so nothing is ever lost).
+    /DDD/CVSROOT	CVS control file directory
+    /DDD/PPP		Project PPP Directory
+    /DDD/PPP/SSS	Project PPP Subdirectory SSS
+    /DDD/PPP/SSS/FILE,v PPP/SSS/FILE repository; FILE
+    			  NOT in Attic
+    /DDD/PPP/SSS/Attic/FILE,v  PPP/SSS/FILE repository,
+    			       for FILL in Attic
 
-If you are doing a group project in which all users are
-in a UNIX group, it is important that your umask be set
-to 7, and not 77, when CVS is accessing the repository.
-To accomplish this put:
+Local (checked out) project structure:
+
+    PPP			Project directory
+    PPP/SSS		Project subdirectory
+    PPP/SSS/FILE	Project file
+    PPP/SSS/CVS		CVS control file directory
+
+The directory organization of the repository mirrors
+that of the local copy of the project.  There are
+additional directories to hold CVS control files: in the
+repository this is just the /DDD/CVSROOT directory, and
+in the local copies of each directory, there is a CVS
+subdirectory.  In the repository files moved to the
+Attic are put in the Attic subdirectory of the file's
+normal repository directory.
+
+The FILE,v files in the repository have exactly the same
+structure as the RCS repository files, an in fact an RCS
+,v file can be moved into a CVS repository directory to
+put the file under CVS control.  The main consideration
+in doing this is to be sure the RCS ,v file is unlocked
+before it is moved.
+
+The ,v files can be moved around or copied in the
+repository, which is what cvsmv and cvscp do.  You can
+create a project subdirectory by simply creating it in
+the repository.  All these changes can be propagated to
+a local project copy by cvsup (cvs update -d -P).
+
+You cannot simply move a ,v file between a repository
+subdirectory to its Attic subdirectory.  The ,v files
+in an Attic directory differ from those not in an Attic
+directory in that the RCS state of their most recent
+revision is `dead' and not `Exp'.
+
+Note on Group Repositories
+---- -- ----- ------------
+
+If a repository is shared amoung several accounts, the
+repository directories can be assigned to a group GGG.
+The directories should have the chmod g+s bit set to
+all subdirectories created will also be in this group.
+Lastly, the accounts should all have the CVSUMASK
+enviroment variable set as follows:
+
+    In the .bashrc:
+
+	CVSUMASK=007; export CVSUMASK
+
+    In .cshrc (or .tcshrc)
 
 	setenv CVSUMASK 007
 
-in the .cshrc file of the account where the repository
-resides.  If you do NOT do this, but instead let CVS
-access the repository with umask equal to 77, the repo-
-sitory files created when you run CVS will be inacces-
-sible to your group mates.
+This ensures that when cvs is run directories created
+by cvs will be writable by their group.
 
 File:		cvs.help
 Author:		Bob Walton (walton@seas.harvard.edu)
@@ -625,6 +639,6 @@ file.
 RCS Info (may not be true date or author):
 
     $Author: walton $
-    $Date: 2009/04/01 17:03:45 $
+    $Date: 2009/04/01 18:52:40 $
     $RCSfile: cvs.help,v $
-    $Revision: 1.21 $
+    $Revision: 1.22 $
