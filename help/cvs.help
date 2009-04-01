@@ -1,4 +1,4 @@
-CVS HELP		    Wed Apr  1 14:52:08 EDT 2009
+CVS HELP		    Wed Apr  1 15:10:07 EDT 2009
 
 Purpose
 -------
@@ -31,7 +31,7 @@ revision of the files available.
 Two or more people can also work on the same project
 using separate working accounts, as long as they do not
 modify the same file at the same time.
-
+
 There are some other uses of a source code control
 system.  A common one is to compute the diff listing
 between your current working modified files and the
@@ -68,7 +68,7 @@ variables:
 
 	CVS_RSH=ssh; export CVS_RSH
 	CVSREAD=; export CVSREAD
-
+
     In .cshrc (or .tcshrc)
 
 	setenv CVS_RSH ssh
@@ -80,7 +80,7 @@ read only whenever you check them into or out of the
 repository.  This prevents one of the dangers of CVS:
 that you will accidentally modify a file, and then when
 you check all the project files into the repository with
-a single command while loggin out of the working
+a single command while logging out of the working
 account, you will check the accidentally modified file
 into the repository along with your intentionally
 modified files.  With CVSREAD, in order to modify a
@@ -106,7 +106,7 @@ To create a project directory PPP and check it out
 execute:
 
 	cvsout -n AAA@HHH:/DDD PPP
-
+
 The -n indicates this is a new project directory that
 does not previously exist.  To just check out an exist-
 ing project directory use
@@ -146,7 +146,7 @@ To create a new project file FFF,
 
 	<create FFF with an editor>
 	cvsadd FFF
-
+
 Cvsadd checks a new directory into the repository, BUT,
 it does NOT check a new file into the repository.
 
@@ -185,7 +185,7 @@ checked in,
 
 	cd PPP
 	cvscom
-
+
 where PPP is the project directory in the working
 account.
 
@@ -222,7 +222,7 @@ its subdirectories (recursively) up to date,
 
 	cd PPP/SSS
 	cvsup
-
+
 The cvsup command tells you what it is doing by output-
 ting lines like:
 
@@ -259,7 +259,7 @@ them to see if something is amiss.  You can do this by
 
 	cd <the directory containing FFF>
 	cvsignore FFF
-
+
 Here FFF should be a file you expect to NEVER check into
 CVS.  It is not an error if this file ceases to exist,
 is remade, etc.; it will continue to be ignored.
@@ -298,7 +298,7 @@ project PPP by
 
     cd PPP
     cvsdiff | less
-
+
 and all the files in a subdirectory SSS of the project,
 and its subdirectories (recursively), by
 
@@ -337,7 +337,7 @@ reference.  You can do this with
 
 	cd PPP
 	cvstag TTT
-
+
 This will associate a tag TTT, or symbolic name, with
 the current revision of every file in the project.
 Then for commands that take a `-rX.Y' option, `-rTTT'
@@ -375,7 +375,7 @@ and remove a tag by
 
 	cvs PPP
 	cvstagrm TAG
-
+
 You can also tag all the files in a subdirectory of the
 project by using `cd PPP/SSS' instead of `cd PPP'.
 
@@ -414,7 +414,7 @@ Removing, Copying, and Moving a File
 To remove a file FFF from the project,
 
 	cvsrm FFF
-
+
 This actually puts FFF in the Attic of its containing
 directory.  The file then appears as if it has been
 removed from the repository, unless one of its revisions
@@ -450,8 +450,9 @@ The non-WOT equivalents of the WOT commands are:
 
     cvsrm FILE		cvs remove -f FILE
     			cvs commit -m update FILE
-
-    cvsexpunge FILE	ssh AAA@HHH rm -f /DDD/SSS/FILE,v
+
+    cvsexpunge FILE	ssh AAA@HHH \
+                            rm -f /DDD/SSS/FILE,v
     			cvs update FILE
 
 	of if in Attic	ssh AAA@HHH \
@@ -488,7 +489,7 @@ removed in the repository it would cause problems for
 already checked out copies of the project, even if there
 are not Attic files.
 
-
+
 Previous Revisions of a File
 -------- --------- -- - ----
 
@@ -522,7 +523,7 @@ The non-WOT equivalents of the WOT commands are:
 	                            FILE > FILE.rX.Y
 				chmod a-w FILE.rX.Y
 
-
+
 Changing Repositories
 -------- ------------
 
@@ -553,12 +554,12 @@ The non-WOT equivalents of the WOT commands are:
 
 	cvsrepository		cat CVS/Root
 
-	cvsrepository PATTERN REPLACMENT
+	cvsrepository PATTERN REPLACEMENT
 
 	    Edit all CVS/Root files in the current
-	    directory and its descedent subdirectories.
+	    directory and its descendant subdirectories.
 
-
+
 Repository Structure
 ---------- ---------
 
@@ -594,7 +595,7 @@ structure as the RCS repository files, an in fact an RCS
 put the file under CVS control.  The main consideration
 in doing this is to be sure the RCS ,v file is unlocked
 before it is moved.
-
+
 The ,v files can be moved around or copied in the
 repository, which is what cvsmv and cvscp do.  You can
 create a project subdirectory by simply creating it in
@@ -610,12 +611,12 @@ revision is `dead' and not `Exp'.
 Note on Group Repositories
 ---- -- ----- ------------
 
-If a repository is shared amoung several accounts, the
+If a repository is shared among several accounts, the
 repository directories can be assigned to a group GGG.
 The directories should have the chmod g+s bit set to
 all subdirectories created will also be in this group.
 Lastly, the accounts should all have the CVSUMASK
-enviroment variable set as follows:
+environment variable set as follows:
 
     In the .bashrc:
 
@@ -627,7 +628,7 @@ enviroment variable set as follows:
 
 This ensures that when cvs is run directories created
 by cvs will be writable by their group.
-
+
 File:		cvs.help
 Author:		Bob Walton (walton@seas.harvard.edu)
 Date:		See date at top of file.
@@ -639,6 +640,6 @@ file.
 RCS Info (may not be true date or author):
 
     $Author: walton $
-    $Date: 2009/04/01 18:52:40 $
+    $Date: 2009/04/01 19:15:17 $
     $RCSfile: cvs.help,v $
-    $Revision: 1.22 $
+    $Revision: 1.23 $
