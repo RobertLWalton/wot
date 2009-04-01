@@ -4,7 +4,7 @@
 #
 # File:		cvsmv
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Wed Apr  1 15:07:44 EDT 2009
+# Date:		Wed Apr  1 15:08:30 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/04/01 19:08:07 $
+#   $Date: 2009/04/01 19:08:42 $
 #   $RCSfile: cvsmv,v $
-#   $Revision: 1.11 $
+#   $Revision: 1.12 $
 
 # Redirect all error output to the standard output.
 #
@@ -53,8 +53,8 @@ cvsmv directory1 directory2
     or may not be under CVS control, before cvsmv is
     executed.  But target files must not exist before
     cvsmv is executed.  When directories are being
-    moved, files in the directories not under CVS control
-    will be moved with UNIX mv(1).
+    moved, files in the directories not under CVS
+    control will be moved with UNIX mv(1).
 
     More specifically for cvsmv of files, after file1 is
     committed the CVS repository file1,v is copied to
