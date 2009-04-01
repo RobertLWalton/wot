@@ -4,7 +4,7 @@
 #
 # File:		cvsmv
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Wed Apr  1 06:53:22 EDT 2009
+# Date:		Wed Apr  1 15:07:44 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/04/01 15:01:13 $
+#   $Date: 2009/04/01 19:08:07 $
 #   $RCSfile: cvsmv,v $
-#   $Revision: 1.10 $
+#   $Revision: 1.11 $
 
 # Redirect all error output to the standard output.
 #
@@ -48,17 +48,25 @@ cvsmv directory1 directory2
     with tags (see cvsrm), and even if not, deleting
     them would foul up other checked out versions of
     their containing project.
+    
+    The target directories may or may not exist, and may
+    or may not be under CVS control, before cvsmv is
+    executed.  But target files must not exist before
+    cvsmv is executed.  When directories are being
+    moved, files in the directories not under CVS control
+    will be moved with UNIX mv(1).
 
-    More specifically for files, after file1 is commit-
-    ted then the CVS repository file1,v is copied to the
-    CVS repository file2,v.  Then a cvs update is per-
-    formed on file2 to make a local copy, and tags are
-    removed from file2.  Next file1 is removed as per
-    `cvs remove -f'"'"' and committed, if file1 has
-    tags, or file1,v is deleted and then updated (to
-    remove local records) otherwise.  Lastly the local
-    copy of file2 is made user writable if file1 was
-    writable before it was committed.
+    More specifically for cvsmv of files, after file1 is
+    committed the CVS repository file1,v is copied to
+    the CVS repository file2,v.  Then a cvs update is
+    performed on file2 to make a local copy, and tags
+    are removed from file2.  Next file1 is removed as
+    per `cvs remove -f'"'"' and committed, if file1 has
+    tags, or file1,v is deleted and then file1 is
+    updated (to remove local records) if file1 has no
+    tags.  Lastly the local copy of file2 is made user
+    writable if file1 was writable before it was commit-
+    ted.
 
     For cvsmv the current directory need not be under
     CVS control and the two files may be in different
