@@ -4,7 +4,7 @@
 #
 # File:		cvscom
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Wed Mar 25 12:59:34 EDT 2009
+# Date:		Thu Apr  2 18:47:12 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/25 18:05:14 $
+#   $Date: 2009/04/02 22:50:23 $
 #   $RCSfile: cvscom,v $
-#   $Revision: 1.6 $
+#   $Revision: 1.7 $
 
 # Redirect all error output to the standard output.
 #
@@ -34,5 +34,12 @@ cvscom [file_or_directory ...]
     exit 1
     ;;
 esac
+
+if [ ! -d ./CVS ]
+then
+    echo "ERROR: current directory is not under CVS" \
+         "control"
+    exit 2
+fi
 
 cvs commit -m update "$@"
