@@ -4,7 +4,7 @@
 #
 # File:		cvscp
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Tue Mar 31 11:28:52 EDT 2009
+# Date:		Thu Apr  2 18:52:34 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/31 15:29:30 $
+#   $Date: 2009/04/02 22:57:16 $
 #   $RCSfile: cvscp,v $
-#   $Revision: 1.9 $
+#   $Revision: 1.10 $
 
 # Redirect all error output to the standard output.
 #
@@ -53,7 +53,15 @@ base1="`basename "$1"`"
 dir2="`dirname "$2"`"
 base2="`basename "$2"`"
 
-if [ ! -f "$1" ]
+if [ -L "$1" ]
+then
+    echo "ERROR: $1 is a symbolic link"
+    exit 2
+elif [ -L "$2" ]
+then
+    echo "ERROR: $2 is a symbolic link"
+    exit 2
+elif [ ! -f "$1" ]
 then
     echo "ERROR $1 is NOT an ordinary file"
     exit 2
@@ -179,7 +187,7 @@ n
 b look
 : readtags
 n
-/^	\([^:]*\):.*$/s//\1/
+/^	\(.*\):[^:]*$/s//\1/
 T done
 p
 b readtags
