@@ -1,4 +1,4 @@
-CVS HELP		    Wed Apr  1 15:10:07 EDT 2009
+CVS HELP		    Thu Apr  2 08:35:42 EDT 2009
 
 Purpose
 -------
@@ -48,7 +48,7 @@ which has free downloads for common operating systems.
 
 In this help file we will explain how to use CVS using
 some small programs from the WOT library.  We will also
-give rough equivalents for these WOT commands in case
+give usable equivalents for these WOT commands in case
 you do not have the WOT programs.
 
 Note on SSH and CVS Environment Variables
@@ -80,7 +80,7 @@ read only whenever you check them into or out of the
 repository.  This prevents one of the dangers of CVS:
 that you will accidentally modify a file, and then when
 you check all the project files into the repository with
-a single command while logging out of the working
+a single command before logging out of the working
 account, you will check the accidentally modified file
 into the repository along with your intentionally
 modified files.  With CVSREAD, in order to modify a
@@ -107,6 +107,11 @@ execute:
 
 	cvsout -n AAA@HHH:/DDD PPP
 
+If the repository is in the current working account, you
+should omit `AAA@HHH:' as in
+
+	cvsout -n /DDD PPP
+
 The -n indicates this is a new project directory that
 does not previously exist.  To just check out an exist-
 ing project directory use
@@ -114,11 +119,15 @@ ing project directory use
 	cvsout AAA@HHH:/DDD PPP
 
 In your working account the project directory will be
-./PPP, which must not previously exist.  You can rename
-it if you like.
+./PPP, which must not previously exist.
 
 The checked out files will be made readonly (if CVSREAD
 is set: see Environment Variables above).
+
+You can also check out just an existing subdirectory SSS
+of a project PPP by
+
+	cvsout AAA@HHH:/DDD PPP/SSS
 
 The non-WOT equivalents to the WOT commands are:
 
@@ -133,7 +142,7 @@ The non-WOT equivalents to the WOT commands are:
 	cvs -d AAA@HHH:/DDD checkout PPP
 	(cd PPP; cvs update -P)
 
-
+
 Creating New Project Subdirectories and Files
 -------- --- ------- -------------- --- -----
 
@@ -146,7 +155,7 @@ To create a new project file FFF,
 
 	<create FFF with an editor>
 	cvsadd FFF
-
+
 Cvsadd checks a new directory into the repository, BUT,
 it does NOT check a new file into the repository.
 
@@ -167,7 +176,7 @@ To check file FFF into the repository:
 
 The file will be made readonly (if CVSREAD is set: see
 Environment Variables above).
-
+
 To modify an existing file and check the revision
 back in
 
@@ -185,7 +194,7 @@ checked in,
 
 	cd PPP
 	cvscom
-
+
 where PPP is the project directory in the working
 account.
 
@@ -200,12 +209,12 @@ Checking Out Revisions from a Repository
 -------- --- --------- ---- - ----------
 
 Often when you log into a working account you find an
-old version of project PPP already checked out.  To
-make this version up to date,
+old revision of project PPP already checked out.  To
+make this revision up to date,
 
 	cd PPP
 	cvsup
-
+
 This replaces local copies of files with the latest
 revisions of the files in the repository, thus moving
 work you did more recently in other working accounts
@@ -222,7 +231,7 @@ its subdirectories (recursively) up to date,
 
 	cd PPP/SSS
 	cvsup
-
+
 The cvsup command tells you what it is doing by output-
 ting lines like:
 
@@ -239,13 +248,13 @@ ting lines like:
     C FFF	IMPORTANT: if you see this do
     		`cvsup -doc' for more information.
 		It means the local and the repository
-		versions of the file conflict.
+		revisions of the file conflict.
 
-To find you whether our files are up-to-date use
+To find out whether our files are up-to-date use
 
 	cd PPP
 	cvsutd
-
+
 Cvsutd is identical in function to cvsup, except it does
 not modify any files, and just produces the listing
 above, which can be used to tell you which files would
@@ -259,7 +268,7 @@ them to see if something is amiss.  You can do this by
 
 	cd <the directory containing FFF>
 	cvsignore FFF
-
+
 Here FFF should be a file you expect to NEVER check into
 CVS.  It is not an error if this file ceases to exist,
 is remade, etc.; it will continue to be ignored.
@@ -283,7 +292,7 @@ The non-WOT equivalents of the WOT commands are:
 			 ./.cvsignore into the
 			 repository>
 
-
+
 Making Diff Listings
 ------ ---- --------
 
@@ -298,7 +307,7 @@ project PPP by
 
     cd PPP
     cvsdiff | less
-
+
 and all the files in a subdirectory SSS of the project,
 and its subdirectories (recursively), by
 
@@ -317,6 +326,18 @@ revision to the latest revision in the repository for
 each file.  This is useful if you are about to cvsup
 and want to see what changes you are about to incorpor-
 ate in the local files.
+
+If instead you want to diff with a particular previous
+revision of a file FFF, first use
+
+    cvslog FFF
+
+to see the revisions and dates available, and then use
+
+    cvsdiff -rX.Y FFF | less
+
+to see the diff listing of the current local file and
+revision rX.Y of the file.
 
 You can also give diff(1) options to cvsdiff, such as
 -b, -w, and --minimal.
@@ -337,7 +358,7 @@ reference.  You can do this with
 
 	cd PPP
 	cvstag TTT
-
+
 This will associate a tag TTT, or symbolic name, with
 the current revision of every file in the project.
 Then for commands that take a `-rX.Y' option, `-rTTT'
@@ -349,7 +370,7 @@ with their TTT tagged revisions.  For example,
 
 	cd PPP
 	cvsdiff -rTTT | less
-
+
 will generate a diff listing for every project file
 that has been modified since the `cvstag TTT' command
 with the revision of the file at the time the `cvstag
@@ -375,10 +396,11 @@ and remove a tag by
 
 	cvs PPP
 	cvstagrm TAG
-
-You can also tag all the files in a subdirectory of the
-project by using `cd PPP/SSS' instead of `cd PPP'.
 
+You can also tag all the files in a subdirectory SSS of
+the project PPP by using `cd PPP/SSS' instead of
+`cd PPP'.
+
 The non-WOT equivalents of the WOT commands are:
 
     cvstag TTT		cvsrm TTT <see below>
@@ -418,8 +440,8 @@ To remove a file FFF from the project,
 This actually puts FFF in the Attic of its containing
 directory.  The file then appears as if it has been
 removed from the repository, unless one of its revisions
-has a tag TTT, in which case CVS command that have the
--rTTT option and still refer to that revision.
+has a tag TTT, in which case CVS commands that have the
+-rTTT option and refer to that revision.
 
 If you want to completely expunge a file from the
 repository you can
@@ -428,7 +450,7 @@ repository you can
 
 This gets rid of all trace of the file.  However, it is
 a bad idea to do this if the file has any tagged
-revisions (see cvslog below).
+revisions (see cvslog above).
 
 If you want to move (rename) a file use
 
@@ -442,7 +464,7 @@ Renaming a file is equivalent to copying it and then
 either cvsrm'ing the OLDNAME if the file has tags or
 cvsexpunge'ing the OLDNAME if the file does not have
 tags.  Copying a file FFF copies the FFF,v file in the
-repository so the revision history of the TARGET is that
+repository so the revision history of the TARGET is the
 same as the revision history of the SOURCE, but all tags
 are removed from the TARGET.
 
@@ -481,15 +503,22 @@ You can rename directories with
 	cvsmv OLDDIRNAME NEWDIRNAME
 
 This makes the new directory and the necessary subdirec-
-tories and then uses cvsmv to move all the files from
-the old to the new directory.  The old directory is left
-empty except for Attic files, and is NOT removed in the
-repository, though it is removed locally.  If it were
-removed in the repository it would cause problems for
-already checked out copies of the project, even if there
-are not Attic files.
-
+tories and then uses cvsmv to move all the files under
+CVS control from the old to the new directory, and uses
+UNIX mv(1) to move all files and directories NOT under
+CVS control from the old to the new directory.  The old
+directory is left empty except for Attic files, and is
+NOT removed in the repository, though it is removed
+locally.  If it were removed in the repository it would
+cause problems for already checked out copies of the
+project, even if there are not Attic files.
 
+The new directory and its subdirectories can pre-exist
+for this command, as long as nothing that is to be moved
+to it (files or subdirectories NOT under CVS control)
+pre-exist in it.  Pre-existing new directories or sub-
+directories will be cvsadd'ed to the repository.
+
 Previous Revisions of a File
 -------- --------- -- - ----
 
@@ -505,7 +534,8 @@ by
 	cvslog
 
 This also tells which tags refer to which revisions for
-each file.
+each file and includes files in the Attic (see cvsrm
+above).
 
 You can get an old revision of a file into the current
 directory with
@@ -522,8 +552,8 @@ The non-WOT equivalents of the WOT commands are:
 	cvsold rX.Y FILE	cvs update -rX.Y -p \
 	                            FILE > FILE.rX.Y
 				chmod a-w FILE.rX.Y
-
 
+
 Changing Repositories
 -------- ------------
 
@@ -560,6 +590,28 @@ The non-WOT equivalents of the WOT commands are:
 	    directory and its descendant subdirectories.
 
 
+Note on Group Repositories
+---- -- ----- ------------
+
+If a repository is shared among several accounts, the
+repository directories can be assigned to a group GGG.
+The directories should have the chmod g+s bit set so
+all subdirectories created will also be in this group.
+Lastly, the accounts should all have the CVSUMASK
+environment variable set as follows:
+
+    In the .bashrc:
+
+	CVSUMASK=007; export CVSUMASK
+
+    In .cshrc (or .tcshrc)
+
+	setenv CVSUMASK 007
+
+This ensures that when cvs is run directories created
+by cvs will be writable by their group.
+
+
 Repository Structure
 ---------- ---------
 
@@ -571,8 +623,8 @@ The CVS repository has the following structure:
     /DDD/PPP/SSS/FILE,v PPP/SSS/FILE repository; FILE
     			  NOT in Attic
     /DDD/PPP/SSS/Attic/FILE,v  PPP/SSS/FILE repository,
-    			       for FILL in Attic
-
+    			       for FILE in Attic
+
 Local (checked out) project structure:
 
     PPP			Project directory
@@ -590,12 +642,12 @@ Attic are put in the Attic subdirectory of the file's
 normal repository directory.
 
 The FILE,v files in the repository have exactly the same
-structure as the RCS repository files, an in fact an RCS
-,v file can be moved into a CVS repository directory to
-put the file under CVS control.  The main consideration
-in doing this is to be sure the RCS ,v file is unlocked
-before it is moved.
-
+structure as the RCS repository files, and in fact an
+RCS ,v file can be moved into a CVS repository directory
+to put the file under CVS control.  The main considera-
+tion in doing this is to be sure the RCS ,v file is un-
+locked before it is moved.
+
 The ,v files can be moved around or copied in the
 repository, which is what cvsmv and cvscp do.  You can
 create a project subdirectory by simply creating it in
@@ -607,27 +659,6 @@ subdirectory to its Attic subdirectory.  The ,v files
 in an Attic directory differ from those not in an Attic
 directory in that the RCS state of their most recent
 revision is `dead' and not `Exp'.
-
-Note on Group Repositories
----- -- ----- ------------
-
-If a repository is shared among several accounts, the
-repository directories can be assigned to a group GGG.
-The directories should have the chmod g+s bit set to
-all subdirectories created will also be in this group.
-Lastly, the accounts should all have the CVSUMASK
-environment variable set as follows:
-
-    In the .bashrc:
-
-	CVSUMASK=007; export CVSUMASK
-
-    In .cshrc (or .tcshrc)
-
-	setenv CVSUMASK 007
-
-This ensures that when cvs is run directories created
-by cvs will be writable by their group.
 
 File:		cvs.help
 Author:		Bob Walton (walton@seas.harvard.edu)
@@ -640,6 +671,6 @@ file.
 RCS Info (may not be true date or author):
 
     $Author: walton $
-    $Date: 2009/04/01 19:15:17 $
+    $Date: 2009/04/02 13:37:32 $
     $RCSfile: cvs.help,v $
-    $Revision: 1.23 $
+    $Revision: 1.24 $
