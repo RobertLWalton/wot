@@ -1,4 +1,4 @@
-CVS HELP		    Thu Apr  2 08:35:42 EDT 2009
+CVS HELP		    Thu Apr  2 09:37:42 EDT 2009
 
 Purpose
 -------
@@ -47,9 +47,11 @@ tems.  The web site for CVS is http://cvs.nongnu.org/,
 which has free downloads for common operating systems.
 
 In this help file we will explain how to use CVS using
-some small programs from the WOT library.  We will also
-give usable equivalents for these WOT commands in case
-you do not have the WOT programs.
+some small programs from the WOT library.  All WOT com-
+mands print their full documentation when given a `-doc'
+argument.  We will also give usable equivalents for
+these WOT commands below in case you do not have the WOT
+programs.
 
 Note on SSH and CVS Environment Variables
 ---- -- --- --- --- ----------- ---------
@@ -441,7 +443,7 @@ This actually puts FFF in the Attic of its containing
 directory.  The file then appears as if it has been
 removed from the repository, unless one of its revisions
 has a tag TTT, in which case CVS commands that have the
--rTTT option and refer to that revision.
+-rTTT option still refer to that revision.
 
 If you want to completely expunge a file from the
 repository you can
@@ -515,8 +517,8 @@ project, even if there are not Attic files.
 
 The new directory and its subdirectories can pre-exist
 for this command, as long as nothing that is to be moved
-to it (files or subdirectories NOT under CVS control)
-pre-exist in it.  Pre-existing new directories or sub-
+to them (files or subdirectories NOT under CVS control)
+pre-exist in them.  Pre-existing new directories or sub-
 directories will be cvsadd'ed to the repository.
 
 Previous Revisions of a File
@@ -671,6 +673,6 @@ file.
 RCS Info (may not be true date or author):
 
     $Author: walton $
-    $Date: 2009/04/02 13:37:32 $
+    $Date: 2009/04/02 13:42:35 $
     $RCSfile: cvs.help,v $
-    $Revision: 1.24 $
+    $Revision: 1.25 $
