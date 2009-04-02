@@ -4,7 +4,7 @@
 #
 # File:		cvsexpunge
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Tue Mar 31 12:22:26 EDT 2009
+# Date:		Thu Apr  2 19:36:50 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/31 16:29:22 $
+#   $Date: 2009/04/02 23:46:51 $
 #   $RCSfile: cvsexpunge,v $
-#   $Revision: 1.6 $
+#   $Revision: 1.7 $
 
 # Redirect all error output to the standard output.
 #
@@ -111,7 +111,7 @@ do
 	;;
     esac
 
-    tagline="`cvs log 2>&1 | sed -n -e '
+    tagline="`(cd "$dir"; cvs log -l 2>&1 | sed -n -e '
 : look
 /^RCS file: /s///
 t found
@@ -125,11 +125,11 @@ H
 : infile
 n
 /^symbolic names:$/b readtags
-/^RCS file: /b look
+/^RCS file: /b done
 b infile
 : readtags
 n
-/^	\([^:]*\):.*$/s//\1/
+/^	\(.*\):[^:]*$/s//\1/
 T done
 H
 b readtags
@@ -141,7 +141,7 @@ x
 t loop
 p
 n
-b look' | egrep "^$rdir/(Attic/|)$base,v" `"
+b look' | egrep "^$rdir/(Attic/|)$base,v" )`"
 
     if [ "$tagline" = "" ]
     then
@@ -154,13 +154,9 @@ b look' | egrep "^$rdir/(Attic/|)$base,v" `"
     if [ ${#tags[@]} -gt 0 ]
     then
         echo "***** WARNING: $file has tags ${tags[@]}"
-    	echo -n "Do you really want to expunge" \
-	        "$file (y or n)? "
-	if ! read || [ "$REPLY" != y ]
-	then
-	    continue
-	fi
-    elif [ $f = no ]
+    fi
+
+    if [ $f = no ]
     then
     	echo -n "expunge $file (y or n)? "
 	if ! read || [ "$REPLY" != y ]

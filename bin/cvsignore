@@ -4,7 +4,7 @@
 #
 # File:		cvsignore
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sun Mar 29 15:06:48 EDT 2009
+# Date:		Thu Apr  2 19:49:37 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/29 19:26:44 $
+#   $Date: 2009/04/02 23:50:53 $
 #   $RCSfile: cvsignore,v $
-#   $Revision: 1.1 $
+#   $Revision: 1.2 $
 
 # Redirect all error output to the standard output.
 #
@@ -40,7 +40,7 @@ cvsignore file_or_pattern ...
     Specifically the listed files and patterns are added
     as lines to the ./.cvsignore file and that file is
     checked in.  You can also edit and cvscom this file
-    if you like to un-ignore files or adjust patterns.
+    if you want to un-ignore files or adjust patterns.
     Printing the currently ignored files and patterns is
     equivalent to printing the ./.cvsignore file.'
     exit 1
