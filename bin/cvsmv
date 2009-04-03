@@ -4,7 +4,7 @@
 #
 # File:		cvsmv
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Wed Apr  1 15:08:30 EDT 2009
+# Date:		Thu Apr  2 21:15:16 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/04/01 19:08:42 $
+#   $Date: 2009/04/03 01:18:09 $
 #   $RCSfile: cvsmv,v $
-#   $Revision: 1.12 $
+#   $Revision: 1.13 $
 
 # Redirect all error output to the standard output.
 #
@@ -257,6 +257,8 @@ then
     exit 0
 fi
 
+# File (non-directory) case
+
 # Get the tags on file1.
 #
 tags=(`(cd "$dir1"; cvs log "$base1" | sed -n -e '
@@ -266,7 +268,7 @@ n
 b look
 : readtags
 n
-/^	\([^:]*\):.*$/s//\1/
+/^	\(.*\):[^:]*$/s//\1/
 T done
 p
 b readtags
