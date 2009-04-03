@@ -4,7 +4,7 @@
 #
 # File:		cvsout
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Tue Mar 31 07:42:33 EDT 2009
+# Date:		Thu Apr  2 22:43:45 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/31 11:43:32 $
+#   $Date: 2009/04/03 03:03:07 $
 #   $RCSfile: cvsout,v $
-#   $Revision: 1.9 $
+#   $Revision: 1.10 $
 
 # Redirect all error output to the standard output.
 #
@@ -51,9 +51,14 @@ cvsout [-n|-e|-ne|-en|-rT] [-E] repository directory
     Then `directory'"'"' is both the name of the subdir-
     ctory of DDD being checked out, relative to DDD, and
     ALSO the name of the local checked out copy direc-
-    tory, relative to the current directory.  AFTER
-    checkout you can rename the local checked out copy
-    directory if you like with mv(1).
+    tory, relative to the current directory.  It can be
+    the name of a project directory, e.g., PPP for
+    project PPP, or the name of a project subdirectory,
+    e.g., PPP/SSS for subdirectory SSS of project PPP.
+    If the latter, both PPP and PPP/SSS are created
+    locally and put under CVS control, but except for
+    SSS none of the contents of the repository PPP
+    directory are checked out.
 
     All the contents of a directory being checked out
     will be checked out, recursively.
@@ -116,9 +121,9 @@ cvsout [-n|-e|-ne|-en|-rT] [-E] repository directory
     shift
 esac
 
-P=-P
+E=no
 case "$1" in
--E)	P=
+-E)	E=yes
 	shift
 	;;
 esac
@@ -205,5 +210,8 @@ fi
 
 echo cvs -d "$repository" checkout $r "$directory"
 cvs -d "$repository" checkout $r "$directory"
-echo "(cd $directory; cvs update $P)"
-(cd "$directory"; cvs update $P)
+if [ $E = no ]
+then
+    echo "(cd $directory; cvs update -P)"
+    (cd "$directory"; cvs update -P)
+fi
