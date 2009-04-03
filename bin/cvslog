@@ -4,7 +4,7 @@
 #
 # File:		cvslog
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Mon Mar 30 10:54:01 EDT 2009
+# Date:		Thu Apr  2 20:15:43 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/30 18:18:20 $
+#   $Date: 2009/04/03 00:16:42 $
 #   $RCSfile: cvslog,v $
-#   $Revision: 1.4 $
+#   $Revision: 1.5 $
 
 # Redirect all error output to the standard output.
 #
@@ -35,6 +35,13 @@ cvslog [-h] [file_or_directory ...]
     exit 1
     ;;
 esac
+
+if [ ! -d ./CVS ]
+then
+    echo "ERROR: current directory is not under CVS" \
+         "control"
+    exit 2
+fi
 
 ignored=''
 ignored="$ignored"'|cvs log: Logging .*'
