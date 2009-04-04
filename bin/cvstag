@@ -4,7 +4,7 @@
 #
 # File:		cvstag
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Tue Mar 31 12:06:50 EDT 2009
+# Date:		Fri Apr  3 21:02:23 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/31 16:11:28 $
+#   $Date: 2009/04/04 01:04:25 $
 #   $RCSfile: cvstag,v $
-#   $Revision: 1.5 $
+#   $Revision: 1.6 $
 
 # Redirect all error output to the standard output.
 #
@@ -66,6 +66,10 @@ fi
 tag="$1"
 
 case "$tag" in
+"")
+    echo "ERROR: tag cannot be empty"
+    exit 2
+    ;;
 [0-9]*)
     echo "ERROR: tag cannot begin with a digit: $tag"
     exit 2
@@ -143,11 +147,11 @@ then
     cvs tag -d "$tag"
 fi
 
-echo rm -rf $tmpdir
-rm -rf $tmpdir
-
 echo cd "$pwd"
 cd "$pwd"
+
+echo rm -rf $tmpdir
+rm -rf $tmpdir
 
 echo cvs tag "$1"
 cvs tag "$1"
