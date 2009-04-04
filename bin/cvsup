@@ -4,7 +4,7 @@
 #
 # File:		cvsup
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Tue Mar 31 07:40:16 EDT 2009
+# Date:		Fri Apr  3 21:56:20 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/31 11:42:07 $
+#   $Date: 2009/04/04 01:57:08 $
 #   $RCSfile: cvsup,v $
-#   $Revision: 1.9 $
+#   $Revision: 1.10 $
 
 P=-P
 case "$1" in
@@ -97,9 +97,10 @@ cvsup [-E] [file-or-directory ...]
 
     R filename	File has been `cvs remove'"'"'d but
     		this remove has not yet been commited
-		to the repository.  If you use
-		`cvsrm'"'"' and `cvsattic'"'"' you
-		should never see this.'
+		to the repository.  If you use' \
+				'`cvsrm'"'"'
+		and `cvsexpunge'"'"' you should never
+		see this.'
     	exit 1
 	;;
 -E)	P=
