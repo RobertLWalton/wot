@@ -4,7 +4,7 @@
 #
 # File:		cvsutd
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Sun Mar 29 16:11:44 EDT 2009
+# Date:		Fri Apr  3 22:38:40 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/29 20:18:54 $
+#   $Date: 2009/04/04 02:39:02 $
 #   $RCSfile: cvsutd,v $
-#   $Revision: 1.6 $
+#   $Revision: 1.7 $
 
 case "$1" in
 
@@ -31,5 +31,12 @@ cvsutd [file-or-directory ...]
     	exit 1
 	;;
 esac
+
+if [ ! -d ./CVS ]
+then
+    echo "ERROR: current directory is not under CVS" \
+         "control"
+    exit 2
+fi
 
 cvs -n update -d -P "$@" 2>&1 | grep -v ': Updating'
