@@ -1,10 +1,10 @@
-#/bin/sh
+#!/bin/sh
 #
 # Produce cvsup listing without changing files.
 #
 # File:		cvsutd
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Fri Apr  3 22:38:40 EDT 2009
+# Date:		Sat Apr  4 12:03:08 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/04/04 02:39:02 $
+#   $Date: 2009/04/04 16:04:23 $
 #   $RCSfile: cvsutd,v $
-#   $Revision: 1.7 $
+#   $Revision: 1.8 $
 
 case "$1" in
 
