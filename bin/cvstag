@@ -4,7 +4,7 @@
 #
 # File:		cvstag
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sun Apr  5 08:36:52 EDT 2009
+# Date:		Sun Apr  5 09:21:10 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/04/05 12:58:03 $
+#   $Date: 2009/04/05 13:21:27 $
 #   $RCSfile: cvstag,v $
-#   $Revision: 1.7 $
+#   $Revision: 1.8 $
 
 # Redirect all error output to the standard output.
 #
@@ -141,7 +141,7 @@ echo cd $tmpdir
 cd $tmpdir
 
 echo "# Checkout with $tag tag to remove it"
-echo "# This will fail if it was not previously used"
+echo "# This will fail if tag was not previously used"
 echo cvs -d "$root" checkout "-r$tag" -P "$repository"
 if cvs -d "$root" checkout "-r$tag" -P "$repository" \
    && [ -d "$repository" ]
