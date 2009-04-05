@@ -4,7 +4,7 @@
 #
 # File:		cvstag
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sun Apr  5 09:26:36 EDT 2009
+# Date:		Sun Apr  5 09:33:11 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/04/05 13:26:55 $
+#   $Date: 2009/04/05 13:39:34 $
 #   $RCSfile: cvstag,v $
-#   $Revision: 1.9 $
+#   $Revision: 1.10 $
 
 # Redirect all error output to the standard output.
 #
@@ -154,6 +154,8 @@ then
     cd "$repository"
     echo cvs tag -d "$tag"
     cvs tag -d "$tag"
+else
+    echo "# Checkout failed to produce $repository"
 fi
 
 echo "# Returning to original current directory"
