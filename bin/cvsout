@@ -4,7 +4,7 @@
 #
 # File:		cvsout
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Fri Apr  3 19:05:30 EDT 2009
+# Date:		Sun Apr  5 08:25:38 EDT 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/04/03 23:05:48 $
+#   $Date: 2009/04/05 14:55:05 $
 #   $RCSfile: cvsout,v $
-#   $Revision: 1.11 $
+#   $Revision: 1.12 $
 
 # Redirect all error output to the standard output.
 #
@@ -69,11 +69,11 @@ cvsout [-n|-e|-ne|-en|-rT] [-E] repository directory
     All the contents of a directory being checked out
     will be checked out, recursively.
 
-    The -rT option, if given, checks out the project
-    revision that has tag T (see cvstag).  If this is
-    done, the checked out files should NOT be modified
-    and then checked back in (i.e., cvscom should NOT
-    be used on them).
+    The -rT option, if given, the project revision that
+    has tag T (see cvstag) is checked into the subdirec-
+    tory ./TAG.rT.  If this is done, the checked out
+    files should NOT be modified and then checked back
+    in (i.e., cvscom should NOT be used on them).
 
     Normally `directory'"'"' must exist in the reposi-
     tory but must NOT exist locally, and it will be
@@ -170,7 +170,30 @@ case "$repository" in
     ;;
 esac
 
-if [ $e = no -a -e "$directory" ]
+if [ "$r" != "" ]
+then
+    tag="`expr "$r" : '-r\(.*\)$'`"
+    case "$tag" in
+    "")
+    	echo "ERROR: empty tag in $r"
+	exit 2
+	;;
+    [0-9]*)
+    	echo "ERROR: tag begins with digit in $r"
+	exit 2
+	;;
+    esac
+
+    tagdir="TAG.r$tag"
+    echo "# Moving to subdirectory $tagdir"
+    echo mkdir -p "$tagdir"
+    mkdir -p "$tagdir"
+    echo cd "$tagdir"
+    if ! cd "$tagdir"
+    then
+        echo "ERROR: cd $tagdir failed"
+    fi
+elif [ $e = no -a -e "$directory" ]
 then
     echo "ERROR: local directory exists but no -e" \
          "option given: $directory"
@@ -196,6 +219,7 @@ fi
 
 if [ $n = yes ]
 then
+    echo "# Making $directory in repository"
     if [ $remote = no ]
     then
     	echo mkdir "$repository/$directory"
@@ -214,10 +238,25 @@ then
     fi
 fi
 
+echo "# Checking $directory out of repository"
 echo cvs -d "$repository" checkout $r "$directory"
-cvs -d "$repository" checkout $r "$directory"
-if [ $E = no ]
+if cvs -d "$repository" checkout $r "$directory" \
+    && [ -d "$directory" ]
 then
-    echo "(cd $directory; cvs update -P)"
-    (cd "$directory"; cvs update -P)
+    if [ $E = no ]
+    then
+	echo "# Removing empty subdirectories"
+	echo "(cd $directory; cvs update -P)"
+	(cd "$directory"; cvs update -P)
+    fi
+    if [ "$r" != "" ]
+    then
+        echo "# Checkout is in $tagdir/$directory"
+    fi
+else
+    echo "# Checkout failed to produce $directory"
+    if [ "$r" != "" ]
+    then
+        echo "# Tag $tag not used in $directory"
+    fi
 fi
