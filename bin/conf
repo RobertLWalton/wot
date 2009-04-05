@@ -4,7 +4,7 @@
 #
 # File:		conf
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sun Mar 22 14:20:26 EDT 2009
+# Date:		Sat Apr  4 12:00:40 EST 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/03/22 18:28:19 $
+#   $Date: 2009/04/05 07:23:15 $
 #   $RCSfile: conf,v $
-#   $Revision: 1.13 $
+#   $Revision: 1.14 $
 
 # The undocumented -d option is used for debugging.
 # WARNING: This option leaves the last tmp file
@@ -418,17 +418,20 @@ do
 		    esac
 		fi
 	    else
-		# Identify the command and the
-		# destination file des of the copy.
+		# Identify the command and the source
+		# file src and destination file des
+		# of the copy.
 		#
 		if [ $command = put \
 		     -o $command = pdiff \
 		          -o $command = ptest ]
 		then
 		    c=put
+		    src="$source"
 		    des="$target"
 		else
 		    c=get
+		    src="$target"
 		    des="$source"
 		fi
 
@@ -455,6 +458,8 @@ do
 		then
 		    exit 2
 		fi
+
+		chmod --reference=$src $tmpfile
 
 		# If tmpfile equals des file return
 		#
