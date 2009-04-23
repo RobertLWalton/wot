@@ -1,6 +1,28 @@
-#!/bin/csh -f
-source ~/.lsbackuprc
-echo rsync -av --delete $argv[2-]:q $argv[1]:q/ \
-    ${LINKACCOUNT}@${LINKSTATION}:walton3/$argv[1]:q
-rsync -av --delete $argv[2-]:q $argv[1]:q/ \
-    ${LINKACCOUNT}@${LINKSTATION}:walton3/$argv[1]:q
+#!/bin/sh
+. ~/.lsbackuprc
+flags='-av --delete'
+while [ x = x ]
+do
+    case "$1" in
+    -*)
+        flags="$flags $1"
+	shift ;;
+    *)  break;;
+    esac
+done
+
+case "$1" in
+/?*/?*) ;;
+*)  echo "BAD: argument: $1"
+    exit 2;;
+esac
+
+if [ -r "$1/.BACKUP-IGNORE" ]
+then
+    flags="$flags --exclude-from=$1/.BACKUP-IGNORE"
+fi
+
+echo rsync $flags "$1/" \
+    ${LINKACCOUNT}@${LINKSTATION}:walton3/$1
+rsync $flags "$1/" \
+    ${LINKACCOUNT}@${LINKSTATION}:walton3/$1
