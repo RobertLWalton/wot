@@ -1,0 +1,3 @@
+#!/bin/sh
+# Note: -dao == -sao
+cdrecord fs=16m dev=/dev/hdc -dao -nopad -data driveropts=burnfree "$@"
