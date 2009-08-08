@@ -5,21 +5,21 @@ then
     shell="zshell $SSH_ZONE"
 else
     profile=Default
-    shell="tcsh"
+    shell="bash"
 fi
 #!/bin/sh
 gnome-terminal --tab-with-profile=$profile \
                --title=btn/include \
-	       --command="tcsh -c 'cd ~/by-the-numbers/btn/include;$shell'" \
+	       --command="bash -c 'cd ~/by-the-numbers/btn/include;$shell'" \
                --tab-with-profile=$profile \
                --title=btn/src \
-	       --command="tcsh -c 'cd ~/by-the-numbers/btn/src;$shell'" \
+	       --command="bash -c 'cd ~/by-the-numbers/btn/src;$shell'" \
                --tab-with-profile=$profile \
                --title=btn/test \
-	       --command="tcsh -c 'cd ~/by-the-numbers/btn/test;$shell'" \
+	       --command="bash -c 'cd ~/by-the-numbers/btn/test;$shell'" \
                --tab-with-profile=$profile \
                --title=btn/doc \
-	       --command="tcsh -c 'cd ~/by-the-numbers/btn/doc;$shell'" \
+	       --command="bash -c 'cd ~/by-the-numbers/btn/doc;$shell'" \
                --tab-with-profile=$profile \
                --title=btn/data \
-	       --command="tcsh -c 'cd ~/by-the-numbers/btn/data;$shell'"
+	       --command="bash -c 'cd ~/by-the-numbers/btn/data;$shell'"

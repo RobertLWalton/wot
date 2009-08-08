@@ -5,17 +5,17 @@ then
     shell="zshell $SSH_ZONE"
 else
     profile=Default
-    shell="tcsh"
+    shell="bash"
 fi
 gnome-terminal --tab-with-profile=$profile \
                --title=min/include \
-	       --command="tcsh -c 'cd ~/min/include;$shell'" \
+	       --command="bash -c 'cd ~/min/include;$shell'" \
                --tab-with-profile=$profile \
                --title=min/src \
-	       --command="tcsh -c 'cd ~/min/src;$shell'" \
+	       --command="bash -c 'cd ~/min/src;$shell'" \
                --tab-with-profile=$profile \
                --title=min/test \
-	       --command="tcsh -c 'cd ~/min/test;$shell'" \
+	       --command="bash -c 'cd ~/min/test;$shell'" \
                --tab-with-profile=$profile \
                --title=min/doc \
-	       --command="tcsh -c 'cd ~/min/doc;$shell'"
+	       --command="bash -c 'cd ~/min/doc;$shell'"
