@@ -1,528 +1,104 @@
-#! /bin/csh -f
+#! /bin/sh
+#
+# Start a new X terminal.
+#
+# File:		xcsh
+# Author:	Bob Walton <walton@deas.harvard.edu>
+# Date:		Thu Oct 15 22:29:48 EDT 2009
+#
+# The authors have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+#
+# RCS Info (may not be true date or author):
+#
+#   $Author: walton $
+#   $Date: 2009/10/16 02:45:17 $
+#   $RCSfile: xcsh,v $
+#   $Revision: 1.10 $
 
-set location=80x35+2+100
-set program=""
-set title="`hostname`"
+location=80x35+5+25
+PP=25
+program=""
+title="`hostname -s`"
 
-set c1="*-c-*-iso8859-1"
-set m1="*-m-*-iso8859-1"
+location_documentation="
+Location should be 1, 2, 3, 4, or WxH+X+Y, WxH-X+Y,
+WxH+X-Y, or WxH-X-Y.  Locations 1, 2, 3, 4 progress from
+the upper left downward and rightward.  W and H are the
+width in columns and height in lines.  +X (-X) gives the
+offset in pixels X of the window from the left (right)
+of the screen.  +Y (-Y) gives the offset in pixels Y of
+the window from the top (bottom) of the screen."
 
-set bitb=-bitstream-terminal-bold-r-normal-
-set bitm=-bitstream-terminal-medium-r-normal-
-set decb=-dec-terminal-bold-r-normal-
-set decm=-dec-terminal-medium-r-normal-
-set miscb=-misc-fixed-bold-r-normal-
-set miscbs=-misc-fixed-bold-r-semicondensed-
-set miscm=-misc-fixed-medium-r-normal-
-set miscms=-misc-fixed-medium-r-semicondensed-
-set schub=-schumacher-clean-bold-r-normal-
-set schum=-schumacher-clean-medium-r-normal-
-set sonym=-sony-fixed-medium-r-normal-
-set adobeb=-adobe-courier-bold-r-normal-
-set adobem=-adobe-courier-medium-r-normal-
-set lucidb="-b&h-lucidatypewriter-bold-r-normal-sans"
-set lucidm="-b&h-lucidatypewriter-medium-r-normal-sans"
-set hcrm="-hrnet&hcr-grtt-medium-r-normal-"
+font_documentation="
+Font argument is PP:
+    PP = [1-9][0-9] = point size:
+         8,10,11,12,14,17,18,20,24,25,34
+    Font is
+      adobe-courier-bold-r-normal-*-PP-*-*-*-*-*-*-*"
 
-set font="$lucidm-18-$m1"
 
-while ($#argv > 0)
-    switch ( "$1" )
-    case -host:
-    case -h:
-        set program="-e ssh $2"
-        set title="$2"
+while test $# -gt 0
+do
+    case "$1" in
+
+    -host | -h )
+        program="-e ssh $2"
+        title="$2"
 	shift
-	breaksw
-    case -location:
-    case -l:
-        switch ( "$2" )
-	case 1:
-	    set location=80x35+5+25
-	    breaksw
-	case 2:
-	    set location=80x35+30+50
-	    breaksw
-	case 3:
-	    set location=80x35+55+75
-	    breaksw
-	case 4:
-	    set location=80x35+80+100
-	    breaksw
-	case [5-90]:
-	    echo "location should be 1, 2, 3, 4, or" \
-		    "WxH+X+Y"
-	    echo "  W and H are width in columns and" \
-		    "height in lines"
-	    echo "  X and Y are the upper left corner" \
-		    "offset in pixels"
+	;;
+
+    -location | -l )
+        case "$2" in
+	1 )
+	    location=80x35+5+25
+	    ;;
+	2 )
+	    location=80x35+30+50
+	    ;;
+	3 )
+	    location=80x35+55+75
+	    ;;
+	4 )
+	    location=80x35+80+100
+	    ;;
+	[0-9]*x[0-9]*[-+][0-9]*[-+][0-9]* )
+	    location="$2"
+	    ;;
+	* )
+	    echo "$location_documentation"
 	    exit 1
-	case *:
-	    set location="$2"
-	    breaksw
-	endsw
+	    ;;
+	esac
 	shift
-	breaksw
+	;;
 
-    case 10bl:
-	set font="$lucidb-10-$m1"
-	breaksw
-    case 10ba:
-	set font="$adobeb-10-$m1"
-	breaksw
-    case 10bs:
-	set font="$schub-10-$c1"
-	breaksw
-    case 10b*:
-        echo use one of 10bl 10ba 10bs
+    8|10|11|12|14|17|18|20|24|25|34)
+	PP=$1
+	;;
+
+    [1-9]* )
+	echo "$font_documentation"
 	exit 1
-	breaksw
+	;;
 
-    case 10ml:
-	set font="$lucidm-10-$m1"
-	breaksw
-    case 10ma:
-	set font="$adobem-10-$m1"
-	breaksw
-    case 10ms:
-	set font="$schum-10-$c1"
-	breaksw
-    case 10mm:
-	set font="$miscm-10-$c1"
-	breaksw
-    case 10mh:
-	set font="$hcrm-10-$m1"
-	breaksw
-    case 10m*:
-        echo use one of 10ml 10ma 10ms 10mm 10mh
+    * )
+    	echo "
+xcsh [font] [-l location] [-h host]
+$font_documentation
+$location_documentation
+
+If host is given, the program "'`ssh host'"' is used
+for login by the xterminal window."
 	exit 1
-	breaksw
+	;;
 
-    case 11bl:
-	set font="$lucidb-11-$m1"
-	breaksw
-    case 11ba:
-	set font="$adobeb-11-$m1"
-	breaksw
-    case 11b*:
-        echo use one of 11bl 11ba
-	exit 1
-	breaksw
-
-    case 11ml:
-	set font="$lucidm-11-$m1"
-	breaksw
-    case 11ma:
-	set font="$adobem-11-$m1"
-	breaksw
-    case 11m*:
-        echo use one of 11ml 11ma
-	exit 1
-	breaksw
-
-    case 12bl:
-	set font="$lucidb-12-$m1"
-	breaksw
-    case 12ba:
-	set font="$adobeb-12-$m1"
-	breaksw
-    case 12bs:
-	set font="$schub-12-$c1"
-	breaksw
-    case 12b*:
-        echo use one of 12bl 12ba 12bs
-	exit 1
-	breaksw
-
-    case 12bml:
-	set font="$lucidm-12-$m1"
-	breaksw
-    case 12ma:
-	set font="$adobem-12-$m1"
-	breaksw
-    case 12ms:
-	set font="$schum-12-$c1"
-	breaksw
-    case 12mh:
-	set font="$hcrm-12-$m1"
-	breaksw
-    case 12mms:
-	set font="$miscms-12-$c1"
-	breaksw
-    case 12m*:
-        echo use one of 12ml 12ma 12ms 12mms 12mh
-	exit 1
-	breaksw
-
-    case 13bs:
-	set font="$schub-13-$c1"
-	breaksw
-    case 13bm:
-	set font="$miscb-13-$c1"
-	breaksw
-    case 13bms:
-	set font="$miscbs-13-$c1"
-	breaksw
-    case 13b*:
-        echo use one of 13bs 13bm 13bms
-	exit 1
-	breaksw
-
-    case 13ms:
-	set font="$schum-13-$c1"
-	breaksw
-    case 13mm:
-	set font="$miscm-13-$c1"
-	breaksw
-    case 13mms:
-	set font="$miscms-13-$c1"
-	breaksw
-    case 13m*:
-        echo use one of 13ms 13mm 13mms
-	exit 1
-	breaksw
-
-    case 14bl:
-	set font="$lucidb-14-$m1"
-	breaksw
-    case 14ba:
-	set font="$adobeb-14-$m1"
-	breaksw
-    case 14bs:
-	set font="$schub-14-$c1"
-	breaksw
-    case 14bm:
-	set font="$miscb-14-$c1"
-	breaksw
-    case 14bd:
-	set font="$decb-14-$c1"
-	breaksw
-    case 14b*:
-        echo use one of 14bl 14ba 14bs 14bm 14bd
-	exit 1
-	breaksw
-
-    case 14ml:
-	set font="$lucidm-14-$m1"
-	breaksw
-    case 14ma:
-	set font="$adobem-14-$m1"
-	breaksw
-    case 14ms:
-	set font="$schum-14-$c1"
-	breaksw
-    case 14mm:
-	set font="$miscm-14-$c1"
-	breaksw
-    case 14md:
-	set font="$decm-14-$c1"
-	breaksw
-    case 14m*:
-        echo use one of 14ml 14ma 14ms 14mm 14md
-	exit 1
-	breaksw
-
-    case 15bs:
-	set font="$schub-15-$c1"
-	breaksw
-    case 15bm:
-	set font="$miscb-15-$c1"
-	breaksw
-    case 15b*:
-        echo use one of 15bs 15bm
-	exit 1
-	breaksw
-
-    case 15ms:
-	set font="$schum-15-$c1"
-	breaksw
-    case 15mh:
-	set font="$hcrm-15-$m1"
-	breaksw
-    case 15mm:
-	set font="$miscm-15-$c1"
-	breaksw
-    case 15m*:
-        echo use one of 15ms 15mh 15mm
-	exit 1
-	breaksw
-
-    case 16bs:
-	set font="$schub-16-$c1"
-	breaksw
-    case 16b*:
-        echo use one of 16bs
-	exit 1
-	breaksw
-
-    case 16ms:
-	set font="$schum-16-$c1"
-	breaksw
-    case 16mn:
-	set font="$sonym-16-$c1"
-	breaksw
-    case 16m*:
-        echo use one of 16ms 16mn
-	exit 1
-	breaksw
-
-    case 17bl:
-	set font="$lucidb-17-$m1"
-	breaksw
-    case 17ba:
-	set font="$adobeb-17-$m1"
-	breaksw
-    case 17b*:
-        echo use one of 17bl 17ba
-	exit 1
-	breaksw
-
-    case 17ml:
-	set font="$lucidm-17-$m1"
-	breaksw
-    case 17ma:
-	set font="$adobem-17-$m1"
-	breaksw
-    case 17mh:
-	set font="$hcrm-17-$m1"
-	breaksw
-    case 17m*:
-        echo use one of 17ml 17ma 17mh
-	exit 1
-	breaksw
-
-    case 18bl:
-	set font="$lucidb-18-$m1"
-	breaksw
-    case 18ba:
-	set font="$adobeb-18-$m1"
-	breaksw
-    case 18bb:
-	set font="$bitb-18-$c1"
-	breaksw
-    case 18b*:
-        echo use one of 18bl 18ba 18bb
-	exit 1
-	breaksw
-
-    case 18ml:
-	set font="$lucidm-18-$m1"
-	breaksw
-    case 18ma:
-	set font="$adobem-18-$m1"
-	breaksw
-    case 18mb:
-	set font="$bitm-18-$c1"
-	breaksw
-    case 18m*:
-        echo use one of 18ml 18ma 18mb
-	exit 1
-	breaksw
-
-    case 19bl:
-	set font="$lucidb-19-$m1"
-	breaksw
-    case 19b*:
-        echo use one of 19bl
-	exit 1
-	breaksw
-
-    case 19ml:
-	set font="$lucidm-19-$m1"
-	breaksw
-    case 19mh:
-	set font="$hcrm-19-$m1"
-	breaksw
-    case 19m*:
-        echo use one of 19ml 19mh
-	exit 1
-	breaksw
-
-    case 20bl:
-	set font="$lucidb-20-$m1"
-	breaksw
-    case 20ba:
-	set font="$adobeb-20-$m1"
-	breaksw
-    case 20b*:
-        echo use one of 20bl 20ba
-	exit 1
-	breaksw
-
-    case 20ml:
-	set font="$lucidm-20-$m1"
-	breaksw
-    case 20ma:
-	set font="$adobem-20-$m1"
-	breaksw
-    case 20mm:
-	set font="$miscm-20-$c1"
-	breaksw
-    case 20m*:
-        echo use one of 20ml 20ma 20mm
-	exit 1
-	breaksw
-
-    case 21mh:
-	set font="$hcrm-21-$m1"
-	breaksw
-    case 21m*:
-        echo use one of 21mh
-	exit 1
-	breaksw
-
-    case 24bl:
-	set font="$lucidb-24-$m1"
-	breaksw
-    case 24ba:
-	set font="$adobeb-24-$m1"
-	breaksw
-    case 24b*:
-        echo use one of 24bl 24ba
-	exit 1
-	breaksw
-
-    case 24ml:
-	set font="$lucidm-24-$m1"
-	breaksw
-    case 24ma:
-	set font="$adobem-24-$m1"
-	breaksw
-    case 24mn:
-	set font="$sonym-24-$c1"
-	breaksw
-    case 24m*:
-        echo use one of 24ml 24ma 24mn
-	exit 1
-	breaksw
-
-    case 25bl:
-	set font="$lucidb-25-$m1"
-	breaksw
-    case 25ba:
-	set font="$adobeb-25-$m1"
-	breaksw
-    case 25b*:
-        echo use one of 25bl 25ba
-	exit 1
-	breaksw
-
-    case 25ml:
-	set font="$lucidm-25-$m1"
-	breaksw
-    case 25ma:
-	set font="$adobem-25-$m1"
-	breaksw
-    case 25mh:
-	set font="$hcrm-25-$m1"
-	breaksw
-    case 25m*:
-        echo use one of 25ml 25ma 25mh
-	exit 1
-	breaksw
-
-    case 26bl:
-	set font="$lucidb-26-$m1"
-	breaksw
-    case 26b*:
-        echo use one of 26bl
-	exit 1
-	breaksw
-
-    case 26ml:
-	set font="$lucidm-26-$m1"
-	breaksw
-    case 26m*:
-        echo use one of 26ml
-	exit 1
-	breaksw
-
-    case 31mh:
-	set font="$hcrm-31-$m1"
-	breaksw
-    case 31m*:
-        echo use one of 31mh
-	exit 1
-	breaksw
-
-    case 34bl:
-	set font="$lucidb-34-$m1"
-	breaksw
-    case 34ba:
-	set font="$adobeb-34-$m1"
-	breaksw
-    case 34b*:
-        echo use one of 34bl 34ba
-	exit 1
-	breaksw
-
-    case 34ml:
-	set font="$lucidm-34-$m1"
-	breaksw
-    case 34ma:
-	set font="$adobem-34-$m1"
-	breaksw
-    case 34m*:
-        echo use one of 34ml 34ma
-	exit 1
-	breaksw
-
-    case 37mh:
-	set font="$hcrm-37-$m1"
-	breaksw
-    case 37m*:
-        echo use one of 37mh
-	exit 1
-	breaksw
-
-    case 50mh:
-	set font="$hcrm-50-$m1"
-	breaksw
-    case 50m*:
-        echo use one of 50mh
-	exit 1
-	breaksw
-
-    case [1-8]*:
-        echo "font argument is PPWS"
-        echo "PP = [1-9][0-9] = point size:"
-	echo "     10-21, 24-26, 31, 34, 37, 50"
-        echo "W = [bm] = weight: b = bold, m = medium"
-        echo "S = [abdhlmns] or ms = style"
-	echo "    a=adobe, b=bitstream, d=dec, h=hcr,"
-	echo "    l=lucid, m=misc, n=sony, s=schumacher,"
-	echo "    ms=misc semicondensed"
-	exit 1
-
-    case *:
-    	echo "xcsh [font] [-l location] [-h host]"
-	echo ""
-        echo "Font argument is PPWS:"
-        echo "  PP = [1-9][0-9] = point size:"
-	echo "       10-21, 24-26, 31, 34, 37, 50"
-        echo "  W = [bm] = weight: b = bold, m = medium"
-        echo "  S = [abdhlmns] or ms = style"
-	echo "      a=adobe, b=bitstream, d=dec, h=hcr,"
-	echo "      l=lucid, m=misc, n=sony," \
-			"s=schumacher,"
-	echo "      ms=misc semicondensed"
-	echo ""
-	echo "location argument is 1, 2, 3, 4, or" \
-		"WxH+X+Y"
-	echo "  W and H are width in columns and" \
-	    	"height in lines"
-    	echo "  X and Y are the upper left corner" \
-		"offset in pixels"
-	echo ""
-	echo "If host is given, program is" \
-		'`ssh host'"'."
-	exit 1
-	breaksw
-
-    endsw
+    esac
     shift
-end
+done
 
+font="-adobe-courier-bold-r-normal-*-$PP-*-*-*-*-*-*-*"
 (xterm  -title "$title" -name "$title" \
 	-g "$location" -fn "$font" \
 	-sb -ls $program )&
