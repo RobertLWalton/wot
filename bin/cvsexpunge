@@ -4,7 +4,7 @@
 #
 # File:		cvsexpunge
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Thu Apr  2 19:36:50 EDT 2009
+# Date:		Tue Nov  3 01:37:59 EST 2009
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/04/02 23:46:51 $
+#   $Date: 2009/11/05 13:17:44 $
 #   $RCSfile: cvsexpunge,v $
-#   $Revision: 1.7 $
+#   $Revision: 1.8 $
 
 # Redirect all error output to the standard output.
 #
@@ -85,6 +85,15 @@ do
 
     root="`cat "$dir/CVS/Root"`"
     repository="`cat "$dir/CVS/Repository"`"
+
+    # Sometimes $root ends in /.  This fouls up egrep
+    # below, so we must remove it.
+    case "$root" in
+    */)
+	root="`expr "$root" : '\(.*\)/$' `"
+        ;;
+    esac
+
     rdir="$root"
     raccount=
     case "$root" in
