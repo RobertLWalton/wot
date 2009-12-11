@@ -1,6 +1,6 @@
 #!/bin/csh -f
 if ( $#argv == 1 ) then
-    vi -c "map <F12> :w<CR>:\!make $1<CR>" $1
+    echo vi -c "map <F12> :w<CR>:\!make $1:t:r<CR>" $1
 else
     vi -c "map <F12> :w<CR>:\!make $1<CR>" $argv[2-]:q
 endif
