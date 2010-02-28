@@ -1,0 +1,83 @@
+#!/bin/sh
+#
+# Change the project of checked out CVS directories.
+#
+# File:		cvsproject
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Sun Feb 28 06:21:25 EST 2010
+#
+# The authors have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+#
+# RCS Info (may not be true date or author):
+#
+#   $Author: walton $
+#   $Date: 2010/02/28 11:23:43 $
+#   $RCSfile: cvsproject,v $
+#   $Revision: 1.1 $
+
+# Redirect all error output to the standard output.
+#
+exec 2>&1
+
+case "$1" in
+-doc*)
+    echo '
+cvsproject
+cvsproject pattern replacement
+
+    Print (with no arguments) or change (with two argu-
+    ments) the CVS project of the current directory.
+
+    When the project is changed, the pattern and
+    replacement are as per the sed(1) substitute (s)
+    command.  The changes affect both the current dir-
+    ectory and all subdirectories of it, recursively.'
+    exit 1
+    ;;
+esac
+
+if [ ! -f CVS/Repository ]
+then
+    echo "ERROR: current directory is not under CVS" \
+         "control"
+    exit 2
+fi
+
+if [ $# -eq 0 ]
+then
+    cat CVS/Repository
+    exit 0
+elif [ $# -ne 2 ]
+then
+    echo "ERROR: too few or too many arguments"
+    exit 2
+fi
+
+if [ -d ../CVS ]
+then
+    echo "WARNING: You are in a subdirectory of" \
+         "a directory under CVS control."
+    echo "Maybe you are not in a project root" \
+    	 "directory."
+    echo -n "Do you want to continue (y or n)? "
+    if ! read || [ "$REPLY" != y ]
+    then
+        exit 1
+    fi
+fi
+
+for d in `find . -name CVS -print`
+do
+    if [ ! -f "$d/Repository" ]
+    then
+        echo "ERROR: $d/Repository does not exist;" \
+	     "skipping"
+        continue
+    fi
+    echo -n "$d/Repository: "
+    sed -e "/$1/s/$1/$2/" -i "$d/Repository"
+    cat "$d/Repository"
+done
+
