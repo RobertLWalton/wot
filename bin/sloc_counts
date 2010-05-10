@@ -4,7 +4,7 @@
 #
 # File:		sloc_counts
 # Author:	Bob Walton (walton@deas.harvard.edu)
-# Date:		Thu Oct  7 09:13:33 EDT 2004
+# Date:		Mon May 10 06:19:31 EDT 2010
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -12,13 +12,13 @@
 #
 # RCS Info (may not be true date or author):
 #
-#   $Author: hc3 $
-#   $Date: 2004/10/07 13:18:26 $
+#   $Author: walton $
+#   $Date: 2010/05/10 10:19:52 $
 #   $RCSfile: sloc_counts,v $
-#   $Revision: 1.7 $
+#   $Revision: 1.8 $
 #
-# The next line starts tcl \
-exec tcl "$0" "$@"
+# The next line starts tclsh \
+exec tclsh "$0" "$@"
 
 # This is a utility program that does NOT have to run
 # in a judging directory tree.
