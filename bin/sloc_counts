@@ -4,7 +4,7 @@
 #
 # File:		sloc_counts
 # Author:	Bob Walton (walton@deas.harvard.edu)
-# Date:		Mon May 10 06:19:31 EDT 2010
+# Date:		Mon May 10 06:22:37 EDT 2010
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2010/05/10 10:19:52 $
+#   $Date: 2010/05/10 10:23:58 $
 #   $RCSfile: sloc_counts,v $
-#   $Revision: 1.8 $
+#   $Revision: 1.9 $
 #
 # The next line starts tclsh \
 exec tclsh "$0" "$@"
@@ -39,11 +39,11 @@ sloc_counts \[-debug\] \[-s\] filename ...
     A SLOC, or `Source Line of Code', is defined as
     follows.
 
-    Files with the extensions .c, .cc, .lsp, and
+    Files with the extensions .h, .c, .cc, .lsp, and
     .java are treated specially.  Other files are
     treated as `shell files'.
 
-    For a .c, .cc, and .java file, a SLOC is a line
+    For a .h, .c, .cc, and .java file, a SLOC is a line
     containing a semi-colon (`;').
 
     For a .lsp file a SLOC is a line containing a
@@ -106,6 +106,7 @@ foreach file $files {
 
     set count 0
     switch $ext {
+	.h	-
 	.c	-
 	.cc	-
 	.java	{
