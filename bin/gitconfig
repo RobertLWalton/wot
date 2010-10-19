@@ -1,0 +1,2 @@
+git config user.name 'Robert L. Walton'
+git config user.email walton@acm.org
