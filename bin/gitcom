@@ -1,1 +1,10 @@
-git commit -a -m update
+#!/bin/sh
+git status -a | egrep "^#[ 	]+[a-z]+:"
+echo 'OK (y or n)?'
+read
+if test "$REPLY" = "y"
+then
+    git commit -a -m update
+else
+    echo 'ABORTED!'
+fi
