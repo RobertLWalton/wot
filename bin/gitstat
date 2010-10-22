@@ -1,1 +1,1 @@
-git status -a | egrep "^#[ 	]+[a-z]+:"
+git status | egrep "^#[ 	]+([a-z]+:|Chang)"
