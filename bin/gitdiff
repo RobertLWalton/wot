@@ -1,1 +1,2 @@
-git diff
+#!/bin/sh
+git diff "$@"
