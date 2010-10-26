@@ -1,1 +1,2 @@
-git rm --cached "$@"
+#!/bin/sh
+git reset -- "$@"
