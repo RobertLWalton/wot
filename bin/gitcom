@@ -1,9 +1,4 @@
 #!/bin/sh
-if test $# -ne 0
-then
-    exec git commit -m update "$@"
-fi
-
 git status -a | egrep "^#[ 	]+([a-z]+:|Chang)"
 echo 'OK (y or n)?'
 read
