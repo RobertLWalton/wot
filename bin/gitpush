@@ -1,1 +1,1 @@
-git push --all --tags
+git push --mirror
