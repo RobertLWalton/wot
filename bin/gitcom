@@ -1,5 +1,5 @@
 #!/bin/sh
-git status -a | egrep "^#[ 	]+([a-z]+:|Chang)"
+git status -a | egrep "^#[ 	]+([a-z ]+:|Chang)"
 echo 'OK (y or n)?'
 read
 if test "$REPLY" = "y"
