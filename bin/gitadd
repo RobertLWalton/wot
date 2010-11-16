@@ -1,1 +1,17 @@
-git add -v "$@"
+#!/bin/sh
+
+if test $# -eq 0
+then
+    git status -a | egrep "^#[ 	]+([a-z ]+:|Chang)"
+    echo 'OK (y or n)?'
+    read
+    if test "$REPLY" = "y"
+    then
+	git add -uv
+    else
+	echo 'ABORTED!'
+    fi
+else
+    git add -v "$@"
+fi
+
