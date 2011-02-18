@@ -1,2 +1,10 @@
 #!/bin/sh
-git diff "$@"
+if test "$1" = ""
+then
+    git diff .
+elif test "$1" = "-a"
+then
+    git diff
+else
+    git diff "$@"
+fi
