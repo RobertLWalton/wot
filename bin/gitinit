@@ -1,0 +1,12 @@
+#!/bin/sh
+case $1 in -doc*)
+    echo "
+gitinit
+
+    Make a .git repository in the current directory."
+
+    exit 1
+    ;;
+esac
+
+git init
