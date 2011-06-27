@@ -1,1 +1,38 @@
-git clone --bare $1 $2
+#!/bin/sh
+case $1 in -doc*)
+    echo "
+gitbare repos
+
+    Make a bare copy \`repos' of the current .git
+    repository and make \`repos' the remote origin of
+    the current repository."
+
+    exit 1
+    ;;
+esac
+
+
+if test ! -d ./.git
+then
+    echo "./.git is not an extant directory"
+    exit 1
+fi
+
+tmpgit=/tmp/$$.git
+trap "rm -rf $tmpgit" EXIT
+
+echo git clone --bare ./.git $tmpgit
+git clone --bare ./.git $tmpgit
+echo rsync -avzHu $tmpgit/ $1/
+rsync -avzHu $tmpgit/ $1/
+
+url=`echo "$1" | \
+     sed -e '/:/s//\/~\//' -e '/^/s//ssh:\/\//'`
+echo git remote add -m master origin "$url"
+git remote add -m master origin "$url"
+echo git config --add branch.master.remote origin
+git config --add branch.master.remote origin
+echo git config --add \
+    branch.master.merge refs/heads/master
+git config --add \
+    branch.master.merge refs/heads/master
