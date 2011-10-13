@@ -4,7 +4,7 @@
 #
 # File:		xsh
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Thu Oct 13 07:20:23 EDT 2011
+# Date:		Thu Oct 13 08:48:08 EDT 2011
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,21 +13,12 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2011/10/13 11:29:44 $
+#   $Date: 2011/10/13 12:55:18 $
 #   $RCSfile: xsh,v $
-#   $Revision: 1.6 $
+#   $Revision: 1.7 $
 
 PP=25
 ZOOM=1.0
-PROFILE=~/.gconf/apps/gnome-terminal/profiles
-PROFILE="$PROFILE/Default/%gconf.xml"
-if ! test -r $PROFILE
-then
-    ZOOM=1.7
-elif grep -q -s 'use_system_font.*true' $PROFILE
-then
-    ZOOM=1.7
-fi
 XTERM=no
 
 case "$1" in
@@ -42,14 +33,14 @@ given; else using xterm.
 
 If gnome-terminal is used the Default profile is used
 and its normal font size (and with it terminal window
-size) is multiplied by ZOOM, which defaults to 1.7 if
-the Default profile uses the system font, and to 1.0
-otherwise.  You may change the font/window size after
-the terminal window is created by typing control + to
-increase and control - to decrease.  From such a ter-
-minal window you may open another terminal window by
-typing control N or another tab of the current window
-by typing control T.
+size) is multiplied by ZOOM, which defaults to 1.0.
+You may change the font/window size after the terminal
+window is created by typing control + to increase and
+control - to decrease.  From such a terminal window you
+may open another terminal window by typing control N or
+another tab of the current window by typing control T,
+and you may switch from one tab to another by typing
+control page-up and control page-down.
 
 If xterm is used, the normal font size is changed to PP
 (default 25).  The lucidatypewriter font is used if that
@@ -66,6 +57,19 @@ if which gnome-terminal >/dev/null 2>&1 \
    && test $XTERM == "no"
 then
     if test "$1" != ""; then ZOOM="$1"; fi
+    PROFILE=~/.gconf/apps/gnome-terminal/profiles
+    PROFILE="$PROFILE/Default/%gconf.xml"
+    if ! test -r $PROFILE
+    then
+	echo '
+You may want to use `Edit'"'"' in the terminal window
+toolbar to change the font of the current profile (the
+Default profile) so it does NOT use the system font
+but instead uses a monospace font of the size you like.
+
+Wait ...'
+	sleep 5
+    fi
     ( gnome-terminal --window-with-profile=Default \
                      --zoom=$ZOOM ) &
 else
@@ -86,6 +90,7 @@ else
 	FONT="-adobe-courier-$WEIGHT-r-normal"
     fi
     FONT="$FONT-*-$PP-*-*-*-*-*-*-*"
+    echo 'Wait ...'
     (xterm  -g 80x35 \
 	    -fn "$FONT" \
 	    -bg white \

@@ -4,7 +4,7 @@
 #
 # File:		xcsh
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Thu Oct 13 06:26:37 EDT 2011
+# Date:		Thu Oct 13 08:47:53 EDT 2011
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,17 +13,22 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2011/10/13 10:27:24 $
+#   $Date: 2011/10/13 12:55:18 $
 #   $RCSfile: xcsh,v $
-#   $Revision: 1.13 $
+#   $Revision: 1.14 $
 
 echo '
 xcsh is OBSOLUTE: use xsh instead.
 See `xsh -doc'"'"' for documentation.
 '
 
-echo Executing xsh "$@"
-exec xsh "$@"
+if test "$1" = ""
+then
+    echo Executing xsh
+    exec xsh
+else
+    exit 0
+fi
 
 location=80x35+5+25
 PP=25
