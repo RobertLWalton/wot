@@ -1,0 +1,63 @@
+#! /bin/sh
+#
+# Start a new X terminal running the shell.
+#
+# File:		xsh
+# Author:	Bob Walton <walton@deas.harvard.edu>
+# Date:		Wed Oct 12 22:59:40 EDT 2011
+#
+# The authors have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+#
+# RCS Info (may not be true date or author):
+#
+#   $Author: walton $
+#   $Date: 2011/10/13 03:17:30 $
+#   $RCSfile: xsh,v $
+#   $Revision: 1.1 $
+
+PP=25
+Z=1.0
+XTERM=no
+title="`id -un`@`hostname -s`"
+
+
+case "$1" in
+   -doc*)
+   	echo "xsh ZOOM"
+	echo "xsh [-xterm] PP"
+	echo ""
+	echo "Opens a new X-window running the shell."
+	echo "Uses gnome-terminal if that exists and"
+	echo "the -xterm option is NOT given; else"
+	echo "uses xterm.  If gnome-terminal is used"
+	echo "the normal font size is multiplied by"
+	echo "ZOOM.  If xterm is used, the normal"
+	echo "font size is changed to PP."
+	exit 0
+esac
+
+if test "$1" == "-xterm"; then XTERM=yes; shift; fi
+
+if test "$1" == "-xterm"; then XTERM=yes; shift; fi
+
+if which gnome-terminal >/dev/null 2>&1 \
+   && test $XTERM == "no"
+then
+    if test "$1" != ""; then Z="$1"; fi
+    ( gnome-terminal --zoom=$Z -t "$title" ) &
+else
+    if test "$1" != ""; then PP="$1"; fi
+    font="-*-lucidatypewriter-medium-*-*-*-$PP-*-*-*-*-*-*-*"
+    font="-adobe-courier-bold-r-normal-*-$PP-*-*-*-*-*-*-*"
+    (xterm  -title "$title" \
+	    -name "$title" \
+	    -g "$location" \
+	    -fn "$font" \
+	    -bg white \
+	    -rightbar \
+	    -sb -ls $program )&
+fi
+
+exit 0

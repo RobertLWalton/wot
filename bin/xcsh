@@ -13,9 +13,9 @@
 # RCS Info (may not be true date or author):
 #
 #   $Author: walton $
-#   $Date: 2009/10/16 02:45:17 $
+#   $Date: 2011/10/13 03:17:30 $
 #   $RCSfile: xcsh,v $
-#   $Revision: 1.10 $
+#   $Revision: 1.11 $
 
 location=80x35+5+25
 PP=25
@@ -98,9 +98,14 @@ for login by the xterminal window."
     shift
 done
 
+font="-*-lucidatypewriter-medium-*-*-*-$PP-*-*-*-*-*-*-*"
 font="-adobe-courier-bold-r-normal-*-$PP-*-*-*-*-*-*-*"
-(xterm  -title "$title" -name "$title" \
-	-g "$location" -fn "$font" \
+(xterm  -title "$title" \
+	-name "$title" \
+	-g "$location" \
+	-fn "$font" \
+	-bg white \
+	-rightbar \
 	-sb -ls $program )&
 
 exit 0
