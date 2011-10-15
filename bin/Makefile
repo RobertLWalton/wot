@@ -15,5 +15,11 @@ conf_helper:	conf_helper.c
 	gcc -ansi -pedantic -o conf_helper conf_helper.c
 	chmod 555 conf_helper
 
+sniffbench:	sniffbench.c
+	rm -f sniffbench
+	gcc -ansi -pedantic -o sniffbench sniffbench.c
+	chmod 555 sniffbench
+
+
 clean:
-	rm -f chkpage efm conf_helper
+	rm -f chkpage efm conf_helper sniffbench
