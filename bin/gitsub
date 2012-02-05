@@ -1,2 +1,25 @@
 #!/bin/sh
-git reset -- "$@"
+case $1 in -doc*)
+    echo "
+gitsub filename ...
+
+    Undo gitadd of the named files.  The working copy
+    of each file, if it exists, is moved to filename-.
+"
+    exit 1
+    ;;
+esac
+
+for f in "$@"
+do
+    if test -f "$f"
+    then
+	echo making backup in "$f-"
+	mv -f "$f" "$f-"
+    fi
+    status=`git checkout-index "$f"`
+    if test "$status" = ""
+    then
+        echo "$f" moved from index to working directory
+    fi
+done
