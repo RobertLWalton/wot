@@ -37,15 +37,5 @@ then
 	echo 'ABORTED!'
     fi
 else
-    for f in "$@"
-    do
-	status=`git add -v "$f"`
-	if test "$status" = ""
-	then
-	    echo "$f" added to index
-	else
-	    echo "$status"
-	fi
-    done
+    git add -v "$@"
 fi
-
