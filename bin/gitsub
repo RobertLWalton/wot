@@ -3,8 +3,19 @@ case $1 in -doc*)
     echo "
 gitsub filename ...
 
-    Undo gitadd of the named files.  The working copy
-    of each file, if it exists, is moved to filename-.
+    For each filename, first copy the working directory
+    file to filename-, then copy the index file to
+    the working directory, then copy the file in the
+    last commit to the index.
+
+    NOTE: If you do this twice to a file, you end up
+    with the last commited version.
+    
+    In particular, if the file was not found in the
+    index, it will be removed from the working direc-
+    tory, but it may be found in the index after
+    this command because it was in the last commit,
+    so executing this command twice may recover it.
 "
     exit 1
     ;;
@@ -17,9 +28,15 @@ do
 	echo making backup in "$f-"
 	mv -f "$f" "$f-"
     fi
-    status=`git checkout-index "$f"`
-    if test "$status" = ""
+    status=`git checkout-index -- "$f" 2>&1`
+    if test -z "$status"
     then
-        echo "$f" moved from index to working directory
+        echo "sub '$f'"
+    elif test -f "$f"
+    then
+        echo "$status"
+    else
+        echo "file not found in index '$f'"
     fi
+    git reset HEAD -- "$f" >& /dev/null
 done
