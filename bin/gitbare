@@ -1,11 +1,21 @@
 #!/bin/sh
 case $1 in -doc*)
     echo "
-gitbare repos
+gitbare repositoryname
 
-    Make a bare copy \`repos' of the current .git
-    repository and make \`repos' the remote origin of
-    the current repository."
+    Make a bare copy \`repositoryname' of the current
+    .git repository and make \`repos' the remote origin
+    of the current repository.
+
+    If the repository is remote, repositoryname should
+    have the format
+
+        user@host:pathname
+
+    where pathname is local to the user's home directory
+    on the host.  Note this is a name that will be feed
+    directly to rsync.
+"
 
     exit 1
     ;;
