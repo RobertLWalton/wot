@@ -1,5 +1,31 @@
 #!/bin/sh
 
+case $1 in -doc*)
+    echo "
+gitadd
+gitadd filename ...
+
+    Add files to the current git index.
+
+    If no filenames are given, only files in the current
+    directory or its subdirectories that are already in
+    the repository and that have been added or removed
+    are added to the index.
+
+    If filenames are given, these files are added to the
+    index.  This should only be done for files not in
+    the repository.  Directories should NOT be added,
+    only files; a directory will be added when a file
+    within it is added, but adding a directory is
+    equivalent to adding all the files in the directory
+    and its subdirectories.
+"
+    exit 1
+    ;;
+esac
+
+git init
+
 if test $# -eq 0
 then
     echo "Modified:"
