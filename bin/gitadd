@@ -45,6 +45,8 @@ else
 	if test "$status" = ""
 	then
 	    echo "$f" added to index
+	else
+	    echo "$status"
 	fi
     done
 fi
