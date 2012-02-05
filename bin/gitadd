@@ -24,8 +24,6 @@ gitadd filename ...
     ;;
 esac
 
-git init
-
 if test $# -eq 0
 then
     echo "Modified:"
