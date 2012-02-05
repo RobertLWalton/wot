@@ -1,0 +1,19 @@
+#!/bin/sh
+case $1 in -doc*)
+    echo "
+gitrm filename ...
+
+    Remove the files from the working directory and the
+    index.
+
+    The files must not have been changed from their
+    versions in the last commit.  If they have been,
+    use 'gitrm -f filename ...' to force removal.
+"
+
+    exit 1
+    ;;
+esac
+
+rm -f "$@"
+git rm --cached "$@"
