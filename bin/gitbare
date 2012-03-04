@@ -2,10 +2,9 @@
 case $1 in -doc*)
     echo "
 gitbare repositoryname
-
     Make a bare copy \`repositoryname' of the current
-    .git repository and make \`repos' the remote origin
-    of the current repository.
+    .git repository and make \`repositoryname' the
+    remote origin of the current repository.
 
     If the repository is remote, repositoryname should
     have the format
