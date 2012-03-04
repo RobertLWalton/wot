@@ -1,1 +1,12 @@
+#!/bin/sh
+case $1 in -doc*)
+    echo "
+gitstat
+    List all the files that will be committed if gitcom
+    is executed."
+
+    exit 1
+    ;;
+esac
+
 git status | egrep "^#[ 	]+([a-z ]+:|Chang)"

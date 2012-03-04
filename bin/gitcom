@@ -2,8 +2,9 @@
 case $1 in -doc*)
     echo "
 gitcom
-    List all the files that will be committed, ask if
-    the commit should proceed, and commit if yes."
+    List all the files that will be committed (just as
+    gitstat would), ask if the commit should proceed,
+    and commit if yes."
 
     exit 1
     ;;
