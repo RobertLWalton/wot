@@ -1,1 +1,14 @@
+#!/bin/sh
+
+case $1 in -doc*)
+    echo "
+gitpush
+
+    Push changes in the current local repository to
+    that repository's remote repository."
+
+    exit 1
+    ;;
+esac
+
 git push --mirror
