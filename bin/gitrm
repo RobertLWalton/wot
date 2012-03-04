@@ -2,18 +2,20 @@
 case $1 in -doc*)
     echo "
 gitrm filename ...
-
-    Remove the files from the working directory and the
-    index.
-
-    The files must not have been changed from their
-    versions in the last commit.  If they have been,
-    use 'gitrm -f filename ...' to force removal.
-"
+    Move filename if it exists to filename-, and indi-
+    cate in the index that filename is to be removed
+    from the next commit."
 
     exit 1
     ;;
 esac
 
-rm -f "$@"
-git rm --cached "$@"
+for f in "$@"
+do
+    if test -f "$f"
+    then
+	echo making backup in "$f-"
+	mv -f "$f" "$f-"
+    fi
+    git rm --cached -f "$f"
+done
