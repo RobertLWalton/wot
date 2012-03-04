@@ -1,1 +1,12 @@
+#!/bin/sh
+case $1 in -doc*)
+    echo "
+gittag tagname
+    Create a tag referring to the last commit (the index
+    is ignored)."
+
+    exit 1
+    ;;
+esac
+
 git tag "$1"

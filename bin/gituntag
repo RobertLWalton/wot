@@ -1,1 +1,11 @@
+#!/bin/sh
+case $1 in -doc*)
+    echo "
+gituntag tagname
+    Delete the named tag."
+
+    exit 1
+    ;;
+esac
+
 git tag -d "$1"

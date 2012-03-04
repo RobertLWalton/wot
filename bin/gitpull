@@ -1,1 +1,13 @@
+#!/bin/sh
+
+case $1 in -doc*)
+    echo "
+gitpull
+    Pull changes in the current local repository's
+    remote repository to the current local repository."
+
+    exit 1
+    ;;
+esac
+
 git pull
