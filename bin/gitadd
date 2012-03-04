@@ -2,24 +2,22 @@
 
 case $1 in -doc*)
     echo "
-gitadd
-gitadd filename ...
+gitadd \[filename ...\]
 
-    Add files to the current git index.
+    Move copies of working files to the index if they
+    differ from copies already in the index.  If no
+    filenames are given, only files in the current
+    directory and its subdirectories that differ from
+    the index versions are added, and these are first
+    listed and you are asked whether to continue.
 
-    If no filenames are given, only files in the current
-    directory or its subdirectories that are already in
-    the repository and that have been added or removed
-    are added to the index.
+    If filenames are given, they are added, even if they
+    were not previously committed, in which case they
+    will be committed by the next gitcom.  Directory
+    names should NOT be given unless you want all files
+    in the named directories and their subdirectories
+    to be committed."
 
-    If filenames are given, these files are added to the
-    index.  This should only be done for files not in
-    the repository.  Directories should NOT be added,
-    only files; a directory will be added when a file
-    within it is added, but adding a directory is
-    equivalent to adding all the files in the directory
-    and its subdirectories.
-"
     exit 1
     ;;
 esac

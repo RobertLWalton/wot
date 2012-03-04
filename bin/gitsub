@@ -2,21 +2,10 @@
 case $1 in -doc*)
     echo "
 gitsub filename ...
-
-    For each filename, first copy the working directory
-    file to filename-, then copy the index file to
-    the working directory, then copy the file in the
-    last commit to the index.
-
-    NOTE: If you do this twice to a file, you end up
-    with the last commited version.
-    
-    In particular, if the file was not found in the
-    index, it will be removed from the working direc-
-    tory, but it may be found in the index after
-    this command because it was in the last commit,
-    so executing this command twice may recover it.
-"
+    For each filename, first copy any working version of
+    the file to filename-, then copy any index version
+    to the working directory, then copy any last commit-
+    ted version to the index."
     exit 1
     ;;
 esac
