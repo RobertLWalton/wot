@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	sniffbench.c
-** Date:	Fri Oct 14 23:51:22 EDT 2011
+** Date:	Sat Oct 15 10:09:32 EDT 2011
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -11,26 +11,21 @@
 ** RCS Info (may not be true date or author):
 **
 **   $Author: walton $
-**   $Date: 2011/10/15 05:21:44 $
+**   $Date: 2012/04/02 10:05:38 $
 **   $RCSfile: sniffbench.c,v $
-**   $Revision: 1.1 $
+**   $Revision: 1.2 $
 */
+
+#define POSIX_C_SOURCE 200112L
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <time.h>
 #include <string.h>
 #include <errno.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <utime.h>
 #include <string.h>
 #include <assert.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <time.h>
 
 const char * documentation [] = {
 "sniffbenchmark t [ -doc | -i imin imax |",
@@ -90,9 +85,28 @@ static void print_graph ( int i )
     fflush ( * gfile );
 }
 
+struct timespec start_time;
+struct timespec next_time;
+struct timespec now_time;
+
+double gettime ( const struct timespec * ts )
+{
+    return ts->tv_sec + 0.000000001 * ts->tv_nsec;
+}
+
+void settime
+	( struct timespec * ts, double time )
+{
+    assert ( time >= 0 );
+    ts->tv_sec = (time_t) floor ( time );
+    ts->tv_sec = (unsigned long)
+    		( ( time - ts->tv_sec )
+		  * 1000000000.0 );
+}
+
 int main ( int argc, char ** argv )
 {
-
+    int result;
     if ( argc < 2
          ||
 	 strncmp ( argv[1], "-doc", 4 ) == 0 )
@@ -100,6 +114,45 @@ int main ( int argc, char ** argv )
 	const char ** p = documentation;
 	while ( * p ) printf ( "%s\n", * p ++ );
 	exit (1);
+    }
+
+    if ( sys_clock_gettime
+    		( CLOCK_REALTIME, & start_time ) )
+    {
+        perror ( "sniffbench: reading sys_clock" );
+	exit ( 1 );
+    }
+
+    settime ( & next_time, gettime ( & start_time ) );
+
+    while ( true )
+    {
+	long result;
+        settime ( & next_time,
+	          gettime ( & next_time ) + 1.0 );
+
+	while ( result = sys_clock_nanosleep
+	            ( CLOCK_REALTIME,
+		      TIMER_ABSTIME,
+		      & next_time,
+		      NULL ) )
+	{
+	    if ( result == EINTVAL ) continue;
+	    perror ( "sniffbench:"
+	             " sys_clock_nonosleep" );
+	    exit ( 1 );
+	}
+
+	if ( sys_clock_gettime
+		    ( CLOCK_REALTIME, & now_time ) )
+	{
+	    perror ( "sniffbench: reading sys_clock" );
+	    exit ( 1 );
+	}
+	printf ( "%.3f\n",
+	         gettime ( & now_time )
+		 -
+		 gettime ( & next_time ) );
     }
 
     exit ( 0 );
