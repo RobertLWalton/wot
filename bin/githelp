@@ -47,7 +47,7 @@ gitpull
 Indexing
 --------
 
-gitdiff \[-a | filename ...\]
+gitdiff [-a | filename ...]
     List differences between the working versions of
     files and the index versions, or when they do not
     exist, the commited versions.  With no argument,
@@ -56,7 +56,7 @@ gitdiff \[-a | filename ...\]
     in all repository directories.  Otherwise only for
     the listed files.
 
-gitadd \[filename ...\]
+gitadd [filename ...]
 
     Move copies of working files to the index if they
     differ from copies already in the index.  If no
