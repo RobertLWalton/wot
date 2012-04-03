@@ -1,0 +1,13 @@
+#!/bin/sh
+case $1 in -doc*)
+    echo "
+gitlog
+    List all commits and file changes.
+"
+
+    exit 1
+    ;;
+esac
+
+git log --name-status --pretty=format:"%h - %cn - %cd" \
+        --date=local --find-renames
