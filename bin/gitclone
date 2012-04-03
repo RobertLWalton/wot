@@ -1,1 +1,27 @@
-git clone $1 $2
+#!/bin/sh
+case $1 in -doc*)
+    echo "
+gitclone repositoryname directory
+    Make a copy of \`repositoryname' in \`directory'.
+
+    If the repository is remote, repositoryname should
+    have the format
+
+        user@host:pathname
+
+    where pathname is local to the user's home directory
+    on the host.  Note this is a name that could be feed
+    directly to rsync.
+"
+
+    exit 1
+    ;;
+esac
+
+
+tmpgit=/tmp/$$.git
+trap "rm -rf $tmpgit" EXIT
+
+url=`echo "$1" | \
+     sed -e '/:/s//\/~\//' -e '/^/s//ssh:\/\//'`
+git clone "$url" $2
