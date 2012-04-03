@@ -1,0 +1,49 @@
+#!/bin/sh
+case $1 in -doc*)
+    echo "
+ssh-authorize file
+    Put this in a ~/.ssh/authorize_keys line of the
+    form
+
+    	command="ssh-authorize file",
+	        no-port-forwarding,
+		no-agent-forwarding,
+		no-X11-forwarding,
+		no-ptty
+		ssh-rsa ....
+
+    which is to be all one line with no spaces after
+    the commas.  Then any input presented using the
+    private key will be filtered through the sed
+    program in file.
+
+    An example sed program to be put into the file
+    is
+
+	/^git-receive-pack my.git$/{
+	p
+	Q
+	}
+	/^git-upload-pack my.git$/{
+	p
+	Q
+	}
+	/^git-upload-archive my.git$/{
+	p
+	Q
+	}
+	/'/s//'\"'\"'/g
+	/.*/s//echo BAD INPUT: '&'/p
+	Q
+
+    which only permits commands that exactly match
+    one of three given lines, and turns everything
+    else into a \`echo BAD INPUT: ...' line.  This
+    also ignores everything after the first line
+    feed in the command."
+
+    exit 1
+    ;;
+esac
+
+echo "$SSH_ORIGINAL_COMMAND" | sed -n -f "$1" | sh
