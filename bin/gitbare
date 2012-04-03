@@ -4,10 +4,12 @@ case $1 in -doc*)
 gitbare repositoryname
     Make a bare copy \`repositoryname' of the current
     .git repository and make \`repositoryname' the
-    remote origin of the current repository.
+    remote origin of the current repository.  The
+    current repository can have only one such remote
+    origin.
 
-    If the repository is remote, repositoryname should
-    have the format
+    If the repository is remote, \`repositoryname'
+    should have the form
 
         user@host:pathname
 
@@ -27,16 +29,25 @@ then
     exit 1
 fi
 
-tmpgit=/tmp/$$.git
-trap "rm -rf $tmpgit" EXIT
+case "$1" in
+*@*)
+    tmpgit=/tmp/$$.git
+    trap "rm -rf $tmpgit" EXIT
 
-echo git clone --bare ./.git $tmpgit
-git clone --bare ./.git $tmpgit
-echo rsync -avzHu $tmpgit/ $1/
-rsync -avzHu $tmpgit/ $1/
+    echo git clone --bare ./.git $tmpgit
+    git clone --bare ./.git $tmpgit
+    echo rsync -avzHu $tmpgit/ $1/
+    rsync -avzHu $tmpgit/ $1/
+    url=`echo "$1" | \
+	 sed -e '/:/s//\/~\//' -e '/^/s//ssh:\/\//'`
+    ;;
+*)
+    echo git clone --bare ./.git "$1"
+    git clone --bare ./.git "$1"
+    url="$1"
+    ;;
+esac
 
-url=`echo "$1" | \
-     sed -e '/:/s//\/~\//' -e '/^/s//ssh:\/\//'`
 echo git remote add -m master origin "$url"
 git remote add -m master origin "$url"
 echo git config --add branch.master.remote origin

@@ -4,8 +4,8 @@ case $1 in -doc*)
 gitclone repositoryname directory
     Make a copy of \`repositoryname' in \`directory'.
 
-    If the repository is remote, repositoryname should
-    have the format
+    If the repository is remote, \`repositoryname'
+    should have the form
 
         user@host:pathname
 
@@ -18,10 +18,15 @@ gitclone repositoryname directory
     ;;
 esac
 
+case "$1" in
+*@*)
+    url=`echo "$1" | \
+	 sed -e '/:/s//\/~\//' -e '/^/s//ssh:\/\//'`
+    ;;
+*)
+    url="$1"
+    ;;
+esac
 
-tmpgit=/tmp/$$.git
-trap "rm -rf $tmpgit" EXIT
-
-url=`echo "$1" | \
-     sed -e '/:/s//\/~\//' -e '/^/s//ssh:\/\//'`
+echo git clone "$url" $2
 git clone "$url" $2
