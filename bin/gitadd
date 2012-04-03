@@ -2,7 +2,7 @@
 
 case $1 in -doc*)
     echo "
-gitadd \[filename ...\]
+gitadd [filename ...]
 
     Move copies of working files to the index if they
     differ from copies already in the index.  If no
