@@ -1,0 +1,30 @@
+#!/bin/sh
+
+case $1 in -doc*)
+    echo "
+gitmerge
+    Merge changes fetched from the remote repository
+    of the current local repository by gitfetch into
+    the current repository.  Gitfetch fetches the
+    changes to the \`origin' branch of the current
+    repository, and gitmerge merges this branch into
+    the current repository.
+
+    All files must be committed first.  If this is
+    not the case, gitmerge complains and aborts."
+
+    exit 1
+    ;;
+esac
+
+stat=`git status | egrep "^#[ 	]+([a-z ]+:|Chang)"`
+if test "$stat" != ""
+then
+    echo There are uncommitted files:
+    echo "$stat"
+    echo Commit before pull.
+    echo Aborting.
+    exit 1
+fi
+
+git merge origin
