@@ -4,10 +4,23 @@ case $1 in -doc*)
     echo "
 gitpull
     Pull changes in the current local repository's
-    remote repository to the current local repository."
+    remote repository to the current local repository.
+
+    All files must be committed first.  If this is
+    not the case, gitpull complains and aborts."
 
     exit 1
     ;;
 esac
+
+stat=`git status | egrep "^#[ 	]+([a-z ]+:|Chang)"`
+if test "$stat" != ""
+then
+    echo There are uncommitted files:
+    echo "$stat"
+    echo Commit before pull.
+    echo Aborting.
+    exit 1
+fi
 
 git pull
