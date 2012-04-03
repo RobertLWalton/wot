@@ -1,1 +1,14 @@
-git cvsimport -d $1 -C $2 $2
+#!/bin/sh
+case $1 in -doc*)
+    echo "
+gitcvsimport cvsroot module directory
+    Make a .git repository in the directory which
+    contains the CVS module obtained from the
+    cvsroot."
+
+    exit 1
+    ;;
+esac
+
+echo git cvsimport -d $1 -C $3 $2
+git cvsimport -d $1 -C $3 $2
