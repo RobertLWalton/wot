@@ -4,97 +4,30 @@
 
 Initialization
 --------------
-
-gitinit
-    Make a .git repository in the current directory.
-
-gitbare repositoryname
-    Make a bare copy \`repositoryname' of the current
-    .git repository and make \`repositoryname' the
-    remote origin of the current repository.
-
-    If the repository is remote, repositoryname should
-    have the format
-
-        user@host:pathname
-
-    where pathname is local to the user's home directory
-    on the host.  Note this is a name that will be feed
-    directly to rsync.
+`gitinit -doc`
+`gitbare -doc`
+`gitclone -doc`
 
 
 Committing
 ----------
-
-gitstat
-    List all the files that will be committed if gitcom
-    is executed.
-
-gitcom
-    List all the files that will be committed (just as
-    gitstat would), ask if the commit should proceed,
-    and commit if yes.
-
-gitpush
-    Push changes in the current local repository to
-    that repository's remote repository.
-
-gitpull
-    Pull changes in the current local repository's
-    remote repository to the current local repository.
+`gitstat -doc`
+`gitcom -doc`
+`gitpush -doc`
+`gitpull -doc`
 
 
 Indexing
 --------
-
-gitdiff [-a | filename ...]
-    List differences between the working versions of
-    files and the index versions, or when they do not
-    exist, the commited versions.  With no argument,
-    do this for all files in the current directory and
-    its subdirectories.  With -a argument, for all files
-    in all repository directories.  Otherwise only for
-    the listed files.
-
-gitadd [filename ...]
-
-    Move copies of working files to the index if they
-    differ from copies already in the index.  If no
-    filenames are given, only files in the current
-    directory and its subdirectories that differ from
-    the index versions are added, and these are first
-    listed and you are asked whether to continue.
-
-    If filenames are given, they are added, even if they
-    were not previously committed, in which case they
-    will be committed by the next gitcom.  Directory
-    names should NOT be given unless you want all files
-    in the named directories and their subdirectories
-    to be committed.
-
-gitsub filename ...
-    For each filename, first copy any working version of
-    the file to filename-, then copy any index version
-    to the working directory, then copy any last commit-
-    ted version to the index.
-
-gitrm filename ...
-    Move filename if it exists to filename-, and indi-
-    cate in the index that filename is to be removed
-    from the next commit.
+`gitdiff -doc`
+`gitadd -doc`
+`gitsub -doc`
+`gitrm -doc`
 
 
 Tags
 ----
-
-gittag tagname
-    Create a tag referring to the last commit (the index
-    is ignored).
-
-gituntag tagname
-    Delete the named tag.
-
-gitshowtags
-    List the current tags and the date of the commit
-    (or other object) each tag refers to.
+`gittag -doc`
+`gituntag -doc`
+`gitshowtags -doc`
 "
