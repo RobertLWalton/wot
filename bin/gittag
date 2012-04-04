@@ -1,12 +1,24 @@
 #!/bin/sh
-case $1 in -doc*)
+case $1 in
+-doc*)
     echo "
+gittag
+    List all existing tags.
 gittag tagname
     Create a tag referring to the last commit (the index
     is ignored)."
 
     exit 1
     ;;
+"")
+    for t in `git tag -l`
+    do
+	dateline=`git show $t -- | grep Date:`
+	date=`expr "$dateline" : 'Date: \(.*\)'`
+	echo ${t}: $date
+    done
+    exit 0
+    ;;
 esac
 
-git tag "$1"
+git tag "$1" --

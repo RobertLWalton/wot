@@ -8,4 +8,4 @@ gituntag tagname
     ;;
 esac
 
-git tag -d "$1"
+git tag -d "$1" --
