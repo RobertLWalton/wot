@@ -10,7 +10,8 @@ gitcom
     ;;
 esac
 
-git status | egrep "^#[ 	]+([a-z ]+:|Chang)"
+git status | egrep \
+    "^#[ 	]+([a-z ]+:|Chang|.* branch )"
 echo 'OK (y or n)?'
 read
 if test "$REPLY" = "y"
