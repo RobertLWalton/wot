@@ -2,10 +2,28 @@
 case $1 in -doc*)
     echo "
 gituntag tagname
-    Delete the named tag."
+    Delete the named tag.  Also warns about problems
+    with deleting tags that have been exported to
+    others."
 
     exit 1
     ;;
 esac
 
-git tag -d "$1" --
+echo "
+WARNING: Deleting or changing a tag that has been
+         exported to others will NOT export the deletion
+	 or change.  To do this you must tell others to
+	 run gituntag in their own repository, and then
+	 if the tag has been changed, to rerun gitpull
+	 to get the changed tag.
+
+To you want to continue?"
+read
+if test "$REPLY" = "y"
+then
+    git tag -d "$1" --
+else
+    echo 'ABORTED!'
+fi
+

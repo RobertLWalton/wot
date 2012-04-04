@@ -10,5 +10,4 @@ gitpush
     ;;
 esac
 
-git push --all
-git push --tags
+git push --mirror --no-force
