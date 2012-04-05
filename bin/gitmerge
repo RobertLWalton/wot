@@ -3,12 +3,19 @@
 case $1 in -doc*)
     echo "
 gitmerge
-    Merge changes fetched from the remote repository
-    of the current local repository by gitfetch into
-    the current repository.  Gitfetch fetches the
-    changes to the \`origin' branch of the current
-    repository, and gitmerge merges this branch into
+    Merge files from the current repository's remote
+    origin to the current repository.  Does an implicit
+    gitfetch to update the \`origin' branch of the
+    current repository, and then merges this branch into
     the current repository.
+
+    Use this if gitpull fails.  Use gitconflict first
+    to see the nature of the failure.  Some files may
+    have merge conflicts that have to be adjusted by
+    editing and committing them after running gitmerge,
+    in which case you may need to run gitpush after
+    committing the files to finish resolving the
+    conflicts.
 
     All files must be committed first.  If this is
     not the case, gitmerge complains and aborts."
@@ -27,4 +34,5 @@ then
     exit 1
 fi
 
+git fetch origin
 git merge origin

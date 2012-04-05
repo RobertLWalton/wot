@@ -10,7 +10,7 @@ gitpush
     gitpush will fail if it the remote origin has
     been updated by someone else since you did the
     last gitpush or gitpull.  In his case use
-    gitconflict and gitmerge and then gitpush."
+    gitconflict, then gitmerge, then gitpush."
 
     exit 1
     ;;

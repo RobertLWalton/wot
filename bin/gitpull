@@ -3,8 +3,12 @@
 case $1 in -doc*)
     echo "
 gitpull
-    Pull changes in the current local repository's
-    remote repository to the current local repository.
+    Pull changes from current repository's remote origin
+    to the current repository.
+
+    If the remote origin contains changes that conflict
+    with the current repository, this fails, and you
+    should use gitconflict, then gitmerge, then gitpush.
 
     All files must be committed first.  If this is
     not the case, gitpull complains and aborts."
