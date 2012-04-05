@@ -1,0 +1,28 @@
+#!/bin/sh
+case $1 in -doc*)
+    echo "
+gitconflict [ filename ...]
+    With no arguments, just lists the files that differ
+    between the remote origin and the working files.
+    With arguments, produces gitdiff listings for chang-
+    ing the remote origin versions of the named files to
+    the working versions.  The argument \`.' will do
+    this for just all files in the current directory and
+    its subdirectories.  gitmerge can be used to merge
+    remote origin files into the working files (which
+    must be committed first)."  
+
+    exit 1
+    ;;
+
+"")
+    git fetch origin
+    git diff --name-status origin
+    ;;
+?*)
+    git fetch origin
+    git diff origin \
+        --src-prefix=origin/ --dst-prefix=working/ \
+        -- "$@"
+    ;;
+esac
