@@ -1,0 +1,13 @@
+#!/bin/sh
+case $1 in -doc*)
+    echo "
+gitmv oldfilename newfilename
+    Rename (move) a file or directory.  The change in
+    the working directory is immediate, but the change
+    is not committed until the next gitcom."
+
+    exit 1
+    ;;
+esac
+
+git mv "$@"

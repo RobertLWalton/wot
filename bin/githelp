@@ -22,13 +22,13 @@ Indexing
 `gitadd -doc`
 `gitsub -doc`
 `gitrm -doc`
+`gitmv -doc`
 
 
 Resolving Conflicts
 --------- ---------
 
-See gitdiff [-r | -R] above.
-`gitfetch -doc`
+`gitconflict -doc`
 `gitmerge -doc`
 
 
@@ -41,5 +41,4 @@ Tags
 
 Importing
 ---------
-`gitcvsimport -doc`
-"
+`gitcvsimport -doc`"

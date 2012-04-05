@@ -2,8 +2,7 @@
 case $1 in -doc*)
     echo "
 gitlog
-    List all commits and file changes.
-"
+    List all commits and file changes."
 
     exit 1
     ;;
