@@ -4,7 +4,13 @@ case $1 in -doc*)
     echo "
 gitpush
     Push changes in the current local repository to
-    that repository's remote repository."
+    that repository's remote origin (see gitbare and
+    gitclone).
+
+    gitpush will fail if it the remote origin has
+    been updated by someone else since you did the
+    last gitpush or gitpull.  In his case use
+    gitconflict and gitmerge and then gitpush."
 
     exit 1
     ;;
