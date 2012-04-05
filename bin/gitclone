@@ -2,7 +2,10 @@
 case $1 in -doc*)
     echo "
 gitclone repositoryname directory
-    Make a copy of \`repositoryname' in \`directory'.
+    Make a copy of \`repositoryname' in \`directory',
+    and make \`repositoryname' the remote origin of
+    this copy.  A repository can have only one remote
+    origin.
 
     If the repository being copied is not a local
     directory, \`repositoryname' should have the form
