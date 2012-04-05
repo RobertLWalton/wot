@@ -7,18 +7,38 @@ gitdiff [-a | filename ...]
     do this for all files in the current directory and
     its subdirectories.  With -a argument, for all files
     in all repository directories.  Otherwise only for
-    the listed files."
+    the listed files.
+
+gitdiff [-r | -R ] [ filename ... ]
+    List differences between working files and the
+    remote repository files.  First does gitfetch to
+    fetch the remote files.  -r shows differences from
+    remote files to working files, -R shows differences
+    from working files to remote files.  If no filenames
+    listed all files shown; if filenames is \`.' only
+    files in current directory are shown; otherwise only
+    listed files are shown."
 
     exit 1
     ;;
-esac
 
-if test "$1" = ""
-then
+"")
     git diff .
-elif test "$1" = "-a"
-then
+    ;;
+"-a")
     git diff
-else
+    ;;
+"-r")
+    shift
+    git fetch origin
+    git diff origin -- "$@"
+    ;;
+"-R")
+    shift
+    git fetch origin
+    git diff -R origin -- "$@"
+    ;;
+*)
     git diff "$@"
-fi
+    ;;
+esac

@@ -8,8 +8,8 @@ gitbare repositoryname
     current repository can have only one such remote
     origin.
 
-    If the repository is remote, \`repositoryname'
-    should have the form
+    If the bare copy is really not a local directory,
+    \`repositoryname' should have the form
 
         user@host:pathname
 

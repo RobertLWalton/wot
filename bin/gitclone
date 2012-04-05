@@ -4,8 +4,8 @@ case $1 in -doc*)
 gitclone repositoryname directory
     Make a copy of \`repositoryname' in \`directory'.
 
-    If the repository is remote, \`repositoryname'
-    should have the form
+    If the repository being copied is not a local
+    directory, \`repositoryname' should have the form
 
         user@host:pathname
 
