@@ -1,6 +1,47 @@
 #!/bin/sh
 
     echo "
+Overview
+--------
+
+A git repository is a parent directory and its descend-
+ants in the directory tree.  The repository proper is in
+the ./.git subdirectory of the parent directory.  The
+files in the parent directory and its descendants are
+called the working files.  The repository holds commits,
+which are snapshots of all the working files and their
+containing directories taken together.  Commits cannot
+be changed.  The repository also holds an \`index',
+which is like a commit that has not been finalized yet
+and which can be changed.  The \`commit' operation makes
+a new commit that includes all the files in the index
+and all the working files that have been modified since
+their last commit.  Not included are files that are not
+in either the index or latest commit.
+
+A git repository can have a remote copy called the
+\`remote origin' of the repository.  This copy is
+generally \`bare', meaning it has just an equivalent
+of the .git directory and has no working files.  The
+last commit of the repository can be pushed to the
+remote origin, and the last commit pushed to the
+remote origin can be pulled to the repository.  Thus
+if several repositories on different machines share the
+same remote origin, a new commit can be made in one of
+these repositories, pushed to the remote origin, and
+pulled to the other repositories.
+
+There can be a conflict if two different commits are
+made in different repositories with the same remote
+origin.  The first commit to be pushed will succeed.
+The second will fail, and the conflict will have to
+be resolved.
+
+At any time the \`current repository' is the repository
+containing the current directory, which may be a
+descendant of the parent directory of the repository.
+
+
 Initialization
 --------------
 `gitinit -doc`

@@ -3,7 +3,11 @@ case $1 in -doc*)
     echo "
 gitstat
     List all the files that will be committed if gitcom
-    is executed."
+    is executed.  This consists of all files in the
+    index, all changes to file names recorded in the
+    index (including file removals and renames), and
+    all files whose working version has been modified
+    since they were last committed."
 
     exit 1
     ;;

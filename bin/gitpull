@@ -10,8 +10,9 @@ gitpull
     with the current repository, this fails, and you
     should use gitconflict, then gitmerge, then gitpush.
 
-    All files must be committed first.  If this is
-    not the case, gitpull complains and aborts."
+    All files in the index and all files modified since
+    their last commit must be committed first.  If this
+    is not the case, gitpull complains and aborts."
 
     exit 1
     ;;

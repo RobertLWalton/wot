@@ -2,8 +2,9 @@
 case $1 in -doc*)
     echo "
 gitinit
-    Make the current directory into a repository.  The
-    git repository files will be placed in ./.git."
+    Make the current directory the parent of a reposi-
+    tory.  The git repository files will be placed in
+    ./.git."
 
     exit 1
     ;;
