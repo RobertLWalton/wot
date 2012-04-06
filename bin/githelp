@@ -41,6 +41,11 @@ At any time the \`current repository' is the repository
 containing the current directory, which may be a
 descendant of the parent directory of the repository.
 
+Git saves the user executable bit of the file mode,
+but does not save any other file mode bit.  Two versions
+of the file differ if their user executable mode bits
+differ, but not if any other mode bits differ.
+
 
 Initialization
 --------------
