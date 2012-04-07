@@ -1,30 +1,47 @@
 #!/bin/sh
 case $1 in -doc*)
     echo "
-gitdiff [-a | filename ...]
+gitdiff [{n}] [-a | filename ...]
     Lists differences between the working versions of
-    files and either the last commited version of the
-    files for files that have not been gitadd'ed to the
-    index, or the index versions for files that have
-    been gitadd'ed to the index.
+    files and either the a previous commited version of
+    files or the last gitadd'ed versions.
 
     With no argument, does this for all files in the
     current directory and its subdirectories.  With -a
     argument, for all files in all repository director-
-    ies.  Otherwise only for the listed files."
+    ies.  Otherwise only for the listed files.
+
+    With no {n} argument, diffs working versions with
+    the last gitadd'ed version if that exists, or the
+    last committed version otherwise.  With {n}, diffs
+    the working version with the version in the n'th
+    commit, where commits are numbered backward in time
+    from the last commit, which is designated by {0}."
 
     exit 1
     ;;
 
+{*})
+    commit="HEAD@$1"
+    shift
+    ;;
+*)
+    commit=""
+    ;;
+esac
+
+case "$1" in
+
 "")
     git diff --src-prefix=index/ --dst-prefix=working/ \
-        .
+        $commit .
     ;;
 "-a")
-    git diff --src-prefix=index/ --dst-prefix=working/
+    git diff --src-prefix=index/ --dst-prefix=working/ \
+        $commit
     ;;
 *)
     git diff --src-prefix=index/ --dst-prefix=working/ \
-        "$@"
+        $commit "$@"
     ;;
 esac

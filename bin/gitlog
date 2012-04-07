@@ -9,8 +9,9 @@ gitlog
 esac
 
 git log --name-status --pretty=format:"%h - %cn - %cd" \
-        --date=local --find-renames | \
+        --date=local --find-renames 2>&1 | \
     awk 'BEGIN { i = 0 }
-         /^[0-9a-fA-F]* - / { print "~" i ": " $0
+         /^[0-9a-fA-F]* - / { print "{" i "} " $0
 	                      i = i + 1 }
-         ! /^[0-9a-fA-F]* - / { print $0 }'
+         ! /^[0-9a-fA-F]* - / { print $0 }' 2>&1 | \
+    less
