@@ -4,19 +4,22 @@ case $1 in -doc*)
     echo "
 gitadd [filename ...]
 
-    Move copies of working files to the index if they
-    differ from copies already in the index.  If no
-    filenames are given, only files in the current
-    directory and its subdirectories that differ from
-    the index versions are added, and these are first
-    listed and you are asked whether to continue.
+    Copy working files to the index if they differ from
+    copies already in the index or from any last
+    committed version if there is no version of a file
+    in the index.
+    
+    If no filenames are given, only files in the current
+    directory and its subdirectories are considered.
+    These are first listed, and you are asked whether to
+    continue.
 
-    If filenames are given, they are added, even if they
-    were not previously committed, in which case they
-    will be committed by the next gitcom.  Directory
-    names should NOT be given unless you want all files
-    in the named directories and their subdirectories
-    to be committed."
+    If filenames are given that were not previously
+    committed or added to the index, these are added to
+    the index so they will be added to the next commit.
+    Directory names should NOT be given unless you want
+    all files in the named directories and their sub-
+    directories to be added."
 
     exit 1
     ;;

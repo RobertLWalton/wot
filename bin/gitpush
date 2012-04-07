@@ -3,7 +3,7 @@
 case $1 in -doc*)
     echo "
 gitpush
-    Push changes in the current repository to that
+    Push commits in the current repository to that
     repository's remote origin (see gitbare and
     gitclone).
 

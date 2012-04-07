@@ -11,13 +11,23 @@ files in the parent directory and its descendants are
 called the working files.  The repository holds commits,
 which are snapshots of all the working files and their
 containing directories taken together.  Commits cannot
-be changed.  The repository also holds an \`index',
-which is like a commit that has not been finalized yet
-and which can be changed.  The \`commit' operation makes
-a new commit that includes all the files in the index
-and all the working files that have been modified since
-their last commit.  Not included are files that are not
-in either the index or latest commit.
+be changed.
+
+The repository also holds an \`index', which contains
+instructions to change, add, remove, or rename files
+when making a new commit from the last commit.  The
+index can be changed.  The index also holds versions of
+files, but we view this as just a convenience for compu-
+ting the differences between sets of changes to a file
+when none of the changes has been committed.
+
+A file is said to be \`committable' if it is mentioned
+in the index or is in the last commit.  The \`commit'
+operation makes a new commit that includes all commit-
+table files except those which the index instructions
+remove or rename.  The commit operation uses the index
+instructions to make the new commit from the last
+commit and the working files, and then clears the index.
 
 A git repository can have a remote copy called the
 \`remote origin' of the repository.  This copy is
@@ -35,16 +45,21 @@ There can be a conflict if two different commits are
 made in different repositories with the same remote
 origin.  The first commit to be pushed will succeed.
 The second will fail, and the conflict will have to
-be resolved.
+be resolved by whoever did the second push.
 
 At any time the \`current repository' is the repository
 containing the current directory, which may be a
 descendant of the parent directory of the repository.
 
-Git saves the user executable bit of the file mode,
-but does not save any other file mode bit.  Two versions
-of the file differ if their user executable mode bits
-differ, but not if any other mode bits differ.
+Note that for each file version git saves the contents
+of the file and the user executable bit of the file
+mode, but does not save any other file mode bit.  Two
+versions of the file with the same content still differ
+if one has the user mode executable bit on and the other
+does not.  Upon being retrieved from a commit, the file
+mode will be 666 or 777 according to the saved execu-
+table bit, and this will be modified by the OS umask
+setting (typically to 640 or 750).
 
 
 Initialization

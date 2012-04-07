@@ -2,9 +2,9 @@
 case $1 in -doc*)
     echo "
 gitmv oldfilename newfilename
-    Rename (move) a file or directory.  The change in
-    the working directory is immediate, but the change
-    is not committed until the next gitcom."
+    Rename (move) a file or directory.  The working
+    directories are changed, and instructions are left
+    in the index to make the change in the next commit."
 
     exit 1
     ;;

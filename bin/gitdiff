@@ -2,12 +2,16 @@
 case $1 in -doc*)
     echo "
 gitdiff [-a | filename ...]
-    List differences between the working versions of
-    files and the index versions.  With no argument,
-    do this for all files in the current directory and
-    its subdirectories.  With -a argument, for all files
-    in all repository directories.  Otherwise only for
-    the listed files."
+    Lists differences between the working versions of
+    files and either the last commited version of the
+    files for files that have not been gitadd'ed to the
+    index, or the index versions for files that have
+    been gitadd'ed to the index.
+
+    With no argument, does this for all files in the
+    current directory and its subdirectories.  With -a
+    argument, for all files in all repository director-
+    ies.  Otherwise only for the listed files."
 
     exit 1
     ;;

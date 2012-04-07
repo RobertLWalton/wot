@@ -2,9 +2,10 @@
 case $1 in -doc*)
     echo "
 gitcom
-    List all the files that will be committed (just as
-    gitstat would), ask if the commit should proceed,
-    and commit if yes."
+    List all the committable files that differ from
+    their last committed versions, just as gitstat
+    would, ask if the commit should proceed, and
+    perform a commit operation if yes."
 
     exit 1
     ;;

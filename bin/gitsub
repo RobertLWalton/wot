@@ -2,10 +2,13 @@
 case $1 in -doc*)
     echo "
 gitsub filename ...
-    For each filename, first copy any working version of
-    the file to filename-, then copy any index version
-    to the working directory, then copy any last commit-
-    ted version to the index."
+    For each filename, first copies any working version
+    of the file to filename-, then restores the working
+    version to the last version either gitadd'ed or
+    committed, if such exists.  Lastly removes the file
+    and any instruction to delete the file from the
+    index.  This undoes a gitrm or gitadd, more or less.
+    Cannot undo gitmv's (just gitmv the file back)."
     exit 1
     ;;
 esac
@@ -17,15 +20,25 @@ do
 	echo making backup in "$f-"
 	mv -f "$f" "$f-"
     fi
+
     status=`git checkout-index -- "$f" 2>&1`
-    if test -z "$status"
+
+    if test -f "$f"
     then
-        echo "sub '$f'"
-    elif test -f "$f"
-    then
-        echo "$status"
+	if test -z "$status"
+	then
+	    echo "sub '$f'"
+	else
+	    echo "$status"
+	fi
+	git reset HEAD -- "$f" >& /dev/null
     else
-        echo "file not found in index '$f'"
+	status=`git checkout HEAD -- "$f" 2>&1`
+	if test -z "$status"
+	then
+	    echo "sub '$f'"
+	else
+	    echo "$status"
+	fi
     fi
-    git reset HEAD -- "$f" >& /dev/null
 done

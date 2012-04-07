@@ -3,15 +3,17 @@
 case $1 in -doc*)
     echo "
 gitpull
-    Pull changes from current repository's remote origin
-    to the current repository.
+    Pull all the commits from current repository's
+    remote origin to the current repository and merge
+    the latest pulled commit with the latest commit in
+    the current repository to form a new commit.
 
     If the remote origin contains changes that conflict
     with the current repository, this fails, and you
     should use gitconflict, then gitmerge, then gitpush.
 
-    All files in the index and all files modified since
-    their last commit must be committed first.  If this
+    The index must be committed first, so all working
+    files match their last committed version.  If this
     is not the case, gitpull complains and aborts."
 
     exit 1
