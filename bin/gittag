@@ -13,9 +13,12 @@ gittag tagname
 "")
     for t in `git tag -l`
     do
-	dateline=`git show $t -- | grep Date:`
+	show=`git show --abbrev-commit $t -- `
+	commitline=`echo "$show" | grep '^commit '`
+	dateline=`echo "$show" | grep Date:`
 	date=`expr "$dateline" : 'Date: \(.*\)'`
-	echo ${t}: $date
+	commit=`expr "$commitline" : 'commit \(.*\)'`
+	echo ${t}: $commit: $date
     done
     exit 0
     ;;
