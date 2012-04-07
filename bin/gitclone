@@ -7,7 +7,7 @@ gitclone repositoryname directory
     \`repositoryname' the remote origin of this copy.
     A repository can have only one remote origin.
 
-    The `\repositoryname' directory should not exist
+    The \`repositoryname' directory should not exist
     before gitclone is executed.  It may be a remote
     directory.  It may be an ssh accessible directory
     with a name of the form
@@ -16,7 +16,7 @@ gitclone repositoryname directory
 
     where pathname is local to the user's home directory
     on the host.  Note this is a name that could be feed
-    directly to rsync.
+    directly to rsync(1).
 
     Alternatively \`repositoryname' can be a URL of the
     form

@@ -8,14 +8,16 @@ gitbare repositoryname
     current repository can have only one such remote
     origin.
 
-    If the bare copy is not a local directory,
-    \`repositoryname' should have the form
+    \`repositoryname' must be the name of a directory
+    that does not exist before gitbare is executed.  If
+    it is not a local directory, \`repositoryname'
+    should have the form
 
         user@host:pathname
 
     where pathname is local to the user's home directory
     on the host.  Note this is a name that will be feed
-    directly to rsync.
+    directly to rsync(1).
 "
 
     exit 1
