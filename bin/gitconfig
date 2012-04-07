@@ -1,2 +1,22 @@
-git config user.name 'Robert L. Walton'
-git config user.email walton@acm.org
+#!/bin/sh
+case $1 in -doc*)
+    echo "
+gitconfig [name email-address]
+    With no arguments, list current repository user's
+    name and email address.  With arguments, change
+    these."
+
+    exit 1
+    ;;
+"")
+    ;;
+*)
+    git config user.name "$1"
+    git config user.email "$2"
+esac
+
+name=`git config --get user.name`
+email=`git config --get user.email`
+if test -z "$name"; then name=NONE; fi
+if test -z "$email"; then email=NONE; fi
+echo User Name: "$name" "     " User Email: "$email"
