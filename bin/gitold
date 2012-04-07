@@ -1,0 +1,32 @@
+#!/bin/sh
+case $1 in -doc*)
+    echo "
+gitold {n} filename
+    Retrieve files from existing commits.  A file named
+    F is retrieved to a file named F{n}."
+
+    exit 1
+    ;;
+esac
+
+c=$1
+shift
+for F in "$@"
+do
+    ls=`git ls-tree HEAD@$c | grep "$F" | tr ' ' '\t'`
+    if test -z "$ls"
+    then
+        echo "$F" not found
+    else
+	mode=`echo "$ls" | cut -f 1`
+	type=`echo "$ls" | cut -f 2`
+	id=`echo "$ls" | cut -f 3`
+	git cat-file $type $id > "$F$c"
+	case "$mode" in
+	*755)
+	    chmod u+x "$F$c"
+	    ;;
+	esac
+	ls -l "$F$c"
+    fi
+done
