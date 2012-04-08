@@ -113,9 +113,11 @@ Resolving Conflicts
 `gitmerge -doc`
 
 
-Tags
-----
+History and Tags
+------- --- ----
 `gitlog -doc`
+`gitls -doc`
+`gitold -doc`
 `gittag -doc`
 `gituntag -doc`
 
