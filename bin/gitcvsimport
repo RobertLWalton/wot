@@ -2,13 +2,18 @@
 case $1 in -doc*)
     echo "
 gitcvsimport cvsroot module directory
-    Make a .git repository in the directory which
-    contains the CVS module obtained from the
-    cvsroot."
+    Make a new git repository in \`directory' which
+    is a copy of the CVS module obtained from cvsroot."
 
     exit 1
     ;;
 esac
 
-echo git cvsimport -d $1 -C $3 $2
-git cvsimport -d $1 -C $3 $2
+if test -e $3
+then
+    echo $3 should not exist
+    echo ABORTING
+    exit 1
+fi
+echo git cvsimport -v -d $1 -C $3 $2
+git cvsimport -v -d $1 -C $3 $2
