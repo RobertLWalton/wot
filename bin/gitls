@@ -1,0 +1,25 @@
+#!/bin/sh
+case $1 in -doc*)
+    echo "
+gitls [{n}] [-r]
+    
+    List the files and subdirectories of the current
+    working directory that are in a given commit.  If no
+    {n} commit name given, use the most recent commit.
+
+    -r follows subdirectories and lists only file
+    names."
+
+    exit 1
+    ;;
+
+{*})
+    commit="HEAD@$1"
+    shift
+    ;;
+*)
+    commit="HEAD"
+    ;;
+esac
+
+git ls-tree --name-only "$@" "$commit" | less -F
