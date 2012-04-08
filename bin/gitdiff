@@ -22,26 +22,28 @@ gitdiff [{n}] [-a | filename ...]
     ;;
 
 {*})
+    src="$1"
     commit="HEAD@$1"
     shift
     ;;
 *)
-    commit=""
+    src=index
+    commit="--"
     ;;
 esac
 
 case "$1" in
 
 "")
-    git diff --src-prefix=index/ --dst-prefix=working/ \
-        $commit .
+    git diff --src-prefix="$src"/ --dst-prefix=working/ \
+        "$commit" .
     ;;
 "-a")
-    git diff --src-prefix=index/ --dst-prefix=working/ \
-        $commit
+    git diff --src-prefix="$src"/ --dst-prefix=working/ \
+        "$commit"
     ;;
 *)
-    git diff --src-prefix=index/ --dst-prefix=working/ \
-        $commit "$@"
+    git diff --src-prefix="$src"/ --dst-prefix=working/ \
+        "$commit" "$@"
     ;;
 esac

@@ -1,5 +1,11 @@
 #!/bin/sh
 
+if test ! -z "$1"
+then
+    git$1 -doc | less -F
+    exit 0
+fi
+
     echo "
 Overview
 --------
@@ -66,6 +72,8 @@ address are associated with commits made using the
 repository.  In addition, commits can be given symbolic
 names called \`tags'.
 
+Repositories have names of the form {...}.
+
 
 Initialization
 --------------
@@ -108,4 +116,4 @@ Tags
 
 Importing
 ---------
-`gitcvsimport -doc`"
+`gitcvsimport -doc`" | less -F
