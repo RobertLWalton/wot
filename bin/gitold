@@ -9,14 +9,14 @@ gitold {n} filename
     ;;
 esac
 
-c=$1
+c="$1"
 shift
 for F in "$@"
 do
-    ls=`git ls-tree HEAD@$c | grep "$F" | tr ' ' '\t'`
+    ls=`git ls-tree "HEAD@$c" | grep "$F" | tr ' ' '\t'`
     if test -z "$ls"
     then
-        echo "$F" not found
+        echo "$F$c" not found
     else
 	mode=`echo "$ls" | cut -f 1`
 	type=`echo "$ls" | cut -f 2`
