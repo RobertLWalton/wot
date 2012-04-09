@@ -1,11 +1,11 @@
 #!/bin/sh
 case $1 in -doc*)
     echo "
-gitls [{n}] [-r]
+gitls [ {n} | ~n ] [-r]
     
     List the files and subdirectories of the current
-    working directory that are in a given commit.  If no
-    {n} commit name given, use the most recent commit.
+    working directory that are in the named commit.  If
+    no commit name is given, use the most recent commit.
 
     -r follows subdirectories and lists only file
     names."
@@ -15,6 +15,11 @@ gitls [{n}] [-r]
 
 {*})
     commit="HEAD@$1"
+    shift
+    ;;
+
+~*)
+    commit="HEAD$1"
     shift
     ;;
 *)

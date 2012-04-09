@@ -47,12 +47,14 @@ then
 fi
 
 
-git log $ancestor --name-status --pretty=format:"%h - %cn - %cd" \
+git log $ancestor --name-status \
+        --pretty=format:"%h - %cn - %cd" \
         --date=local --find-renames "$commit" 2>&1 | \
     awk 'BEGIN { i = '$i' }
-         /^[0-9a-fA-F]* - / { print "'$pre'" i "'$post' " $0
-	                      i = i + 1
-			      next }
+         /^[0-9a-fA-F]* - / \
+	     { print "'$pre'" i "'$post' " $0
+	       i = i + 1
+	       next }
          /^[ \t]*$/ { print ""
 	              next }
          /./ { print "\t" $0 }' 2>&1 | \
