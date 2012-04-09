@@ -3,7 +3,14 @@ case $1 in -doc*)
     echo "
 gitcvsimport cvsroot module directory
     Make a new git repository in \`directory' which
-    is a copy of the CVS module obtained from cvsroot."
+    is a copy of the CVS module obtained from cvsroot.
+
+    In such a repository the {n} naming scheme for
+    commits will not work for imported CVS commits,
+    and instead you should use ~n, where n is a natural
+    number.  ~n and {n} are similar, but there are some
+    differences, and {n} is better when imported CVS
+    commits are not involved."
 
     exit 1
     ;;
