@@ -1,5 +1,5 @@
 #!/bin/sh
-case $1 in -doc*)
+case "$1" in -doc*)
     echo "
 gitls [ {n} | ~n ] [-r]
     

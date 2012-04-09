@@ -4,9 +4,9 @@ case $1 in
     echo "
 gittag
     List all existing tags.
-gittag [{n}] tagname
-    Create a tag referring to the commit named {n} or
-    if this is not given, to the last commit."
+gittag [ {n} | ~n ] tagname
+    Create a tag referring to the named commit or
+    if no name is given, to the last commit."
 
     exit 1
     ;;
@@ -25,6 +25,10 @@ gittag [{n}] tagname
 
 {*})
     git tag "$2" "HEAD@$1" --
+    ;;
+
+~*)
+    git tag "$2" "HEAD$1" --
     ;;
 
 *)

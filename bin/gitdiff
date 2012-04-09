@@ -1,5 +1,5 @@
 #!/bin/sh
-case $1 in -doc*)
+case "$1" in -doc*)
     echo "
 gitdiff [ {n} | ~n ] [-a | filename ...]
     Lists differences between the working versions of

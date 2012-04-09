@@ -76,9 +76,12 @@ Commits have names of the form {...}.  A name of the
 form {n} where n is a natural number names the n'th
 commit before the most recent, so {0} is the most recent
 commit, {1} the previous commit, etc.  Names such as
-'{Apr 6 7:00}' and '{two days ago}' can also be used,
-but these must be in quotes when used as arguments
-because they contain spaces.
+'{Apr 6 7:00}' and '{two days ago}' can also be used
+in most situations, but these must be in quotes when
+used as arguments because they contain spaces.  If
+you have imported a repository from CVS, you may want
+to use alternative commit names of the form ~n: see
+gitcvsimport.
 
 
 Initialization

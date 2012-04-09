@@ -26,10 +26,10 @@ gitclone repositoryname directory
     or
     	ftp://...
 
-    which should reference an internet accessible reposi-
-    tory directory.  Note that in this case it will not
-    be possible to use gitpush to push commits from the
-    current repository to its remote origin."
+    which should reference an internet accessible repo-
+    sitory directory.  Note that in this case it will
+    not be possible to use gitpush to push commits from
+    the current repository to its remote origin."
 
     exit 1
     ;;
