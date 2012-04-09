@@ -1,17 +1,56 @@
 #!/bin/sh
-case $1 in -doc*)
+case "$1" in -doc*)
     echo "
-gitlog
-    List all commits and file changes."
+gitlog [{n} | ~n ]
+    List all commits and file changes beginning at
+    a given commit and proceding backward in time.
+    If no commit is given, {0} is assumed."
 
     exit 1
     ;;
+
+{*})
+    i=`expr "$1" : '{\([0-9]*\)}$'`
+    ancestor=-g
+    commit="HEAD@$1"
+    pre={
+    post=}
+    ;;
+
+~*)
+    i=`expr "$1" : '~\([0-9]*\)$'`
+    ancestor=--first-parent
+    commit="HEAD$1"
+    pre='~'
+    post=
+    ;;
+
+"")
+    i=0
+    ancestor=-g
+    commit="HEAD"
+    pre={
+    post=}
+    ;;
+
+*)
+    echo ERROR: illegal commit "$1"
+    exit 1
+    ;;
+
 esac
 
-git log -g --name-status --pretty=format:"%h - %cn - %cd" \
-        --date=local --find-renames 2>&1 | \
-    awk 'BEGIN { i = 0 }
-         /^[0-9a-fA-F]* - / { print "{" i "} " $0
+if test -z "$i"
+then
+    echo ERROR: illegal commit "$1"
+    exit 1
+fi
+
+
+git log $ancestor --name-status --pretty=format:"%h - %cn - %cd" \
+        --date=local --find-renames "$commit" 2>&1 | \
+    awk 'BEGIN { i = '$i' }
+         /^[0-9a-fA-F]* - / { print "'$pre'" i "'$post' " $0
 	                      i = i + 1
 			      next }
          /^[ \t]*$/ { print ""
