@@ -15,5 +15,7 @@ then
     echo ABORTING
     exit 1
 fi
+e='^(Tree ID|Parent ID|Commit ID|Update|Committed|New)'
 echo git cvsimport -v -d $1 -C $3 $2
-git cvsimport -v -d $1 -C $3 $2
+git cvsimport -v -d $1 -C $3 $2 | \
+    egrep -v "$e"
