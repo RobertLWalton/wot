@@ -8,11 +8,13 @@
 # domain; they make no warranty and accept no liability
 # for this program.
 
-case $1 in -doc*)
+case "$1" in
+-doc* | "")
     echo "
-gitcvsimport cvsroot module directory
+gitcvsimport [-v] cvsroot module directory
     Make a new git repository in \`directory' which
     is a copy of the CVS module obtained from cvsroot.
+    With the -v option full verbosity is enabled. 
 
     In such a repository the {n} naming scheme for
     commits will not work for imported CVS commits,
@@ -23,15 +25,30 @@ gitcvsimport cvsroot module directory
 
     exit 1
     ;;
+-v)
+    filter=no
+    shift
+    ;;
+*)
+    filter=yes
 esac
 
-if test -e $3
+if test -z "$3"
 then
-    echo $3 should not exist
+   echo ERROR: three arguments required
+   exit 1
+elif test -e "$3"
+then
+    echo "$3" should not exist
     echo ABORTING
     exit 1
 fi
-e='^(Tree ID|Parent ID|Commit ID|Update|Committed|New)'
+
 echo git cvsimport -v -d $1 -C $3 $2
-git cvsimport -v -d $1 -C $3 $2 | \
-    egrep -v "$e"
+e='^(Tree ID|Parent ID|Commit ID|Update|Committed|New)'
+if test $filter = yes
+then
+    git cvsimport -v -d $1 -C $3 $2 | egrep -v "$e"
+else
+    git cvsimport -v -d $1 -C $3 $2
+fi
