@@ -1,10 +1,28 @@
 #!/bin/sh
+#
+# File:		githelp
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Thu Apr 12 08:11:49 EDT 2012
+#
+# The author(s) have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
 
-if test ! -z "$1"
-then
+case "$1" in
+-doc*)
+	echo "
+githelp [NAME]
+    Print documentation for all git... commands with no
+    argument, or for gitNAME if NAME is given."
+    exit 1
+    ;;
+"")
+    ;;
+*)
     git$1 -doc | less -F
     exit 0
-fi
+    ;;
+esac
 
     echo "
 Overview
