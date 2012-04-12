@@ -21,7 +21,12 @@ gitcvsimport [-v] cvsroot module directory
     and instead you should use ~n, where n is a natural
     number.  ~n and {n} are similar, but there are some
     differences, and {n} is better when imported CVS
-    commits are not involved."
+    commits are not involved.
+
+    If you get an error fetching a file that should not
+    be in the CVS repository, remove all lines naming
+    the file from the file CVSROOT/history in the
+    repository, and try again."
 
     exit 1
     ;;
@@ -43,6 +48,11 @@ then
     echo ABORTING
     exit 1
 fi
+
+# Remove the cache so it will be rebuilt, as it may
+# cause problems if CVSROOT/history has been edited.
+#
+rm -rf ~/.cvsps
 
 echo git cvsimport -v -d $1 -C $3 $2
 e='^(Tree ID|Parent ID|Commit ID|Update|Committed|New)'
