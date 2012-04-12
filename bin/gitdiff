@@ -12,7 +12,7 @@ case "$1" in -doc*)
     echo "
 gitdiff [ {n} | ~n ] [-a | filename ...]
     Lists differences between the working versions of
-    files and either a previous commited version of the
+    files and either a previous committed version of the
     files or the last gitadd'ed versions.
 
     With no argument, does this for all files in the

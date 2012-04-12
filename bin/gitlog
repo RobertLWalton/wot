@@ -12,7 +12,7 @@ case "$1" in -doc*)
     echo "
 gitlog [{n} | ~n ]
     List all commits and file changes beginning at
-    a given commit and proceding backward in time.
+    a given commit and proceeding backward in time.
     If no commit is given, {0} is assumed."
 
     exit 1

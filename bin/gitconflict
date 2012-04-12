@@ -11,8 +11,13 @@
 case $1 in -doc*)
     echo "
 gitconflict [ filename ...]
-    With no arguments, just lists the files that differ
-    between the remote origin and the working files.
+    Examine differences between the remote origin and
+    the working files.  Does an implicit fetch of the
+    \`origin' branch of the current repository.  Then
+    if no arguments are given, just lists the files that
+    differ between the remote origin and the working
+    files.
+
     With arguments, produces gitdiff listings for chang-
     ing the remote origin versions of the named files to
     the working versions.  The argument \`.' will do

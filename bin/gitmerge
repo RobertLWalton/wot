@@ -14,9 +14,9 @@ case $1 in -doc*)
 gitmerge
     Merge files from the current repository's remote
     origin to the current repository.  Does an implicit
-    gitfetch to update the \`origin' branch of the
-    current repository, and then merges this branch into
-    the current repository.
+    fetch of the \`origin' branch of the current reposi-
+    tory, and then merges this branch into the current
+    repository.
 
     Use this if gitpull fails.  Use gitconflict first
     to see the nature of the failure.  Some files may
