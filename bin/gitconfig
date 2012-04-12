@@ -2,9 +2,9 @@
 case $1 in -doc*)
     echo "
 gitconfig [name email-address]
-    With no arguments, list current repository user's
-    name and email address.  With arguments, change
-    these."
+    With no arguments, list the current repository
+    user's name and email address.  With arguments,
+    change these."
 
     exit 1
     ;;
