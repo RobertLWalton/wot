@@ -5,7 +5,7 @@
 #
 # File:		print
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Wed Jan 14 10:35:46 EST 2009
+# Date:		Thu Apr 12 13:25:04 EDT 2012
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -68,9 +68,11 @@ print [-12FfdlpWNVEbo] [-P printer] [filename ...]
     The header normally includes file name, date, login
     name, and page number.  -f suppresses the file name;
     -d suppresses the date; -l suppresses the login
-    name; and -p suppresses the page number.  -F prints
-    the full file name instead of just the last compo-
-    nent of the file name.
+    name; -p suppresses the page number, -h suppresses
+    all of these but the page number, and -H suppresses
+    all including the page number.  -F prints the full
+    file name instead of just the last component of the
+    file name.
 
     Normally the page has a border, but -b suppresses
     the border.
@@ -82,14 +84,15 @@ print [-12FfdlpWNVEbo] [-P printer] [filename ...]
     to the standard output, instead of to a printer.
     Note that remarks are always printed on the standard
     error, so the standard error and standard output
-    should NOT be combined if the -o option is used."
+    should NOT be combined if the -o option is used." \
+    | less -F
 
     	exit 1
 	;;
     -P ) ;;
     -* )
     	switches="$1"
-	if test `expr "$1" : '\-[21FfdlpWNVEboB]*$'` \
+	if test `expr "$1" : '\-[21FfdlphHWNVEboB]*$'` \
 	        -le 1
 	then
 	    echo ERROR: bad option in "$1"
@@ -174,6 +177,19 @@ print [-12FfdlpWNVEbo] [-P printer] [filename ...]
 
 	case "$1" in
 	*p*)	pagenumber=""
+	esac
+
+	case "$1" in
+	*h*)	filename=""
+		date=""
+		login=""
+	esac
+
+	case "$1" in
+	*H*)	filename=""
+		date=""
+		login=""
+		pagenumber=""
 	esac
 
 	case "$1" in
