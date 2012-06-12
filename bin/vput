@@ -2,7 +2,7 @@
 #
 # File:		vput
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Tue Jun 12 04:53:32 EDT 2012
+# Date:		Tue Jun 12 06:36:49 EDT 2012
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -61,6 +61,11 @@ do
         echo ERROR: cannot find TITLE=... in "$y".com
 	continue
     fi
+    if test "`expr "$title" : '.*\(/\).*$'`" = "/"
+    then
+        echo ERROR: TITLE=... contains /
+	continue
+    fi
     if ! vorbiscomment -c "$y".com -w "$x"
     then
         echo ERROR: cannot change comments in "$x"
@@ -71,6 +76,10 @@ do
     then
         continue
     fi
-    mv -f "$x" "$title".ogg
+    if ! mv -f "$x" "$title".ogg
+    then
+        echo ERROR: move of "$x" failed
+        continue
+    fi
     echo "$title".ogg
 done
