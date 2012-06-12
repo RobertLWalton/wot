@@ -1,0 +1,37 @@
+#!/bin/sh
+#
+# File:		vget
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Tue Jun 12 04:31:10 EDT 2012
+#
+# The author(s) have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+
+case $1 in -doc*)
+    echo "
+vget filename.ogg ...
+    For each filename.ogg, create a filename.com
+    containing the comments of filename.ogg."
+
+    exit 1
+    ;;
+esac
+
+for x in "$@"
+do
+    y=`basename "$x" .ogg`
+    if test "$x" != "$y".ogg
+    then
+        echo ERROR: "$x" does not have .ogg extension
+	continue
+    fi
+    if test ! -r "$x"
+    then
+        echo ERROR: cannot read "$x"
+	continue
+    fi
+    rm -f "$y".com
+    vorbiscomment -l "$x" > "$y".com
+    echo "$y".com
+done

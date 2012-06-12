@@ -1,0 +1,76 @@
+#!/bin/sh
+#
+# File:		vput
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Tue Jun 12 04:53:32 EDT 2012
+#
+# The author(s) have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+
+case $1 in -doc*)
+    echo "
+vget filename.ogg ...
+    For each filename.ogg, check that filename.com
+    exists, that both files are readable and writable,
+    and that the comment
+
+    	TITLE=titlename
+
+    exists in filename.com.  If all checks pass, change
+    the comments in filename.ogg to the contents of
+    filename.com, change the file name of filename.ogg
+    to titlename.ogg, and delete filename.com"
+
+    exit 1
+    ;;
+esac
+
+for x in "$@"
+do
+    y=`basename "$x" .ogg`
+    if test "$x" != "$y".ogg
+    then
+        echo ERROR: "$x" does not have .ogg extension
+	continue
+    fi
+    if test ! -r "$x"
+    then
+        echo ERROR: cannot read "$x"
+	continue
+    fi
+    if test ! -r "$y".com
+    then
+        echo ERROR: cannot read "$y".com
+	continue
+    fi
+    if test ! -w "$x"
+    then
+        echo ERROR: cannot write "$x"
+	continue
+    fi
+    if test ! -w "$y".com
+    then
+        echo ERROR: cannot write "$y".com
+	continue
+    fi
+    titleline=`grep '^TITLE=' "$y".com`
+    title=`expr "$titleline" : 'TITLE=\(.*\)$'`
+    if test "$title" = ""
+    then
+        echo ERROR: cannot find TITLE=... in "$y".com
+	continue
+    fi
+    if ! vorbiscomment -c "$y".com -w "$x"
+    then
+        echo ERROR: cannot change comments in "$x"
+        continue
+    fi
+    rm -f "$y".com
+    if test "$title".ogg = "$x"
+    then
+        continue
+    fi
+    mv -f "$x" "$title".ogg
+    echo "$title".ogg
+done
