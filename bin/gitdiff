@@ -2,7 +2,7 @@
 #
 # File:		gitdiff
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Thu Apr 12 08:11:49 EDT 2012
+# Date:		Tue Jul 24 03:05:48 EDT 2012
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -10,7 +10,7 @@
 
 case "$1" in -doc*)
     echo "
-gitdiff [ {n} | ~n ] [-a | filename ...]
+gitdiff [ {m} | ~m ] [ {n} | ~n ] [-a | filename ...]
     Lists differences between the working versions of
     files and either a previous committed version of the
     files or the last gitadd'ed versions.
@@ -22,9 +22,10 @@ gitdiff [ {n} | ~n ] [-a | filename ...]
 
     With no commit name argument, diffs working versions
     with the last gitadd'ed version if that exists, or
-    the last committed version otherwise.  With a commit
-    name, diffs the working version with the version in
-    the commit."
+    the last committed version otherwise.  With one
+    commit name, diffs the working version with the
+    version in the commit.  With two commit names, diffs
+    the versions in the two commits."
 
     exit 1
     ;;
@@ -43,7 +44,26 @@ gitdiff [ {n} | ~n ] [-a | filename ...]
 
 *)
     src=index
-    commit="--"
+    commit=""
+    ;;
+esac
+
+case "$1" in
+
+{*})
+    dst="$1"
+    commit="$commit HEAD@$1"
+    shift
+    ;;
+
+~*)
+    dst="$1"
+    commit="$commit HEAD$1"
+    shift
+    ;;
+
+*)
+    dst=working
     ;;
 esac
 
@@ -51,17 +71,17 @@ case "$1" in
 
 "")
     git diff --src-prefix="$src"/ \
-             --dst-prefix=working/ \
-             "$commit" .
+             --dst-prefix="$dst"/ \
+             $commit .
     ;;
 "-a")
     git diff --src-prefix="$src"/ \
-             --dst-prefix=working/ \
-             "$commit"
+             --dst-prefix="$dst"/ \
+             $commit
     ;;
 *)
     git diff --src-prefix="$src"/ \
-             --dst-prefix=working/ \
-             "$commit" "$@"
+             --dst-prefix="$dst"/ \
+             $commit -- "$@"
     ;;
 esac
