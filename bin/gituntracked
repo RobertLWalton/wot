@@ -1,0 +1,20 @@
+#!/bin/sh
+#
+# File:		gituntracked
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Sat Jul 28 07:26:56 EDT 2012
+#
+# The author(s) have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+
+case $1 in -doc*)
+    echo "
+gituntracked
+    List all untracked files."
+
+    exit 1
+    ;;
+esac
+
+git status --porcelain | sed -n -e '/^?? /s///p'
