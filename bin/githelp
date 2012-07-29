@@ -2,7 +2,7 @@
 #
 # File:		githelp
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Thu Apr 12 08:11:49 EDT 2012
+# Date:		Sun Jul 29 08:48:49 EDT 2012
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -125,6 +125,12 @@ Indexing
 `gitsub -doc`
 `gitrm -doc`
 `gitmv -doc`
+
+
+Checking
+--------
+`gituntracked -doc`
+`gitcheck -doc`
 
 
 Resolving Conflicts

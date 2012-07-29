@@ -2,7 +2,7 @@
 #
 # File:		gitcheck
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sat Jul 28 07:12:34 EDT 2012
+# Date:		Sun Jul 29 08:51:09 EDT 2012
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -12,8 +12,10 @@ case $1 in -doc*)
     echo "
 gitcheck
     Check the current git repository for errors, e.g.,
-    object that do not have the signature they are
-    supposed to have."
+    objects that do not have the signature they are
+    supposed to have.  If a repository checks, it
+    probably has not been damaged by miscopying, etc.,
+    as the signatures act like checksums."
 
     exit 1
     ;;
