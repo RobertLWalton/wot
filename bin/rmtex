@@ -1,5 +1,32 @@
-#! /bin/csh -f
+#!/bin/sh
+#
+# File:		rmtex
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Sun Jul 29 08:51:09 EDT 2012
+#
+# The author(s) have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
 
-foreach x ( $argv:q )
-    rm -f ${x:r}.{dvi,ps,pdf,log,aux,bbl,blg,idx,ilg,ind,toc,lof,lot}
-end
+case $1 in -doc*)
+    echo "
+rmtex filename ...
+    Remove all the files that might be output by
+
+    	pdflatex filename    or    latex filename
+
+    such as filename.aux, and including filename.ps
+    and filename.pdf."
+
+    exit 1
+    ;;
+esac
+
+for x in $@
+do
+    for y in dvi ps pdf log aux bbl blg idx ilg ind \
+             toc lof lot
+    do
+	rm -f "${x:r}.$y"
+    done
+done
