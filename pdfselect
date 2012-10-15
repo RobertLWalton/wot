@@ -1,8 +1,8 @@
 #!/bin/sh
 if [ "$2" = "" ]
 then
-    echo pdfselect PAGES FILE
+    echo pdfselect FIRST-LAST FILE
     exit 1
 fi
-pdf2ps "$2" - | psselect "$1" | lpr
+pdf2ps "$2" - | psselect -p"$1" | lpr
 
