@@ -5,4 +5,3 @@ then
     exit 1
 fi
 pdf2ps "$2" - | psselect -p"$1" | lpr
-
