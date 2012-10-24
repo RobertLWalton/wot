@@ -1,5 +1,5 @@
 #!/bin/sh
-. ~/.lsbackuprc
+. ~/.rbackuprc
 flags='-av --delete'
 while [ x = x ]
 do
@@ -11,18 +11,55 @@ do
     esac
 done
 
-case "$1" in
-/?*/?*) ;;
-*)  echo "BAD: argument: $1"
-    exit 2;;
-esac
+local=LOCAL_$1
+local=${!local}
+remote=REMOTE_$1
+remote=${!remote}
 
-if [ -r "$1/.BACKUP-IGNORE" ]
+if [ "$local" = "" ]
+then
+    list=""
+    for x in ${!LOCAL_*}
+    do
+        y=`expr "$x" : 'LOCAL_\(.*\)'`
+	list="$list $y"
+    done
+    echo "rbackup DIR"
+    echo "or"
+    echo "rrestore DIR"
+    echo ""
+    echo "where DIR is one of:$list"
+    exit 1
+fi
+
+if [ -r "$local/.BACKUP-IGNORE" ]
 then
     flags="$flags --exclude-from=$1/.BACKUP-IGNORE"
 fi
 
-echo rsync $flags "$1/" \
-    ${LINKACCOUNT}@${LINKSTATION}:walton3/$1
-rsync $flags "$1/" \
-    ${LINKACCOUNT}@${LINKSTATION}:walton3/$1
+case "$0" in
+    *backup)
+        src="${local}/"
+	des="${LINKACCOUNT}@${LINKSTATION}:${remote}/"
+	;;
+    *lsrestore)
+	src="${LINKACCOUNT}@${LINKSTATION}:${remote}/"
+        des="${local}/"
+	;;
+    *)
+        echo "Command name $0 not *backup or *restore"
+	exit 1
+	;;
+esac
+
+echo rsync $flags '\'
+echo "   " "${src}" "${des}"
+echo 'OK (y or n)?'
+read
+if test "$REPLY" != "y"
+then
+    echo ABORTING
+    exit 1
+fi
+
+rsync $flags "${src}" ${des}"
