@@ -40,10 +40,10 @@ fi
 case "$0" in
     *backup)
         src="${local}/"
-	des="${LINKACCOUNT}@${LINKSTATION}:${remote}/"
+	des="${remote}/"
 	;;
     *lsrestore)
-	src="${LINKACCOUNT}@${LINKSTATION}:${remote}/"
+	src="${remote}/"
         des="${local}/"
 	;;
     *)
