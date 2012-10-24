@@ -62,4 +62,4 @@ then
     exit 1
 fi
 
-rsync $flags "${src}" ${des}"
+rsync $flags "${src}" "${des}"
