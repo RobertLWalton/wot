@@ -24,9 +24,7 @@ then
         y=`expr "$x" : 'LOCAL_\(.*\)'`
 	list="$list $y"
     done
-    echo "remsave DIR"
-    echo "or"
-    echo "remrestore DIR"
+    echo "$0 DIR"
     echo ""
     echo "where DIR is one of:$list"
     exit 1
