@@ -4,4 +4,4 @@ then
     echo pdfselect FIRST-LAST FILE
     exit 1
 fi
-pdf2ps "$2" - | psselect -p"$1" | lpr
+pdftops "$2" - | psselect -p"$1" | lpr
