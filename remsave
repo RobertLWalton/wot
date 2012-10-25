@@ -1,5 +1,5 @@
 #!/bin/sh
-. ~/.rbackuprc
+. ~/.remsave
 flags='-av --delete'
 while [ x = x ]
 do
@@ -24,9 +24,9 @@ then
         y=`expr "$x" : 'LOCAL_\(.*\)'`
 	list="$list $y"
     done
-    echo "rbackup DIR"
+    echo "remsave DIR"
     echo "or"
-    echo "rrestore DIR"
+    echo "remrestore DIR"
     echo ""
     echo "where DIR is one of:$list"
     exit 1
@@ -38,7 +38,7 @@ then
 fi
 
 case "$0" in
-    *backup)
+    *save)
         src="${local}/"
 	des="${remote}/"
 	;;
@@ -47,7 +47,7 @@ case "$0" in
         des="${local}/"
 	;;
     *)
-        echo "Command name $0 not *backup or *restore"
+        echo "Command name $0 not *save or *restore"
 	exit 1
 	;;
 esac
