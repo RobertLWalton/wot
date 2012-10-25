@@ -34,7 +34,7 @@ fi
 
 if [ -r "$local/.BACKUP-IGNORE" ]
 then
-    flags="$flags --exclude-from=$1/.BACKUP-IGNORE"
+    flags="$flags --exclude-from=$local/.BACKUP-IGNORE"
 fi
 
 case "$0" in
@@ -42,7 +42,7 @@ case "$0" in
         src="${local}/"
 	des="${remote}/"
 	;;
-    *lsrestore)
+    *restore)
 	src="${remote}/"
         des="${local}/"
 	;;
