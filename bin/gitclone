@@ -2,7 +2,7 @@
 #
 # File:		gitclone
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Thu Apr 12 08:11:49 EDT 2012
+# Date:		Mon Oct 15 10:21:38 EDT 2012
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -38,7 +38,8 @@ gitclone repositoryname directory
     which should reference an internet accessible repo-
     sitory directory.  Note that in this case it will
     not be possible to use gitpush to push commits from
-    the current repository to its remote origin."
+    the current repository to its remote origin." \
+    | less -F
 
     exit 1
     ;;
