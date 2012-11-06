@@ -21,11 +21,10 @@ do
     y=$d/$x
     if [ -x $y ]
     then
+	chmod $v a+rx $y
 	if [ "$x" != "." -a -r "$y/Publish" ]
 	then
 	    publish $v $y
-	else
-	    chmod $v a+rx $y
 	fi
     else
 	chmod $v a+r $y
