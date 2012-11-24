@@ -1,0 +1,26 @@
+#!/bin/sh
+#
+# File:		gitcp
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Sat Nov 24 04:25:08 EST 2012
+#
+# The author(s) have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+
+case $1 in -doc*)
+    echo "
+gitcp repository
+    Copy the contents of the designated repository into
+    the current repository.  Note the ENTIRE contents
+    of the designated repository are copied.  If you
+    only want to copy a few files, make a temporary
+    clone of the designated repository, remove what you
+    do not want from the temporary, and gitcp the
+    temporary."
+
+    exit 1
+    ;;
+esac
+
+git pull "$1" master
