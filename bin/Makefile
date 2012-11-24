@@ -1,4 +1,4 @@
-all:	chkpage efm conf_helper
+all:	chkpage efm conf_helper remrestore
 
 chkpage:	chkpage.c
 	rm -f chkpage
@@ -15,6 +15,9 @@ conf_helper:	conf_helper.c
 	gcc -ansi -pedantic -o conf_helper conf_helper.c
 	chmod 555 conf_helper
 
+remrestore:
+	ln -s remsave remrestore
+
 sniffbench:	sniffbench.c
 	rm -f sniffbench
 	gcc -ansi -pedantic -o sniffbench sniffbench.c
@@ -22,4 +25,5 @@ sniffbench:	sniffbench.c
 
 
 clean:
-	rm -f chkpage efm conf_helper sniffbench
+	rm -f chkpage efm conf_helper remrestore \
+	      sniffbench
