@@ -1,2 +1,0 @@
-#!/bin/sh -f
-scp walton@gigue.deas.harvard.edu:.calendar ~

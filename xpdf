@@ -1,4 +1,0 @@
-#!/bin/csh -f
-rm -f ~/tmp/view.pdf
-ln -s "$1" ~/tmp/view.pdf
-evince ~/tmp/view.pdf

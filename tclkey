@@ -1,2 +1,0 @@
-#!/bin/csh -f
-grep -r $argv:q ~/tcl/man/mann/*.n

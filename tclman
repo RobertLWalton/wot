@@ -1,2 +1,0 @@
-#!/bin/csh -f
-man -M ~/tcl/man $argv:q

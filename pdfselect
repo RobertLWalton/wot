@@ -1,7 +1,0 @@
-#!/bin/sh
-if [ "$2" = "" ]
-then
-    echo pdfselect FIRST-LAST FILE
-    exit 1
-fi
-pdftops "$2" - | psselect -p"$1" | lpr

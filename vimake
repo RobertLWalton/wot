@@ -1,6 +1,0 @@
-#!/bin/csh -f
-if ( $#argv == 1 ) then
-    vim -c "map <F12> :w<CR>:\!make $1:t:r<CR>" $1
-else
-    vim -c "map <F12> :w<CR>:\!make $1<CR>" $argv[2-]:q
-endif

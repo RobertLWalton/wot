@@ -1,7 +1,0 @@
-#! /bin/sh
-echo rsync --protocol=29 -avH --delete "$@" \
-    /group/hc3/web/ \
-    walton@pub.seas.harvard.edu:/seas/web/sites_static/groups/hc3/
-rsync --protocol=29 -avH --delete "$@" \
-    /group/hc3/web/ \
-    walton@pub.seas.harvard.edu:/seas/web/sites_static/groups/hc3/

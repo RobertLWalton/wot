@@ -1,4 +1,0 @@
-#!/bin/csh -f
-hpcm_email_passwords $argv:q \
-    -A 'From: walton@seas.harvard.edu' \
-    -A 'Cc: walton@seas.harvard.edu'
