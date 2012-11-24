@@ -1,0 +1,63 @@
+#!/bin/sh
+. ~/.remsaverc
+flags='-av --delete'
+while [ x = x ]
+do
+    case "$1" in
+    -*)
+        flags="$flags $1"
+	shift ;;
+    *)  break;;
+    esac
+done
+
+local=LOCAL_$1
+local=${!local}
+remote=REMOTE_$1
+remote=${!remote}
+
+if [ "$local" = "" ]
+then
+    list=""
+    for x in ${!LOCAL_*}
+    do
+        y=`expr "$x" : 'LOCAL_\(.*\)'`
+	list="$list $y"
+    done
+    echo "$0 DIR"
+    echo ""
+    echo "where DIR is one of:$list"
+    exit 1
+fi
+
+if [ -r "$local/.BACKUP-IGNORE" ]
+then
+    flags="$flags --exclude-from=$local/.BACKUP-IGNORE"
+fi
+
+case "$0" in
+    *save)
+        src="${local}/"
+	des="${remote}/"
+	;;
+    *restore)
+	src="${remote}/"
+        des="${local}/"
+	;;
+    *)
+        echo "Command name $0 not *save or *restore"
+	exit 1
+	;;
+esac
+
+echo rsync $flags '\'
+echo "   " "${src}" "${des}"
+echo 'OK (y or n)?'
+read
+if test "$REPLY" != "y"
+then
+    echo ABORTING
+    exit 1
+fi
+
+rsync $flags "${src}" "${des}"
