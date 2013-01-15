@@ -2,7 +2,7 @@
 #
 # File:		gitlog
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Fri Jul 27 02:32:05 EDT 2012
+# Date:		Tue Jan 15 03:20:07 EST 2013
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -20,7 +20,8 @@ gitlog [{n} | ~n ]
 
 {*})
     i=`expr "$1" : '{\([0-9]*\)}$'`
-    ancestor=-g
+    # ancestor=-g
+    ancestor=--first-parent
     commit="HEAD@$1"
     pre={
     post=}
@@ -36,7 +37,8 @@ gitlog [{n} | ~n ]
 
 "")
     i=0
-    ancestor=-g
+    # ancestor=-g
+    ancestor=--first-parent
     commit="HEAD"
     pre={
     post=}
