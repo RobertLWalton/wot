@@ -4,7 +4,7 @@
 #
 # File:		cvsdiff
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Thu Apr  2 19:23:37 EDT 2009
+# Date:		Sat May  4 04:12:47 EDT 2013
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -59,9 +59,18 @@ cvsdiff [options] [file_or_directory ...]
     		was given tag T (see cvstag).
 
     diff(1)	You can use standard diff(1) options,
-    option	such as -b, -w, --minimal.'
+    option	such as -b, -w, --minimal.  If no
+                options are given or the first option
+		is not -c* or -u*, the -u3 option is
+		added.'
     exit 1
     ;;
+esac
+
+uopt="-u3"
+case "$1" in
+    -c*)   uopt="" ;;
+    -u*)   uopt="" ;;
 esac
 
 if [ ! -d ./CVS ]
@@ -71,4 +80,4 @@ then
     exit 2
 fi
 
-cvs diff "$@" 2>&1 | grep -v 'cvs.*: Diffing '
+cvs diff $uopt "$@" 2>&1 | grep -v 'cvs.*: Diffing '
