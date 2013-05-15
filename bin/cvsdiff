@@ -4,7 +4,7 @@
 #
 # File:		cvsdiff
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sat May  4 04:12:47 EDT 2013
+# Date:		Wed May 15 07:27:06 EDT 2013
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -62,7 +62,8 @@ cvsdiff [options] [file_or_directory ...]
     option	such as -b, -w, --minimal.  If no
                 options are given or the first option
 		is not -c* or -u*, the -u3 option is
-		added.'
+		added.' \
+	| less -F
     exit 1
     ;;
 esac
@@ -80,4 +81,5 @@ then
     exit 2
 fi
 
-cvs diff $uopt "$@" 2>&1 | grep -v 'cvs.*: Diffing '
+cvs diff $uopt "$@" 2>&1 | \
+    grep -v 'cvs.*: Diffing ' | less -F
