@@ -24,7 +24,7 @@ gittag [ {n} | ~n ] tagname
     do
 	show=`git show --abbrev-commit $t -- `
 	commitline=`echo "$show" | grep '^commit '`
-	dateline=`echo "$show" | grep Date:`
+	dateline=`echo "$show" | grep '^Date:'`
 	date=`expr "$dateline" : 'Date: \(.*\)'`
 	commit=`expr "$commitline" : 'commit \(.*\)'`
 	echo ${t}: $commit: $date
