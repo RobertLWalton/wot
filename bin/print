@@ -21,7 +21,7 @@
 landscape=""
 border="-j"
 filename="\$n"
-date=" \$W  \$C "
+date="%D %T"
 login=" %n "
 pagenumber="\$% of \$="
 font=10
@@ -222,11 +222,55 @@ case "$1" in
     	;;
 esac
 
-exec enscript $landscape $border \
-        -b "$filename|$date$login|$pagenumber" \
-	--margins=48:48:: \
-	-F Courier-Bold$titlefont -f $style$font \
-	$output "$@"
+options=
+done_one=0
+for file in "$@" "" ""
+do
+    DATE=""
+    case "$file" in
+    -*)
+        options="$options $file"
+	continue
+	;;
+    "")
+        if [ $done_one -eq 1 ]
+	then
+	    break
+	fi
+	FILENAME="STANDARD INPUT"
+	if [ -n "$date" ]
+	then
+	    DATE=`date +"$date"`
+	fi
+	;;
+    *)
+	case "$filename" in
+	*n)
+	    FILENAME=`basename $file`
+	    ;;
+	*N)
+	    FILENAME="$file"
+	    ;;
+	*)
+	    FILENAME=""
+	    ;;
+	esac
+	if [ -n "$date" ]
+	then
+	    DATE=`date -r $file +"$date"`
+	fi
+    esac
+
+    cat $file | unicode2latin1 | \
+	enscript $landscape $border \
+	    -b "$FILENAME|$DATE$login|$pagenumber" \
+	    --margins=48:48:: \
+	    -F Courier-Bold$titlefont -f $style$font \
+	    $output $options
+    done_one=1
+done
+
+exit 0
 
 
 

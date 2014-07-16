@@ -1,9 +1,16 @@
-all:	chkpage efm conf_helper remrestore
+all:	chkpage efm conf_helper remrestore \
+        unicode2latin1
 
 chkpage:	chkpage.c
 	rm -f chkpage
 	gcc -ansi -pedantic -o chkpage chkpage.c
 	chmod 555 chkpage
+
+unicode2latin1:	unicode2latin1.c
+	rm -f unicode2latin1
+	gcc -ansi -pedantic -o unicode2latin1 \
+	    unicode2latin1.c
+	chmod 555 unicode2latin1
 
 efm:	efm.c
 	rm -f efm
