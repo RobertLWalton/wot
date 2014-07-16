@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	unicode2latin1.c
-** Date:	Wed Jul 16 12:23:35 EDT 2014
+** Date:	Wed Jul 16 15:35:25 EDT 2014
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -155,9 +155,19 @@ int main ( int argc, char ** argv )
 	begs = s;
 	c = utf8_to_unicode ( & s );
 
+	/* We must use hex encoding in "..." literals
+	 * that are to be output as having LATIN1
+	 * characters, as otherwise they would be
+	 * output in UTF8.
+	 *
+	 * 	\xAB	is	«
+	 * 	\xA6	is	¦
+	 * 	\xBB	is	»
+	 */
 	if ( c == UNKNOWN_UCHAR )
 	{
-	    char * prefix = "«¦";
+	    char * prefix = "\xAB\xA6";
+	    char * vprefix = "«¦";
 	    if ( verbose )
 		fprintf ( stderr,
 			  "unicode2latin1: found " );
@@ -167,14 +177,14 @@ int main ( int argc, char ** argv )
 		printf ( "%s%02X", prefix, b );
 		if ( verbose )
 		    fprintf ( stderr,
-			      "%s%02X", prefix, b );
+			      "%s%02X", vprefix, b );
 		prefix = ",";
 	    }
 	    if ( verbose )
 		fprintf ( stderr, 
 			  "¦» in line %d\n",
 			  line_number );
-	    if ( printf ( "¦»" ) >= 0 )
+	    if ( printf ( "\xA6\xBB" ) >= 0 )
 	        continue;
 	}
 	else if ( c > 0xFF )
@@ -185,7 +195,9 @@ int main ( int argc, char ** argv )
 			  " found «¦%02X¦»"
 			  " in line %d\n",
 			  c, line_number );
-	    if ( printf ( "«¦%02X¦»", c ) >= 0 )
+	    if (    printf
+			( "\xAB\xA6%02X\xA6\xBB", c )
+	         >= 0 )
 		continue;
 	}
 	else
