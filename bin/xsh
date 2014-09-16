@@ -4,7 +4,7 @@
 #
 # File:		xsh
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Thu Oct 13 08:48:08 EDT 2011
+# Date:		Tue Sep 16 11:45:32 UTC 2014
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -71,7 +71,8 @@ Wait ...'
 	sleep 5
     fi
     ( gnome-terminal --window-with-profile=Default \
-                     --zoom=$ZOOM ) &
+                     --zoom=$ZOOM \
+		     2>&1 | grep -v atk-bridge ) &
 else
     if test "$1" != ""; then PP="$1"; fi
     WEIGHT=medium
