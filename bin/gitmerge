@@ -44,4 +44,4 @@ then
 fi
 
 git fetch origin
-git merge origin
+git merge origin/master
