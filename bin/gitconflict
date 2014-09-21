@@ -31,11 +31,11 @@ gitconflict [ filename ...]
 
 "")
     git fetch origin
-    git diff --name-status origin
+    git diff --name-status origin/master
     ;;
 ?*)
     git fetch origin
-    git diff origin \
+    git diff origin/master \
         --src-prefix=origin/ --dst-prefix=working/ \
         -- "$@"
     ;;
