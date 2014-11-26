@@ -2,7 +2,7 @@
 #
 # File:		gitmerge
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Thu Apr 12 08:11:49 EDT 2012
+# Date:		Wed Nov 26 05:47:06 EST 2014
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -33,7 +33,7 @@ gitmerge
     ;;
 esac
 
-stat=`git status | egrep "^#[ 	]+([a-z ]+:|Chang)"`
+stat=`git status --porcelain -uno`
 if test "$stat" != ""
 then
     echo There are uncommitted files:
