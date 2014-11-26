@@ -18,5 +18,4 @@ gitstat
     ;;
 esac
 
-git status | egrep \
-    "^#[ 	]+([a-z ]+:|Chang|.* branch )"
+git status --porcelain -uno -b
