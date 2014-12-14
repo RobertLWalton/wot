@@ -1,2 +1,2 @@
-#! /bin/csh -f
-chkpage -c56 -l40 $argv:q
+#! /bin/sh
+chkpage -c56 -l40 "$@"
