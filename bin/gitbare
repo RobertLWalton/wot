@@ -2,7 +2,7 @@
 #
 # File:		gitbare
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Thu Apr 12 08:11:49 EDT 2012
+# Date:		Mon Dec 29 06:32:18 EST 2014
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -49,18 +49,15 @@ case "$1" in
     git clone --bare ./.git $tmpgit
     echo rsync -avzHu $tmpgit/ $1/
     rsync -avzHu $tmpgit/ $1/
-    url=`echo "$1" | \
-	 sed -e '/:/s//\/~\//' -e '/^/s//ssh:\/\//'`
     ;;
 *)
     echo git clone --bare ./.git "$1"
     git clone --bare ./.git "$1"
-    url="$1"
     ;;
 esac
 
-echo git remote add -m master origin "$url"
-git remote add -m master origin "$url"
+echo git remote add -m master origin "$1"
+git remote add -m master origin "$1"
 echo git config --add branch.master.remote origin
 git config --add branch.master.remote origin
 echo git config --add \

@@ -2,7 +2,7 @@
 #
 # File:		gitclone
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Mon Oct 15 10:21:38 EDT 2012
+# Date:		Mon Dec 29 06:31:07 EST 2014
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -45,15 +45,5 @@ gitclone repositoryname directory
     ;;
 esac
 
-case "$1" in
-*@*)
-    url=`echo "$1" | \
-	 sed -e '/:/s//\/~\//' -e '/^/s//ssh:\/\//'`
-    ;;
-*)
-    url="$1"
-    ;;
-esac
-
-echo git clone "$url" $2
-git clone "$url" $2
+echo git clone "$1" $2
+git clone "$1" $2
