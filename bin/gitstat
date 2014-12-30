@@ -18,4 +18,5 @@ gitstat
     ;;
 esac
 
-git status --porcelain -uno -b
+git branch
+git status --porcelain -uno
