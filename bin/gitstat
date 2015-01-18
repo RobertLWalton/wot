@@ -18,5 +18,8 @@ gitstat
     ;;
 esac
 
-git diff --name-only master origin/HEAD
+if [ -n "`git diff --name-only master origin/HEAD`" ]
+then
+    echo "master and origin/HEAD differ"
+fi
 git status --porcelain -uno
