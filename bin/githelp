@@ -2,7 +2,7 @@
 #
 # File:		githelp
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sun Jul 29 08:48:49 EDT 2012
+# Date:		Tue Jan 27 04:07:39 EST 2015
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -96,10 +96,16 @@ commit before the most recent, so {0} is the most recent
 commit, {1} the previous commit, etc.  Names such as
 '{Apr 6 7:00}' and '{two days ago}' can also be used
 in most situations, but these must be in quotes when
-used as arguments because they contain spaces.  If
-you have imported a repository from CVS, you may want
+used as arguments because they contain spaces.
+
+If you have imported a repository from CVS, you may want
 to use alternative commit names of the form ~n: see
-gitcvsimport.
+gitcvsimport.  WARNING: ~0 must be quoted as it denotes
+the current directory; but ~1 need not be quoted.
+
+Some programs also accept \`r' as the name of the cur-
+rent remote repository (aka origin/HEAD) and \`l' as a
+synonym for ~0.
 
 
 Initialization

@@ -2,32 +2,53 @@
 #
 # File:		gitdiff
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Tue Jul 24 03:05:48 EDT 2012
+# Date:		Tue Jan 27 04:19:05 EST 2015
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
 # for this program.
 
+fetch=no
+
 case "$1" in -doc*)
     echo "
-gitdiff [ {m} | ~m ] [ {n} | ~n ] [-a | filename ...]
+gitdiff [ l | r | {m} | ~m ] [ l | r | {n} | ~n ] \\
+        [-n | git-diff-option ...] \\
+        [-a | [--] filename ...]
     Lists differences between the working versions of
     files and either a previous committed version of the
     files or the last gitadd'ed versions.
 
-    With no argument, does this for all files in the
-    current directory and its subdirectories.  With -a
-    argument, for all files in all repository director-
-    ies.  Otherwise only for the listed files.
+    With no filenames or -a, lists differences for all
+    files in the current directory and its subdirector-
+    ies.  With -a, for all files in all repository
+    directories.  Otherwise only for the listed files.
 
-    With no commit name argument, diffs working versions
-    with the last gitadd'ed version if that exists, or
-    the last committed version otherwise.  With one
+    With no commit name arguments, diffs working ver-
+    sions the last gitadd'ed version if that exists,
+    or the last committed version otherwise.  With one
     commit name, diffs the working version with the
     version in the commit.  With two commit names, diffs
-    the versions in the two commits."
+    the versions in the two commits.
+
+    The -n option is shorthand for the git diff option
+    --name-status that just lists the names and status
+    of the files with differences."
 
     exit 1
+    ;;
+
+l)
+    src="~0"
+    commit="HEAD~0"
+    shift
+    ;;
+
+r)
+    src="remote"
+    commit="origin/HEAD"
+    fetch=yes
+    shift
     ;;
 
 {*})
@@ -50,6 +71,19 @@ esac
 
 case "$1" in
 
+l)
+    dst="~0"
+    commit="$commit HEAD~0"
+    shift
+    ;;
+
+r)
+    dst="remote"
+    commit="$commit origin/HEAD"
+    fetch=yes
+    shift
+    ;;
+
 {*})
     dst="$1"
     commit="$commit HEAD@$1"
@@ -67,21 +101,51 @@ case "$1" in
     ;;
 esac
 
+options=""
+while [ $# -ne 0 ]
+do
+    case "$1" in
+
+    --)
+        break
+	;;
+
+    -n)
+	options="$options --name-status"
+	shift
+	;;
+
+    -*)
+	options="$options $1"
+	shift
+	;;
+
+    *)
+        break
+	;;
+    esac
+done
+
+if [ $fetch = "yes" ]
+then
+    git fetch
+fi
+
 case "$1" in
 
 "")
     git diff --src-prefix="$src"/ \
              --dst-prefix="$dst"/ \
-             $commit .
+             $commit $options .
     ;;
 "-a")
     git diff --src-prefix="$src"/ \
              --dst-prefix="$dst"/ \
-             $commit
+             $commit $options
     ;;
 *)
     git diff --src-prefix="$src"/ \
              --dst-prefix="$dst"/ \
-             $commit -- "$@"
+             $commit $options "$@"
     ;;
 esac
