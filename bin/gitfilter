@@ -48,30 +48,25 @@ then
     fi
 fi
 
-command=""
 directory="$1"
 shift
+
+command='find . -maxdepth 1 \( -name . -o -name .git'
 while [ $# -ne 0 ]
 do
-    if [ -z "$command" ]
-    then
-	command='find . -maxdepth 1 \('
-    else
-        command="$command -o"
-    fi
-    command="$command -name $1"
+    name="$1"
+    case "$name" in */)
+        name=`expr "$name" : '\(.*\)/$'`
+    esac
+    case "$name" in */*)
+        echo "ERROR: $name contains /"
+	exit 1
+    esac
+    command="$command -o -name $name"
     shift
 done
 
-if [ -z "$command" ]
-then
-    echo "ERROR: no filenames given"
-    exit 1
-fi
-
 command="$command"' -o -print0 \) | xargs -0 rm -rf'
-
-echo "{$command}"
 
 if [ -e "$directory" ]
 then
@@ -79,3 +74,56 @@ then
     exit 1
 fi
 
+dir=.
+while [ ! -e $dir/.git ]
+do
+    if [ ! -e $dir ]
+    then
+        echo "ERROR: current directory has no .git" \
+	     "containing ancestor"
+	exit 1
+    fi
+    dir=$dir/..
+done
+
+if git clone -q --no-hardlinks $dir/.git "$directory"
+then
+    echo "Cloned $dir/.git to $directory"
+else
+    echo "FAILED: git clone -q --no-hardlinks" \
+         "$dir/.git $directory"
+    exit 1
+fi
+
+olddir=`pwd`
+if cd "$directory"
+then
+    echo "Filtering will be done in $directory"
+else
+    echo "FAILED: cd $directory"
+    exit 1
+fi
+
+# Cautious double check.
+newdir=`pwd`
+if [ "$olddir" = "$newdir" ]
+then
+    echo "SYSTEM ERROR: cd $directory did not report" \
+         "error"
+    exit 1
+fi
+
+if git filter-branch --prune-empty \
+                     --tree-filter "$command" HEAD
+then
+    echo "Cloned repository in $directory has been" \
+         "filtered"
+    echo "  Contents: `find . -maxdepth 1 \
+                  \( -name . -o -name .git \
+                             -o -printf '%f\0' \) \
+	    | xargs -0 echo `"
+else
+    echo "FAILED: git filter-branch --prune-empty" \
+                     "--tree-filter '$command' HEAD"
+    exit 1
+fi
