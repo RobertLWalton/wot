@@ -1,0 +1,81 @@
+#!/bin/sh
+#
+# File:		gitfilter
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Fri Jun 19 06:45:20 EDT 2015
+#
+# The author(s) have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+
+case $1 in -doc*|"")
+    echo "
+gitfilter directory filename ...
+    Clone the current git repository in the directory
+    which must not previously exist, and then in that
+    directory remove all files and subdirectories not
+    named from all commits, pruning empty commits.  The
+    commits are renamed."
+
+    exit 1
+    ;;
+esac
+
+askcontinue=0
+if [ -n "`git branch -l | grep origin`" ]
+then
+    if [ "`git diff --name-only HEAD origin/HEAD`" ]
+    then
+	echo "HEAD and origin/HEAD differ"
+	askcontinue=1
+    fi
+fi
+stat=`git status --porcelain -uno`
+if [ -n "$stat" ]
+then
+    echo "commit not up-to-date"
+    echo $stat
+    askcontinue=1
+fi
+if [ $askcontinue -eq 1 ]
+then
+    echo 'DO YOU WANT TO CONTINUE (y or n)?'
+    read
+    if [ "$REPLY" != "y" ]
+    then
+	echo 'ABORTED!'
+	exit 0
+    fi
+fi
+
+command=""
+directory="$1"
+shift
+while [ $# -ne 0 ]
+do
+    if [ -z "$command" ]
+    then
+	command='find . -maxdepth 1 \('
+    else
+        command="$command -o"
+    fi
+    command="$command -name $1"
+    shift
+done
+
+if [ -z "$command" ]
+then
+    echo "ERROR: no filenames given"
+    exit 1
+fi
+
+command="$command"' -o -print0 \) | xargs -0 rm -rf'
+
+echo "{$command}"
+
+if [ -e "$directory" ]
+then
+    echo "ERROR: $directory already exists"
+    exit 1
+fi
+
