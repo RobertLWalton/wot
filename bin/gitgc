@@ -1,0 +1,21 @@
+#!/bin/sh
+#
+# File:		gitgc
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Thu Aug 13 17:57:09 EDT 2015
+#
+# The author(s) have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+
+case $1 in -doc*)
+    echo "
+gitgc
+    Agressively garbage collect the repository to save
+    space."
+
+    exit 1
+    ;;
+esac
+
+git gc --aggressive
