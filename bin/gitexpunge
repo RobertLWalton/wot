@@ -1,8 +1,8 @@
 #!/bin/sh
 #
-# File:		gitfilter
+# File:		gitexpunge
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Wed Nov 25 03:30:48 EST 2015
+# Date:		Wed Nov 25 03:29:39 EST 2015
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -10,16 +10,16 @@
 
 case $1 in -doc*|"")
     echo "
-gitfilter directory filename ...
+gitexpunge directory filename ...
     Clone the current git repository in the directory
     which must not previously exist, and then in that
-    directory remove all files and subdirectories NOT
-    NAMED from all commits, pruning empty commits.  The
-    commits are renamed.
+    directory REMOVE all files and subdirectories that
+    ARE NAMED from all commits, pruning empty commits.
+    The commits are renamed.
     
-    Note that this is the opposite of gitexpunge which
-    REMOVES all the files and subdirectories instead of
-    KEEPING them."
+    Note this is the opposite of gitfilter which KEEPS
+    the named files and subdirectories instead of
+    REMOVING them."
 
     exit 1
     ;;
@@ -55,7 +55,7 @@ fi
 directory="$1"
 shift
 
-command='find . -maxdepth 1 \( -name . -o -name .git'
+command='rm -rf'
 while [ $# -ne 0 ]
 do
     name="$1"
@@ -66,11 +66,9 @@ do
         echo "ERROR: $name contains /"
 	exit 1
     esac
-    command="$command -o -name $name"
+    command="$command $name"
     shift
 done
-
-command="$command"' -o -print0 \) | xargs -0 rm -rf'
 
 if [ -e "$directory" ]
 then
