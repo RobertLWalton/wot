@@ -1,2 +1,2 @@
-#! /bin/sh
+#! /bin/bash
 chkpage -c56 -l40 "$@"

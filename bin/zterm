@@ -1,2 +1,2 @@
-#!/bin/sh
+#!/bin/bash
 gnome-terminal --window-with-profile=$1

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # File:		gitmv
 # Author:	Bob Walton <walton@acm.org>

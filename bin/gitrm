@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # File:		gitrm
 # Author:	Bob Walton <walton@acm.org>

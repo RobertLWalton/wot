@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Make a copy of a CVS repository file.
 #

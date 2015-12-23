@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # File:		gitdelete-remotes
 # Author:	Bob Walton <walton@acm.org>

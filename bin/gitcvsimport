@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # File:		gitcvsimport
 # Author:	Bob Walton <walton@acm.org>

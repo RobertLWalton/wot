@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 #
 # Print files, in 60 line x 80 column format by default,
 # or in other formats by option.

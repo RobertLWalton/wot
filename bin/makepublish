@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 rm -f Publish
 for x in `find . -maxdepth 1 -type l -o -perm -o+r -print | sort`

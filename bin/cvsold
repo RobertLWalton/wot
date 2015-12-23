@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Get an old revision of a file.
 #

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Expunge files from a CVS repository.
 #

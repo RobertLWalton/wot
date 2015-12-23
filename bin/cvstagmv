@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Move (rename) a tag from all project files.
 #

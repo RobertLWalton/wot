@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Make the current CVS checkout up to date.
 #

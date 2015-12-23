@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Output the SLOC counts of files.
 #
