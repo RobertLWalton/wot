@@ -4,7 +4,7 @@
 #
 # File:		conf
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sat Apr  4 12:00:40 EST 2009
+# Date:		Wed Feb 10 14:39:11 EST 2016
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -77,7 +77,7 @@ conf [-v] COMMAND [FILE-PATTERN ...]
       		file and the file that would replace it
 		if a get were done.  By default this is
 		computed by `diff source target'"'"'.
-
+
     The source directories are a list of one or more
     directories.  If a file appears in several of these,
     only the first directory containing the file is
@@ -109,7 +109,7 @@ conf [-v] COMMAND [FILE-PATTERN ...]
     in which case the file named in that variable is
     sourced.  The sourced file should define the
     following global variables.
-    
+
     Note that since arrays with string subscripts are
     not allowed in bash, these are fudged by using
 
@@ -144,7 +144,38 @@ conf [-v] COMMAND [FILE-PATTERN ...]
 	    HOST=`hostname -s`
 	    DIRECTORIES=/:$HOME/conf/$HOST
 	    DIRECTORIES=$DIRECTORIES:$HOME/conf/default
+
+	SPLIT[$file]='regular-expression'
+	    If this is defined for a file with name
+	    $file.#, where # is a positive integer, then
+	    before anything else is done involving files
+	    named $file.# for any positive integer #,
+	    the file f=target-directory/$file is split
+	    into part files named f.1, f.2, ... .  The
+	    splitting is done by treating any line
+	    matching the regular-expression as the
+	    beginning of a new part file of f.  Then
+	    after everything else is done the part
+	    files f.1, f.2, ... are concatenated to
+	    reform f.
 
+	    E.g., if SPLIT[etc/passwd]="walton" then
+	    a source file .../etc/passwd.2 with target
+	    directory / causes the file /etc/passwd to
+	    be split into files /etc/passwd.1,
+	    /etc/passwd.2, before anything is done
+	    involving source files .../etc/passwd.#,
+	    where the line beginning with `walton'"'"'
+	    starts the file /etc/passwd.2.  Then after
+	    all other processing is finished, the files
+	    /etc/passwd.{1,2} are concatenated to form
+	    /etc/passwd.
+
+	    However, if one of the files modified by
+	    this process does not change, it is not
+	    actually rewritten, so its date does not
+	    change.
+
 	CONF[$file]='"'"'PPP AAA ...'"'"'
 	    If this is defined for a given $file, then
 	    the main action of conf is done when conf
@@ -155,7 +186,7 @@ conf [-v] COMMAND [FILE-PATTERN ...]
 		    VERBOSE HOST
 
 	    where
-	    
+
 	      PPP AAA ...  Names a program and
 			   initial arguments.
 
@@ -180,7 +211,7 @@ conf [-v] COMMAND [FILE-PATTERN ...]
 	    that will be used to replace TARGETFILE for
 	    a `put'"'"' command or to replace SOURCEFILE
 	    for a `get'"'"' command.
-				
+
 	    PPP can be an external program or a bash
 	    function.  The following are default values
 	    as indicated:
@@ -210,7 +241,7 @@ conf [-v] COMMAND [FILE-PATTERN ...]
 		files, and for the order of these lines.
 		For get the target file takes precedence
 		for these matters instead.
-
+
 		The password field in the source file
 		has the form:
 
@@ -238,13 +269,13 @@ conf [-v] COMMAND [FILE-PATTERN ...]
 		there are no listed hosts in the source,
 		the source password is copied to the
 		target.
-
+
 		Note that the source password itself can
 		begin with a sequence of !'"'"'s, as in
-		
+
 			!somehost!!!$1$89ce4A89B3
 		and
-		
+
 			!somehost!!!
 
 		For fields giving the date of the last
@@ -277,7 +308,7 @@ conf [-v] COMMAND [FILE-PATTERN ...]
 			Accepting
 
 		For all other lines the source takes
-		precedence.'
+		precedence.' | less -F
 
     exit 1
     ;;
