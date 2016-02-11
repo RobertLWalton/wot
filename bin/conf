@@ -4,7 +4,7 @@
 #
 # File:		conf
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Wed Feb 10 14:39:11 EST 2016
+# Date:		Thu Feb 11 05:24:34 EST 2016
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -323,7 +323,7 @@ esac
 # We prepare to use tmp files
 #
 tmpfile=/tmp/conf$$-tmp
-trap "$nodebug rm -f $tmpfile" EXIT
+trap "$nodebug rm -f $tmpfile*" EXIT
 
 # Symbol table.
 #
@@ -350,6 +350,83 @@ symbol etc/shadow
 CONF[$?]='conf_helper shadow'
 
 . ${CONFRC:-$HOME/conf/confrc}
+
+# change_file tmp f
+#
+#    If file tmp != f, rm -f f and mv tmp f.  If f does
+#    not exist, mv tmp f.  Else rm tmp.  Return 0 if
+#    mv executed, 1 otherwise.
+#
+change_file() {
+    if [ ! -e "$2" ]
+    then
+	mv "$1" "$2"
+	return 0
+    elif cmp -s "$1" "$2"
+    then
+	rm -f "$1"
+	return 1
+    else
+	rm -f "$2"
+	mv "$1" "$2"
+	return 0
+    fi
+}
+
+# split_file f b
+#
+#    Split the file f into f.1, f.2, ... where the parts
+#    after the first begin with lines matching the
+#    regular expression SPLIT[$b].  Only change files
+#    that are changed by this process.
+#
+split_file() {
+    local _f="$1"
+    local _b=$2
+    local _re=${SPLIT[$_b]}
+    if [ -e "$_f" ]
+    then
+	local _c=1
+	local _p=""
+	exec 3<"$_f"
+	rm -f "$tmpfile.$_c"
+	exec 4>"$tmpfile.$_c"
+	while read <&3
+	do
+	    if [[ "$REPLY" =~ $_re ]]
+	    then
+		exec 4>&-
+		if change_file "$tmpfile.$_c" "$_f.$_c"
+		then
+		    _p="$_p .$_c"
+		fi
+
+		let ++_c
+		rm -f "$tmpfile.$_c"
+		exec 4>"$tmpfile.$_c"
+	    fi
+	    echo "$REPLY" >&4
+	done
+	exec 3<&-
+	exec 4>&-
+
+	if change_file "$tmpfile.$_c" "$_f.$_c"
+	then
+	    _p="$_p .$_c"
+	fi
+
+	$verbose \
+	    echo -n "SPLIT $_f BY $_re INTO $_c PARTS"
+	if [ "$_p" != "" ]
+	then
+	    $verbose echo " (RE)MAKING${_p}"
+	else
+	    $verbose echo " (RE)MAKING NONE"
+	fi
+
+    fi
+    split[$_b]=yes
+}
 
 for dirlist in $DIRECTORIES
 do
@@ -406,6 +483,20 @@ do
 	    fi
 	    done[$f]=yes
 	    $verbose echo "FILE: $file in $dir"
+
+	    if [[ "$file" =~ ^(.*)\.[0-9]+$ ]]
+	    then
+	        base=${BASH_REMATCH[1]}
+		symbol $base
+		declare -i b=$?
+		regexp="${SPLIT[$b]}"
+		if [ ${split[$b]:-no} = no \
+		     -a \
+		     "$regexp" != "" ]
+		then
+		    split_file $targetdir/$base $b
+		fi
+	    fi
 
 	    source=$dir/$file
 	    target=$targetdir/$file
