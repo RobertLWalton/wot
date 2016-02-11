@@ -4,7 +4,7 @@
 #
 # File:		conf
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Thu Feb 11 05:43:44 EST 2016
+# Date:		Thu Feb 11 14:31:10 EST 2016
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -147,28 +147,28 @@ conf [-v] COMMAND [FILE-PATTERN ...]
 
 	SPLIT[$file]='regular-expression'
 	    If this is defined for a file with name
-	    $file.#, where # is a positive integer, then
+	    $file.#, where # is a natural number, then
 	    before anything else is done involving files
-	    named $file.# for any positive integer #,
+	    named $file.# for any natural number #,
 	    the file f=target-directory/$file is split
-	    into part files named f.1, f.2, ... .  The
+	    into part files named f.0, f.1, ... .  The
 	    splitting is done by treating any line
 	    matching the regular-expression as the
 	    beginning of a new part file of f.  Then
 	    after everything else is done the part
-	    files f.1, f.2, ... are concatenated to
-	    reform f.
+	    files f.0, f.1, ... are concatenated to
+	    reassemble f.
 
 	    E.g., if SPLIT[etc/passwd]="walton" then
-	    a source file .../etc/passwd.2 with target
+	    a source file .../etc/passwd.1 with target
 	    directory / causes the file /etc/passwd to
-	    be split into files /etc/passwd.1,
-	    /etc/passwd.2, before anything is done
+	    be split into files /etc/passwd.0,
+	    /etc/passwd.1, before anything is done
 	    involving source files .../etc/passwd.#,
 	    where the line beginning with `walton'"'"'
-	    starts the file /etc/passwd.2.  Then after
+	    starts the file /etc/passwd.1.  Then after
 	    all other processing is finished, the files
-	    /etc/passwd.{1,2} are concatenated to form
+	    /etc/passwd.{0,1} are concatenated to form
 	    /etc/passwd.
 
 	    However, if one of the files modified by
@@ -375,10 +375,12 @@ change_file() {
 
 # split_file f b
 #
-#    Split the file f into f.1, f.2, ... where the parts
+#    Split the file f into f.0, f.1, ... where the parts
 #    after the first begin with lines matching the
 #    regular expression SPLIT[$b].  Only change files
 #    that are changed by this process.
+#
+#    Return number of parts file was split into.
 #
 declare -a split split_target split_parts
 splits=""
@@ -386,9 +388,9 @@ split_file() {
     local _f="$1"
     local _b=$2
     local _re=${SPLIT[$_b]}
+    local _c=0
     if [ -e "$_f" ]
     then
-	local _c=1
 	local _p=""
 	exec 3<"$_f"
 	rm -f "$tmpfile.$_c"
@@ -417,13 +419,15 @@ split_file() {
 	    _p="$_p .$_c"
 	fi
 
+	let ++_c
+
 	local _d="" _df
 	for _df in "$_f".*
 	do
 	   if [[ "$_df" =~ ^.*\.([0-9]+)$ ]]
 	   then
 	       local _dc=${BASH_REMATCH[1]}
-	       if (( $_dc == 0 || $_dc > $_c ))
+	       if (( $_dc >= $_c ))
 	       then
 	           rm -f "$_df"
 		   _d="$_d .$_dc"
@@ -447,12 +451,8 @@ split_file() {
 	else
 	    $verbose echo ""
 	fi
-
     fi
-    split[$_b]=yes
-    split_target[$_b]="$_f"
-    split_parts[$_b]="$_c"
-    splits="$splits $_b"
+    return $_c
 }
 
 for dirlist in $DIRECTORIES
@@ -511,17 +511,29 @@ do
 	    done[$f]=yes
 	    $verbose echo "FILE: $file in $dir"
 
-	    if [[ "$file" =~ ^(.*)\.[0-9]+$ ]]
+	    if [[ "$file" =~ ^(.*)\.([0-9]+)$ ]]
 	    then
 	        base=${BASH_REMATCH[1]}
+	        ext=${BASH_REMATCH[2]}
 		symbol $base
 		declare -i b=$?
 		regexp="${SPLIT[$b]}"
-		if [ ${split[$b]:-no} = no \
-		     -a \
-		     "$regexp" != "" ]
+		if [ "$regexp" != "" ]
 		then
-		    split_file $targetdir/$base $b
+		    if [ ${split[$b]:-no} = no ]
+		    then
+			tfile="$targetdir/$base"
+			split_file "$tfile" $b
+			split_parts[$b]=$?
+			split[$b]=yes
+			split_target[$b]="$tfile"
+			splits="$splits $b"
+		    fi
+		    if (( $ext >= ${split_parts[$b]} ))
+		    then 
+		        let ++ext
+		        split_parts[$b]=$ext
+		    fi
 		fi
 	    fi
 
@@ -653,8 +665,14 @@ do
     c=0
     while (( $c < $p ))
     do
+	if [ -e "$file.$c" ]
+	then
+	    cat "$file.$c" >> "$tmpfile"
+	else
+	    echo "ERROR: $file.$c IS MISSING"
+	fi
+
 	let ++c
-        cat "$file.$c" >> "$tmpfile"
     done
     if change_file "$tmpfile" "$file"
     then
