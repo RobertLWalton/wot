@@ -4,7 +4,7 @@
 #
 # File:		conf
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Thu Feb 11 05:24:34 EST 2016
+# Date:		Thu Feb 11 05:43:44 EST 2016
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -327,7 +327,7 @@ trap "$nodebug rm -f $tmpfile*" EXIT
 
 # Symbol table.
 #
-declare -a symbol
+declare -a symbol CONF SPLIT
 #
 # Return the index of symbol in status $?.
 #
@@ -380,6 +380,8 @@ change_file() {
 #    regular expression SPLIT[$b].  Only change files
 #    that are changed by this process.
 #
+declare -a split split_target split_parts
+splits=""
 split_file() {
     local _f="$1"
     local _b=$2
@@ -415,17 +417,42 @@ split_file() {
 	    _p="$_p .$_c"
 	fi
 
+	local _d="" _df
+	for _df in "$_f".*
+	do
+	   if [[ "$_df" =~ ^.*\.([0-9]+)$ ]]
+	   then
+	       local _dc=${BASH_REMATCH[1]}
+	       if (( $_dc == 0 || $_dc > $_c ))
+	       then
+	           rm -f "$_df"
+		   _d="$_d .$_dc"
+	       fi
+	   fi
+	done
+
 	$verbose \
 	    echo -n "SPLIT $_f BY $_re INTO $_c PARTS"
+
 	if [ "$_p" != "" ]
 	then
-	    $verbose echo " (RE)MAKING${_p}"
+	    $verbose echo -n " (RE)MAKING${_p}"
 	else
-	    $verbose echo " (RE)MAKING NONE"
+	    $verbose echo -n " (RE)MAKING NONE"
+	fi
+
+	if [ "$_d" != "" ]
+	then
+	    $verbose echo " DELETING${_d}"
+	else
+	    $verbose echo ""
 	fi
 
     fi
     split[$_b]=yes
+    split_target[$_b]="$_f"
+    split_parts[$_b]="$_c"
+    splits="$splits $_b"
 }
 
 for dirlist in $DIRECTORIES
@@ -616,6 +643,23 @@ do
 	    fi
 	done
     done
+done
+
+for b in $splits
+do
+    file=${split_target[$b]}
+    p=${split_parts[$b]}
+    rm -f "$tmpfile"
+    c=0
+    while (( $c < $p ))
+    do
+	let ++c
+        cat "$file.$c" >> "$tmpfile"
+    done
+    if change_file "$tmpfile" "$file"
+    then
+        $verbose echo "REASSEMBLED $file FROM $p PARTS"
+    fi
 done
 
 exit 0
