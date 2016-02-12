@@ -4,7 +4,7 @@
 #
 # File:		conf
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Thu Feb 11 14:31:10 EST 2016
+# Date:		Thu Feb 11 19:47:54 EST 2016
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -403,6 +403,7 @@ split_file() {
 		if change_file "$tmpfile.$_c" "$_f.$_c"
 		then
 		    _p="$_p .$_c"
+		    echo "CHANGED: $_f.$_c"
 		fi
 
 		let ++_c
@@ -417,6 +418,7 @@ split_file() {
 	if change_file "$tmpfile.$_c" "$_f.$_c"
 	then
 	    _p="$_p .$_c"
+	    echo "CHANGED: $_f.$_c"
 	fi
 
 	let ++_c
@@ -674,8 +676,16 @@ do
 
 	let ++c
     done
-    if change_file "$tmpfile" "$file"
+    if [ ! -e "$tmpfile" ]
     then
+        if [ -e "$file" ]
+	then
+	    echo "CHANGED: $file"
+	    rm -f "$file"
+	fi
+    elif change_file "$tmpfile" "$file"
+    then
+	echo "CHANGED: $file"
         $verbose echo "REASSEMBLED $file FROM $p PARTS"
     fi
 done
