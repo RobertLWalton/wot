@@ -4,18 +4,11 @@
 #
 # File:		conf
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Fri Feb 12 05:44:56 EST 2016
+# Date:		Mon Mar  7 20:48:58 EST 2016
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
 # for this program.
-#
-# RCS Info (may not be true date or author):
-#
-#   $Author: walton $
-#   $Date: 2009/04/05 07:23:15 $
-#   $RCSfile: conf,v $
-#   $Revision: 1.14 $
 
 # The undocumented -d option is used for debugging.
 # WARNING: This option leaves the last tmp file
@@ -23,6 +16,18 @@
 
 nop() {
     do_nothing=
+}
+
+cpall() {
+    cp --preserve=all "$1" "$2"
+}
+
+cptime() {
+    cp --preserve=timestamps "$1" "$2"
+}
+
+cpattr() {
+    cp --attributes-only --preserve=all "$1" "$2"
 }
 
 verbose=nop
@@ -54,13 +59,18 @@ conf [-v] COMMAND [FILE-PATTERN ...]
 
       put	The source files are used to update the
                 target files.  By default this is done
-		by `cp -p'"'"'.  The target files need
-		not pre-exist.
+		by cp preserving timestamps (but not
+		mode, owner, or context) after making
+		target user writable.  But if target
+		does not pre-exist, update is done by
+		cp preserving timestamps, mode, owner,
+		and context.
 
       get	The target files are used to update the
       		source files.  By default this is done
-		by `cp -p'"'"'.  The source files must
-		pre-exist this command.
+		by cp preserving timestamps, mode,
+		owner, and context.  The source files
+		must pre-exist this command.
 
       ptest     List the files that would be changed by
       		put.
@@ -353,20 +363,24 @@ CONF[$?]='conf_helper shadow'
 
 # change_file tmp f
 #
-#    If file tmp != f, rm -f f and mv tmp f.  If f does
-#    not exist, mv tmp f.  Else rm tmp.  Return 0 if
-#    mv executed, 1 otherwise.
+#    If file tmp != f, move attributes from f to tmp,
+#    rm -f f and mv tmp f.  If f does not exist, mv
+#    tmp f and print f's attributes.  Else rm tmp.
+#    Return 0 if mv executed, 1 otherwise.
 #
 change_file() {
     if [ ! -e "$2" ]
     then
 	mv "$1" "$2"
+	echo "NOTE: created $2:"
+	ls -Z "$2"
 	return 0
     elif cmp -s "$1" "$2"
     then
 	rm -f "$1"
 	return 1
     else
+	cpattr "$2" "$1"
 	rm -f "$2"
 	mv "$1" "$2"
 	return 0
@@ -400,10 +414,11 @@ split_file() {
 	    if [[ "$REPLY" =~ $_re ]]
 	    then
 		exec 4>&-
+		cpattr "$_f" "$tmpfile.$_c"
 		if change_file "$tmpfile.$_c" "$_f.$_c"
 		then
 		    _p="$_p .$_c"
-		    echo "CHANGED: $_f.$_c"
+		    echo "NOTE: changed $_f.$_c"
 		fi
 
 		let ++_c
@@ -414,11 +429,12 @@ split_file() {
 	done
 	exec 3<&-
 	exec 4>&-
+	cpattr "$_f" "$tmpfile.$_c"
 
 	if change_file "$tmpfile.$_c" "$_f.$_c"
 	then
 	    _p="$_p .$_c"
-	    echo "CHANGED: $_f.$_c"
+	    echo "NOTE: changed $_f.$_c"
 	fi
 
 	let ++_c
@@ -553,7 +569,9 @@ do
 		then
 		    echo "PUTTING $file in $dir"
 		    rm -f $target
-		    cp -p $source $target
+		    cpall $source $target
+		    echo "NOTE: created $target"
+		    ls -Z "$target"
 		elif ! cmp -s $source $target
 		then
 		    case "$command" in
@@ -562,8 +580,13 @@ do
 			;;
 		    put)
 			echo "PUTTING $file in $dir"
-			rm -f $target
-			cp -p $source $target
+			if [ ! -w $target ]
+			then
+			    chmod u+w $target
+			    echo "NOTE:" \
+			         "chmod u+w $target"
+			fi
+			cptime $source $target
 			;;
 		    pdiff)
 			echo "PDIFFING: $file in $dir"
@@ -572,7 +595,7 @@ do
 		    get)
 			echo "GETTING $file in $dir"
 			rm -f $source
-			cp -p $target $source
+			cpall $target $source
 			;;
 		    gdiff)
 			echo "GDIFFING: $file in $dir"
@@ -622,9 +645,9 @@ do
 		    exit 2
 		fi
 
-		chmod --reference=$src $tmpfile
+		cpattr $src $tmpfile
 
-		# If tmpfile equals des file return
+		# If tmpfile equals des file do nothing
 		#
 		if ! cmp -s $tmpfile $des
 		then
@@ -634,8 +657,13 @@ do
 			;;
 		    put)
 			echo "PUTTING $file in $dir"
-			rm -f $target
-			cp -p $tmpfile "$target"
+			if [ ! -w $target ]
+			then
+			    chmod u+w $target
+			    echo "NOTE:" \
+			         "chmod u+w $target"
+			fi
+			cptime $tmpfile "$target"
 			;;
 		    pdiff)
 			echo "PDIFFING: $file in $dir"
@@ -644,7 +672,7 @@ do
 		    get)
 			echo "GETTING $file in $dir"
 			rm -f $source
-			cp -p $tmpfile "$source"
+			cpall $tmpfile "$source"
 			;;
 		    gdiff)
 			echo "GDIFFING: $file in $dir"
@@ -663,29 +691,65 @@ for b in $splits
 do
     file=${split_target[$b]}
     p=${split_parts[$b]}
+    regexp="${SPLIT[$b]}"
     rm -f "$tmpfile"
+    exec 4>"$tmpfile"
     c=0
+    newest="file.0"
     while (( $c < $p ))
     do
 	if [ -e "$file.$c" ]
 	then
-	    cat "$file.$c" >> "$tmpfile"
+	    if [ "$file.$c" -nt "$newest" ]
+	    then
+	        newest="$file.$c"
+	    fi
+
+	    exec 3<"$file.$c"
+	    line=0
+	    while read -r <&3
+	    do
+		if [[ "$REPLY" =~ $regexp ]]
+		then
+		    if (( $line != 0 ))
+		    then
+		        echo "ERROR: non-first line" \
+			     " of $file.$c" \
+			     " matches $regexp"
+			exit 2
+		    elif (( $c == 0 ))
+		    then
+		        echo "ERROR: first line" \
+			     " of $file.$c" \
+			     " matches $regexp"
+			exit 2
+		    fi
+		else
+		    if (( $line == 0 && $c != 0 ))
+		    then
+		        echo "ERROR: first line" \
+			     " of $file.$c" \
+			     " does NOT match $regexp"
+			exit 2
+		    fi
+		fi
+		echo "$REPLY" >&4
+		let ++line
+	    done
+	    exec 3<&-
 	else
 	    echo "ERROR: $file.$c IS MISSING"
+	    exit 2
 	fi
 
 	let ++c
     done
-    if [ ! -e "$tmpfile" ]
+    exec 4>&-
+
+    cpattr "$newest" "$tmpfile"
+    if change_file "$tmpfile" "$file"
     then
-        if [ -e "$file" ]
-	then
-	    echo "CHANGED: $file"
-	    rm -f "$file"
-	fi
-    elif change_file "$tmpfile" "$file"
-    then
-	echo "CHANGED: $file"
+	echo "NOTE: changed $file"
         $verbose echo "REASSEMBLED $file FROM $p PARTS"
     fi
 done
