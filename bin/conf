@@ -4,7 +4,7 @@
 #
 # File:		conf
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Tue Mar  8 05:04:25 EST 2016
+# Date:		Tue Mar  8 05:14:13 EST 2016
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -27,7 +27,9 @@ cptime() {
 }
 
 cpattr() {
-    cp --attributes-only --preserve=all "$1" "$2"
+    chmod --reference="$1" "$2"
+    chcon --reference="$1" "$2"
+    chown --reference="$1" "$2"
 }
 
 verbose=nop
