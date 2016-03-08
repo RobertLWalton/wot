@@ -4,7 +4,7 @@
 #
 # File:		conf
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Mon Mar  7 20:48:58 EST 2016
+# Date:		Tue Mar  8 03:14:08 EST 2016
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -453,8 +453,9 @@ split_file() {
 	   fi
 	done
 
-	$verbose \
-	    echo -n "SPLIT $_f BY $_re INTO $_c PARTS"
+	$verbose echo "SPLIT $_f"
+	$verbose echo "   BY $_re"
+	$verbose echo -n "   INTO $_c PARTS"
 
 	if [ "$_p" != "" ]
 	then
@@ -714,22 +715,23 @@ do
 		    if (( $line != 0 ))
 		    then
 		        echo "ERROR: non-first line" \
-			     " of $file.$c" \
-			     " matches $regexp"
+			     "of $file.$c"
+			echo "       matches $regexp"
 			exit 2
 		    elif (( $c == 0 ))
 		    then
 		        echo "ERROR: first line" \
-			     " of $file.$c" \
-			     " matches $regexp"
+			     "of $file.$c"
+			echo "       matches $regexp"
 			exit 2
 		    fi
 		else
 		    if (( $line == 0 && $c != 0 ))
 		    then
 		        echo "ERROR: first line" \
-			     " of $file.$c" \
-			     " does NOT match $regexp"
+			     "of $file.$c"
+			echo "       does NOT match" \
+			     "$regexp"
 			exit 2
 		    fi
 		fi
