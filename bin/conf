@@ -4,7 +4,7 @@
 #
 # File:		conf
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Tue Mar  8 03:14:08 EST 2016
+# Date:		Tue Mar  8 05:04:25 EST 2016
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -530,6 +530,7 @@ do
 	    done[$f]=yes
 	    $verbose echo "FILE: $file in $dir"
 
+	    base="$file"
 	    if [[ "$file" =~ ^(.*)\.([0-9]+)$ ]]
 	    then
 	        base=${BASH_REMATCH[1]}
@@ -559,6 +560,8 @@ do
 	    source=$dir/$file
 	    target=$targetdir/$file
 
+	    symbol $base
+	    f=$?
 	    program=${CONF[$f]:-}
 	    if [ ! -e $target -a $command != put ]
 	    then
