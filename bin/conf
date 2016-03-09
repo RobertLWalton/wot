@@ -4,7 +4,7 @@
 #
 # File:		conf
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Tue Mar  8 05:20:07 EST 2016
+# Date:		Wed Mar  9 00:08:58 EST 2016
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -26,10 +26,20 @@ cptime() {
     cp --preserve=timestamps "$1" "$2"
 }
 
-cpattr() {
+# WARNING: --attributes-only option to cp does NOT work
+#          on CentOS 6.
+
+cpattronly() {
     chmod --reference="$1" "$2"
     chcon --reference="$1" "$2"
     chown --reference="$1" "$2"
+}
+
+cpattrandtime() {
+    chmod --reference="$1" "$2"
+    chcon --reference="$1" "$2"
+    chown --reference="$1" "$2"
+    touch --reference="$1" "$2"
 }
 
 verbose=nop
@@ -382,7 +392,7 @@ change_file() {
 	rm -f "$1"
 	return 1
     else
-	cpattr "$2" "$1"
+	cpattronly "$2" "$1"
 	rm -f "$2"
 	mv "$1" "$2"
 	return 0
@@ -416,7 +426,7 @@ split_file() {
 	    if [[ "$REPLY" =~ $_re ]]
 	    then
 		exec 4>&-
-		cpattr "$_f" "$tmpfile.$_c"
+		cpattrandtime "$_f" "$tmpfile.$_c"
 		if change_file "$tmpfile.$_c" "$_f.$_c"
 		then
 		    _p="$_p .$_c"
@@ -431,7 +441,7 @@ split_file() {
 	done
 	exec 3<&-
 	exec 4>&-
-	cpattr "$_f" "$tmpfile.$_c"
+	cpattrandtime "$_f" "$tmpfile.$_c"
 
 	if change_file "$tmpfile.$_c" "$_f.$_c"
 	then
@@ -651,7 +661,7 @@ do
 		    exit 2
 		fi
 
-		cpattr $src $tmpfile
+		cpattrandtime $src $tmpfile
 
 		# If tmpfile equals des file do nothing
 		#
@@ -753,7 +763,7 @@ do
     done
     exec 4>&-
 
-    cpattr "$newest" "$tmpfile"
+    cpattrandtime "$newest" "$tmpfile"
     if change_file "$tmpfile" "$file"
     then
 	echo "NOTE: changed $file"
