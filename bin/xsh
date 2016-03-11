@@ -4,7 +4,7 @@
 #
 # File:		xsh
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Tue Sep 16 11:45:32 UTC 2014
+# Date:		Fri Mar 11 12:49:02 EST 2016
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -31,7 +31,7 @@ Opens a new X-window running the shell, using gnome-
 terminal if that exists and the -xterm option is NOT
 given; else using xterm.
 
-If gnome-terminal is used the Default profile is used
+If gnome-terminal is used the default profile is used
 and its normal font size (and with it terminal window
 size) is multiplied by ZOOM, which defaults to 1.0.
 You may change the font/window size after the terminal
@@ -49,30 +49,30 @@ can also suffix `b'"'"' to PP, as in `18b'"'"', to' \
     'force a bold
 font.'
 	exit 0
+	;;
+
+   -XSH-SHELL)
+        echo ''
+        echo 'NOTE: 'You may need or want to change \
+	     the font by selecting
+	echo '      'Edit - Profile Preferences, \
+	     checking Custom font, and picking
+        echo '      'a font that looks good \(some \
+	     fonts overlap themselves\).
+        echo ''
+	exec bash
+	;;
+
 esac
 
-if test "$1" == "-xterm"; then XTERM=yes; shift; fi
+if test "$1" = "-xterm"; then XTERM=yes; shift; fi
 
 if which gnome-terminal >/dev/null 2>&1 \
-   && test $XTERM == "no"
+   && test $XTERM = "no"
 then
     if test "$1" != ""; then ZOOM="$1"; fi
-    PROFILE=~/.gconf/apps/gnome-terminal/profiles
-    PROFILE="$PROFILE/Default/%gconf.xml"
-    if ! test -r $PROFILE
-    then
-	echo '
-You may want to use `Edit'"'"' in the terminal window
-toolbar to change the font of the current profile (the
-Default profile) so it does NOT use the system font
-but instead uses a monospace font of the size you like.
-
-Wait ...'
-	sleep 5
-    fi
-    ( gnome-terminal --window-with-profile=Default \
-                     --zoom=$ZOOM \
-		     2>&1 | grep -v atk-bridge ) &
+    NO_AT_BRIDGE=1 gnome-terminal --zoom=$ZOOM \
+        --command="$0 -XSH-SHELL"
 else
     if test "$1" != ""; then PP="$1"; fi
     WEIGHT=medium
