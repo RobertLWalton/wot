@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Remove files in a CVS repository (to the Attic).
 #

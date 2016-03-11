@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # File:		gittag
 # Author:	Bob Walton <walton@acm.org>

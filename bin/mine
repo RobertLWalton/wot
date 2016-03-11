@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Make files writable by the current user.
 #

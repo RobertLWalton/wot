@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Change the project of checked out CVS directories.
 #

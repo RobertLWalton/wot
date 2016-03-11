@@ -1,21 +1,14 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Manage system configuration files.
 #
 # File:		conf
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sat Apr  4 12:00:40 EST 2009
+# Date:		Wed Mar  9 00:08:58 EST 2016
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
 # for this program.
-#
-# RCS Info (may not be true date or author):
-#
-#   $Author: walton $
-#   $Date: 2009/04/05 07:23:15 $
-#   $RCSfile: conf,v $
-#   $Revision: 1.14 $
 
 # The undocumented -d option is used for debugging.
 # WARNING: This option leaves the last tmp file
@@ -23,6 +16,30 @@
 
 nop() {
     do_nothing=
+}
+
+cpall() {
+    cp --preserve=all "$1" "$2"
+}
+
+cptime() {
+    cp --preserve=timestamps "$1" "$2"
+}
+
+# WARNING: --attributes-only option to cp does NOT work
+#          on CentOS 6.
+
+cpattronly() {
+    chmod --reference="$1" "$2"
+    chcon --reference="$1" "$2"
+    chown --reference="$1" "$2"
+}
+
+cpattrandtime() {
+    chmod --reference="$1" "$2"
+    chcon --reference="$1" "$2"
+    chown --reference="$1" "$2"
+    touch --reference="$1" "$2"
 }
 
 verbose=nop
@@ -54,13 +71,18 @@ conf [-v] COMMAND [FILE-PATTERN ...]
 
       put	The source files are used to update the
                 target files.  By default this is done
-		by `cp -p'"'"'.  The target files need
-		not pre-exist.
+		by cp preserving timestamps (but not
+		mode, owner, or context) after making
+		target user writable.  But if target
+		does not pre-exist, update is done by
+		cp preserving timestamps, mode, owner,
+		and context.
 
       get	The target files are used to update the
       		source files.  By default this is done
-		by `cp -p'"'"'.  The source files must
-		pre-exist this command.
+		by cp preserving timestamps, mode,
+		owner, and context.  The source files
+		must pre-exist this command.
 
       ptest     List the files that would be changed by
       		put.
@@ -77,7 +99,7 @@ conf [-v] COMMAND [FILE-PATTERN ...]
       		file and the file that would replace it
 		if a get were done.  By default this is
 		computed by `diff source target'"'"'.
-
+
     The source directories are a list of one or more
     directories.  If a file appears in several of these,
     only the first directory containing the file is
@@ -109,7 +131,7 @@ conf [-v] COMMAND [FILE-PATTERN ...]
     in which case the file named in that variable is
     sourced.  The sourced file should define the
     following global variables.
-    
+
     Note that since arrays with string subscripts are
     not allowed in bash, these are fudged by using
 
@@ -144,7 +166,38 @@ conf [-v] COMMAND [FILE-PATTERN ...]
 	    HOST=`hostname -s`
 	    DIRECTORIES=/:$HOME/conf/$HOST
 	    DIRECTORIES=$DIRECTORIES:$HOME/conf/default
+
+	SPLIT[$file]='regular-expression'
+	    If this is defined for a file with name
+	    $file.#, where # is a natural number, then
+	    before anything else is done involving files
+	    named $file.# for any natural number #,
+	    the file f=target-directory/$file is split
+	    into part files named f.0, f.1, ... .  The
+	    splitting is done by treating any line
+	    matching the regular-expression as the
+	    beginning of a new part file of f.  Then
+	    after everything else is done the part
+	    files f.0, f.1, ... are concatenated to
+	    reassemble f.
 
+	    E.g., if SPLIT[etc/passwd]="walton" then
+	    a source file .../etc/passwd.1 with target
+	    directory / causes the file /etc/passwd to
+	    be split into files /etc/passwd.0,
+	    /etc/passwd.1, before anything is done
+	    involving source files .../etc/passwd.#,
+	    where the line beginning with `walton'"'"'
+	    starts the file /etc/passwd.1.  Then after
+	    all other processing is finished, the files
+	    /etc/passwd.{0,1} are concatenated to form
+	    /etc/passwd.
+
+	    However, if one of the files modified by
+	    this process does not change, it is not
+	    actually rewritten, so its date does not
+	    change.
+
 	CONF[$file]='"'"'PPP AAA ...'"'"'
 	    If this is defined for a given $file, then
 	    the main action of conf is done when conf
@@ -155,7 +208,7 @@ conf [-v] COMMAND [FILE-PATTERN ...]
 		    VERBOSE HOST
 
 	    where
-	    
+
 	      PPP AAA ...  Names a program and
 			   initial arguments.
 
@@ -180,7 +233,7 @@ conf [-v] COMMAND [FILE-PATTERN ...]
 	    that will be used to replace TARGETFILE for
 	    a `put'"'"' command or to replace SOURCEFILE
 	    for a `get'"'"' command.
-				
+
 	    PPP can be an external program or a bash
 	    function.  The following are default values
 	    as indicated:
@@ -210,7 +263,7 @@ conf [-v] COMMAND [FILE-PATTERN ...]
 		files, and for the order of these lines.
 		For get the target file takes precedence
 		for these matters instead.
-
+
 		The password field in the source file
 		has the form:
 
@@ -238,13 +291,13 @@ conf [-v] COMMAND [FILE-PATTERN ...]
 		there are no listed hosts in the source,
 		the source password is copied to the
 		target.
-
+
 		Note that the source password itself can
 		begin with a sequence of !'"'"'s, as in
-		
+
 			!somehost!!!$1$89ce4A89B3
 		and
-		
+
 			!somehost!!!
 
 		For fields giving the date of the last
@@ -277,7 +330,7 @@ conf [-v] COMMAND [FILE-PATTERN ...]
 			Accepting
 
 		For all other lines the source takes
-		precedence.'
+		precedence.' | less -F
 
     exit 1
     ;;
@@ -292,11 +345,11 @@ esac
 # We prepare to use tmp files
 #
 tmpfile=/tmp/conf$$-tmp
-trap "$nodebug rm -f $tmpfile" EXIT
+trap "$nodebug rm -f $tmpfile*" EXIT
 
 # Symbol table.
 #
-declare -a symbol
+declare -a symbol CONF SPLIT
 #
 # Return the index of symbol in status $?.
 #
@@ -319,6 +372,119 @@ symbol etc/shadow
 CONF[$?]='conf_helper shadow'
 
 . ${CONFRC:-$HOME/conf/confrc}
+
+# change_file tmp f
+#
+#    If file tmp != f, move attributes from f to tmp,
+#    rm -f f and mv tmp f.  If f does not exist, mv
+#    tmp f and print f's attributes.  Else rm tmp.
+#    Return 0 if mv executed, 1 otherwise.
+#
+change_file() {
+    if [ ! -e "$2" ]
+    then
+	mv "$1" "$2"
+	echo "NOTE: created $2:"
+	ls -Z "$2"
+	return 0
+    elif cmp -s "$1" "$2"
+    then
+	rm -f "$1"
+	return 1
+    else
+	cpattronly "$2" "$1"
+	rm -f "$2"
+	mv "$1" "$2"
+	return 0
+    fi
+}
+
+# split_file f b
+#
+#    Split the file f into f.0, f.1, ... where the parts
+#    after the first begin with lines matching the
+#    regular expression SPLIT[$b].  Only change files
+#    that are changed by this process.
+#
+#    Return number of parts file was split into.
+#
+declare -a split split_target split_parts
+splits=""
+split_file() {
+    local _f="$1"
+    local _b=$2
+    local _re=${SPLIT[$_b]}
+    local _c=0
+    if [ -e "$_f" ]
+    then
+	local _p=""
+	exec 3<"$_f"
+	rm -f "$tmpfile.$_c"
+	exec 4>"$tmpfile.$_c"
+	while read -r <&3
+	do
+	    if [[ "$REPLY" =~ $_re ]]
+	    then
+		exec 4>&-
+		cpattrandtime "$_f" "$tmpfile.$_c"
+		if change_file "$tmpfile.$_c" "$_f.$_c"
+		then
+		    _p="$_p .$_c"
+		    echo "NOTE: changed $_f.$_c"
+		fi
+
+		let ++_c
+		rm -f "$tmpfile.$_c"
+		exec 4>"$tmpfile.$_c"
+	    fi
+	    echo "$REPLY" >&4
+	done
+	exec 3<&-
+	exec 4>&-
+	cpattrandtime "$_f" "$tmpfile.$_c"
+
+	if change_file "$tmpfile.$_c" "$_f.$_c"
+	then
+	    _p="$_p .$_c"
+	    echo "NOTE: changed $_f.$_c"
+	fi
+
+	let ++_c
+
+	local _d="" _df
+	for _df in "$_f".*
+	do
+	   if [[ "$_df" =~ ^.*\.([0-9]+)$ ]]
+	   then
+	       local _dc=${BASH_REMATCH[1]}
+	       if (( $_dc >= $_c ))
+	       then
+	           rm -f "$_df"
+		   _d="$_d .$_dc"
+	       fi
+	   fi
+	done
+
+	$verbose echo "SPLIT $_f"
+	$verbose echo "   BY $_re"
+	$verbose echo -n "   INTO $_c PARTS"
+
+	if [ "$_p" != "" ]
+	then
+	    $verbose echo -n " (RE)MAKING${_p}"
+	else
+	    $verbose echo -n " (RE)MAKING NONE"
+	fi
+
+	if [ "$_d" != "" ]
+	then
+	    $verbose echo " DELETING${_d}"
+	else
+	    $verbose echo ""
+	fi
+    fi
+    return $_c
+}
 
 for dirlist in $DIRECTORIES
 do
@@ -376,9 +542,38 @@ do
 	    done[$f]=yes
 	    $verbose echo "FILE: $file in $dir"
 
+	    base="$file"
+	    if [[ "$file" =~ ^(.*)\.([0-9]+)$ ]]
+	    then
+	        base=${BASH_REMATCH[1]}
+	        ext=${BASH_REMATCH[2]}
+		symbol $base
+		declare -i b=$?
+		regexp="${SPLIT[$b]}"
+		if [ "$regexp" != "" ]
+		then
+		    if [ ${split[$b]:-no} = no ]
+		    then
+			tfile="$targetdir/$base"
+			split_file "$tfile" $b
+			split_parts[$b]=$?
+			split[$b]=yes
+			split_target[$b]="$tfile"
+			splits="$splits $b"
+		    fi
+		    if (( $ext >= ${split_parts[$b]} ))
+		    then 
+		        let ++ext
+		        split_parts[$b]=$ext
+		    fi
+		fi
+	    fi
+
 	    source=$dir/$file
 	    target=$targetdir/$file
 
+	    symbol $base
+	    f=$?
 	    program=${CONF[$f]:-}
 	    if [ ! -e $target -a $command != put ]
 	    then
@@ -390,7 +585,9 @@ do
 		then
 		    echo "PUTTING $file in $dir"
 		    rm -f $target
-		    cp -p $source $target
+		    cpall $source $target
+		    echo "NOTE: created $target"
+		    ls -Z "$target"
 		elif ! cmp -s $source $target
 		then
 		    case "$command" in
@@ -399,8 +596,13 @@ do
 			;;
 		    put)
 			echo "PUTTING $file in $dir"
-			rm -f $target
-			cp -p $source $target
+			if [ ! -w $target ]
+			then
+			    chmod u+w $target
+			    echo "NOTE:" \
+			         "chmod u+w $target"
+			fi
+			cptime $source $target
 			;;
 		    pdiff)
 			echo "PDIFFING: $file in $dir"
@@ -409,7 +611,7 @@ do
 		    get)
 			echo "GETTING $file in $dir"
 			rm -f $source
-			cp -p $target $source
+			cpall $target $source
 			;;
 		    gdiff)
 			echo "GDIFFING: $file in $dir"
@@ -448,10 +650,10 @@ do
 		    exit 2
 		fi
 
-		$debug echo $program \
-		            $c $file \
-			    $source $target $tmpfile \
-			    $v $HOST
+		$verbose echo EXECUTING: $program \
+		              $c $file \
+			      $source $target $tmpfile \
+			      $v $HOST
 		if ! $program $c $file \
 		              $source $target $tmpfile \
 		              $v $HOST
@@ -459,9 +661,9 @@ do
 		    exit 2
 		fi
 
-		chmod --reference=$src $tmpfile
+		cpattrandtime $src $tmpfile
 
-		# If tmpfile equals des file return
+		# If tmpfile equals des file do nothing
 		#
 		if ! cmp -s $tmpfile $des
 		then
@@ -471,8 +673,13 @@ do
 			;;
 		    put)
 			echo "PUTTING $file in $dir"
-			rm -f $target
-			cp -p $tmpfile "$target"
+			if [ ! -w $target ]
+			then
+			    chmod u+w $target
+			    echo "NOTE:" \
+			         "chmod u+w $target"
+			fi
+			cptime $tmpfile "$target"
 			;;
 		    pdiff)
 			echo "PDIFFING: $file in $dir"
@@ -481,7 +688,7 @@ do
 		    get)
 			echo "GETTING $file in $dir"
 			rm -f $source
-			cp -p $tmpfile "$source"
+			cpall $tmpfile "$source"
 			;;
 		    gdiff)
 			echo "GDIFFING: $file in $dir"
@@ -494,6 +701,74 @@ do
 	    fi
 	done
     done
+done
+
+for b in $splits
+do
+    file=${split_target[$b]}
+    p=${split_parts[$b]}
+    regexp="${SPLIT[$b]}"
+    rm -f "$tmpfile"
+    exec 4>"$tmpfile"
+    c=0
+    newest="file.0"
+    while (( $c < $p ))
+    do
+	if [ -e "$file.$c" ]
+	then
+	    if [ "$file.$c" -nt "$newest" ]
+	    then
+	        newest="$file.$c"
+	    fi
+
+	    exec 3<"$file.$c"
+	    line=0
+	    while read -r <&3
+	    do
+		if [[ "$REPLY" =~ $regexp ]]
+		then
+		    if (( $line != 0 ))
+		    then
+		        echo "ERROR: non-first line" \
+			     "of $file.$c"
+			echo "       matches $regexp"
+			exit 2
+		    elif (( $c == 0 ))
+		    then
+		        echo "ERROR: first line" \
+			     "of $file.$c"
+			echo "       matches $regexp"
+			exit 2
+		    fi
+		else
+		    if (( $line == 0 && $c != 0 ))
+		    then
+		        echo "ERROR: first line" \
+			     "of $file.$c"
+			echo "       does NOT match" \
+			     "$regexp"
+			exit 2
+		    fi
+		fi
+		echo "$REPLY" >&4
+		let ++line
+	    done
+	    exec 3<&-
+	else
+	    echo "ERROR: $file.$c IS MISSING"
+	    exit 2
+	fi
+
+	let ++c
+    done
+    exec 4>&-
+
+    cpattrandtime "$newest" "$tmpfile"
+    if change_file "$tmpfile" "$file"
+    then
+	echo "NOTE: changed $file"
+        $verbose echo "REASSEMBLED $file FROM $p PARTS"
+    fi
 done
 
 exit 0

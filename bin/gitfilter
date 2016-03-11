@@ -1,0 +1,133 @@
+#!/bin/bash
+#
+# File:		gitfilter
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Wed Nov 25 03:30:48 EST 2015
+#
+# The author(s) have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+
+case $1 in -doc*|"")
+    echo "
+gitfilter directory filename ...
+    Clone the current git repository in the directory
+    which must not previously exist, and then in that
+    directory remove all files and subdirectories NOT
+    NAMED from all commits, pruning empty commits.  The
+    commits are renamed.
+    
+    Note that this is the opposite of gitexpunge which
+    REMOVES all the files and subdirectories instead of
+    KEEPING them."
+
+    exit 1
+    ;;
+esac
+
+askcontinue=0
+if [ -n "`git branch -r | grep origin`" ]
+then
+    if [ "`git diff --name-only HEAD origin/HEAD`" ]
+    then
+	echo "HEAD and origin/HEAD differ"
+	askcontinue=1
+    fi
+fi
+stat=`git status --porcelain -uno`
+if [ -n "$stat" ]
+then
+    echo "commit not up-to-date"
+    echo $stat
+    askcontinue=1
+fi
+if [ $askcontinue -eq 1 ]
+then
+    echo 'DO YOU WANT TO CONTINUE (y or n)?'
+    read
+    if [ "$REPLY" != "y" ]
+    then
+	echo 'ABORTED!'
+	exit 0
+    fi
+fi
+
+directory="$1"
+shift
+
+command='find . -maxdepth 1 \( -name . -o -name .git'
+while [ $# -ne 0 ]
+do
+    name="$1"
+    case "$name" in */)
+        name=`expr "$name" : '\(.*\)/$'`
+    esac
+    case "$name" in */*)
+        echo "ERROR: $name contains /"
+	exit 1
+    esac
+    command="$command -o -name $name"
+    shift
+done
+
+command="$command"' -o -print0 \) | xargs -0 rm -rf'
+
+if [ -e "$directory" ]
+then
+    echo "ERROR: $directory already exists"
+    exit 1
+fi
+
+dir=.
+while [ ! -e $dir/.git ]
+do
+    if [ ! -e $dir ]
+    then
+        echo "ERROR: current directory has no .git" \
+	     "containing ancestor"
+	exit 1
+    fi
+    dir=$dir/..
+done
+
+if git clone -q --no-hardlinks $dir/.git "$directory"
+then
+    echo "Cloned $dir/.git to $directory"
+else
+    echo "FAILED: git clone -q --no-hardlinks" \
+         "$dir/.git $directory"
+    exit 1
+fi
+
+olddir=`pwd`
+if cd "$directory"
+then
+    echo "Filtering will be done in $directory"
+else
+    echo "FAILED: cd $directory"
+    exit 1
+fi
+
+# Cautious double check.
+newdir=`pwd`
+if [ "$olddir" = "$newdir" ]
+then
+    echo "SYSTEM ERROR: cd $directory did not report" \
+         "error"
+    exit 1
+fi
+
+if git filter-branch --prune-empty \
+                     --tree-filter "$command" HEAD
+then
+    echo "Cloned repository in $directory has been" \
+         "filtered"
+    echo "  Contents: `find . -maxdepth 1 \
+                  \( -name . -o -name .git \
+                             -o -printf '%f\0' \) \
+	    | xargs -0 echo `"
+else
+    echo "FAILED: git filter-branch --prune-empty" \
+                     "--tree-filter '$command' HEAD"
+    exit 1
+fi

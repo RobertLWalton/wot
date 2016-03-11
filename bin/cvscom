@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Commit (check in) files to the repostory.
 #
