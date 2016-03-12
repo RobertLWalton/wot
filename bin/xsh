@@ -4,28 +4,24 @@
 #
 # File:		xsh
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Fri Mar 11 12:49:02 EST 2016
+# Date:		Sat Mar 12 03:37:27 EST 2016
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
 # for this program.
-#
-# RCS Info (may not be true date or author):
-#
-#   $Author: walton $
-#   $Date: 2011/10/13 12:55:18 $
-#   $RCSfile: xsh,v $
-#   $Revision: 1.7 $
 
-PP=25
+FSIZE=20
 ZOOM=1.0
 XTERM=no
+
+tmpfile=/tmp/xsh$$-tmp
+trap "rm -f $tmpfile*" EXIT
 
 case "$1" in
    -doc*)
    	echo '
 xsh [ZOOM]
-xsh [-xterm] [PP]"
+xsh -xterm [FSIZE]"
 
 Opens a new X-window running the shell, using gnome-
 terminal if that exists and the -xterm option is NOT
@@ -34,20 +30,19 @@ given; else using xterm.
 If gnome-terminal is used the default profile is used
 and its normal font size (and with it terminal window
 size) is multiplied by ZOOM, which defaults to 1.0.
-You may change the font/window size after the terminal
-window is created by typing control + to increase and
-control - to decrease.  From such a terminal window you
-may open another terminal window by typing control N or
+You may change the font size after the terminal window
+is created by typing control + to increase and control
+- to decrease.  From such a terminal window you may
+open another terminal window by typing control N or
 another tab of the current window by typing control T,
 and you may switch from one tab to another by typing
 control page-up and control page-down.
 
-If xterm is used, the normal font size is changed to PP
-(default 25).  The lucidatypewriter font is used if that
-is available, and otherwise adobe-courier is used.  You
-can also suffix `b'"'"' to PP, as in `18b'"'"', to' \
-    'force a bold
-font.'
+If xterm is used, the normal font size is changed to
+FSIZE (default 20).
+
+In either case you may change the window size by
+dragging the edges.' | less -F
 	exit 0
 	;;
 
@@ -74,29 +69,64 @@ then
     NO_AT_BRIDGE=1 gnome-terminal --zoom=$ZOOM \
         --command="$0 -XSH-SHELL"
 else
-    if test "$1" != ""; then PP="$1"; fi
-    WEIGHT=medium
-    case "$PP" in
-        *b)	WEIGHT=bold
-	        PP=`expr "$PP" : '\\(.*\\)b$'`
-		;;
-        *m)	WEIGHT=medium
-	        PP=`expr "$PP" : '\\(.*\\)m$'`
-		;;
-    esac
-    if xlsfonts | grep lucidatypewriter >/dev/null
+    if [[ "$1" != "" ]]
     then
-	FONT="-*-lucidatypewriter-$WEIGHT-*-*"
-    else
-	FONT="-adobe-courier-$WEIGHT-r-normal"
+        FSIZE="$1"
+        if [[ ! ( "$FSIZE" =~ ^[0-9]+$ ) ]]
+	then
+	    echo "Bad font size $FSIZE"
+	    exit 2
+	fi
     fi
-    FONT="$FONT-*-$PP-*-*-*-*-*-*-*"
-    echo 'Wait ...'
-    (xterm  -g 80x35 \
-	    -fn "$FONT" \
-	    -bg white \
-	    -rightbar \
-	    -sb -ls $program )&
+
+    declare -a fonts
+    xlsfonts >$tmpfile \
+        -fn "*-r-normal--0-*-m-*-iso8859-1"
+    c=0
+    exec 3<"$tmpfile"
+    while read -r <&3
+    do
+        fonts[$c]="$REPLY"
+	let ++c
+    done
+    exec 3<&-
+
+    if (( c == 0 ))
+    then
+        FONT=fixed
+	FSIZE=small
+    else
+	echo "Point size will be $FSIZE"
+	echo "Choose your font (bold may be better):"
+	i=0
+	while (( i < c ))
+	do
+	    echo "$i: ${fonts[$i]}"
+	    let ++i
+	done
+	let --c
+	while read -r
+	do
+	    if [[ "$REPLY" =~ ^[0-9]+$ ]]
+	    then
+		if (( $REPLY <= $c ))
+		then
+		    break
+		fi
+	    fi
+	    echo "Try again (0-$c)"
+	done
+	[[    "${fonts[$REPLY]}" \
+	   =~ ^(.*-r-normal--)0(-.*$) ]]
+	FONT="${BASH_REMATCH[1]}${FSIZE}"
+	FONT="${FONT}${BASH_REMATCH[2]}"
+    fi
+
+    echo "Font will be $FONT"
+    echo "Point size will be $FSIZE"
+    echo 'Launching xterm (will take some seconds)'
+    xterm  -g 80x35 -fn "$FONT" -bg white \
+	   -rightbar -sb -ls &
 fi
 
 exit 0
