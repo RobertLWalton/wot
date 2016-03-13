@@ -4,7 +4,7 @@
 #
 # File:		conf
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Wed Mar  9 00:08:58 EST 2016
+# Date:		Sat Mar 12 15:24:56 EST 2016
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -345,7 +345,7 @@ esac
 # We prepare to use tmp files
 #
 tmpfile=/tmp/conf$$-tmp
-trap "$nodebug rm -f $tmpfile*" EXIT
+$nodebug trap "rm -f $tmpfile*" EXIT
 
 # Symbol table.
 #
@@ -383,18 +383,23 @@ CONF[$?]='conf_helper shadow'
 change_file() {
     if [ ! -e "$2" ]
     then
-	mv "$1" "$2"
+	$nodebug mv "$1" "$2"
+	$debug cpall "$1" "$2"
+	$debug echo KEEPING "$1"
 	echo "NOTE: created $2:"
 	ls -Z "$2"
 	return 0
     elif cmp -s "$1" "$2"
     then
-	rm -f "$1"
+	$nodebug rm -f "$1"
+	$debug echo KEEPING "$1"
 	return 1
     else
 	cpattronly "$2" "$1"
 	rm -f "$2"
-	mv "$1" "$2"
+	$nodebug mv "$1" "$2"
+	$debug cpall "$1" "$2"
+	$debug echo KEEPING "$1"
 	return 0
     fi
 }
@@ -698,6 +703,7 @@ do
 		fi
 
 		$nodebug rm -f $tmpfile
+		$debug echo KEEPING $tmpfile
 	    fi
 	done
     done
@@ -708,8 +714,8 @@ do
     file=${split_target[$b]}
     p=${split_parts[$b]}
     regexp="${SPLIT[$b]}"
-    rm -f "$tmpfile"
-    exec 4>"$tmpfile"
+    rm -f "$tmpfile.combine"
+    exec 4>"$tmpfile.combine"
     c=0
     newest="file.0"
     while (( $c < $p ))
@@ -763,8 +769,8 @@ do
     done
     exec 4>&-
 
-    cpattrandtime "$newest" "$tmpfile"
-    if change_file "$tmpfile" "$file"
+    cpattrandtime "$newest" "$tmpfile.combine"
+    if change_file "$tmpfile.combine" "$file"
     then
 	echo "NOTE: changed $file"
         $verbose echo "REASSEMBLED $file FROM $p PARTS"
