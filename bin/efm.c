@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Mon Jun  6 10:18:36 EDT 2016
+** Date:	Mon Jun  6 13:11:39 EDT 2016
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -277,6 +277,7 @@ int RETRIES = 3;	/* Number of retries. */
 
 #define MAX_LEXEME_SIZE 2000
 #define MAX_LINE_SIZE ( 2 * MAX_LEXEME_SIZE + 10 )
+#define MAX_KEY_SIZE 200
 
 typedef char line_buffer[MAX_LINE_SIZE+2];
 
@@ -448,6 +449,54 @@ void put_lexeme ( char ** buffer, const char * lexeme )
 	}
 	* q ++ = '"';
 	* buffer = q;
+    }
+}
+
+/* Read keys from file stream.  On error print error
+ * message to stdout and exit ( 1 );
+ */
+char s3_access_key[MAX_KEY_SIZE+1];
+char s3_secret_key[MAX_KEY_SIZE+1];
+void read_keys ( FILE * f )
+{
+    line_buffer buffer;
+    s3_access_key[0] = 0;
+    s3_secret_key[0] = 0;
+    while ( get_line ( buffer, f ) )
+    {
+        char * key;
+	char * location;
+	if ( buffer[0] == '#' ) continue;
+	else if ( strncmp ( "s3_access_key:",
+	                    buffer, 14 )
+	          == 0 )
+	{
+	    key = buffer + 14;
+	    location = s3_access_key;
+	}
+	else if ( strncmp ( "s3_secret_key:",
+	                    buffer, 14 )
+	          == 0 )
+	{
+	    key = buffer + 14;
+	    location = s3_secret_key;
+	}
+	else
+	{
+	    buffer[5] = 0;
+	    printf ( "ERROR: unrecognized EFM-KEYS-gpg"
+	             " line beginning `%s'\n", buffer );
+	    exit ( 1 );
+	}
+
+	if ( strlen ( key ) > MAX_KEY_SIZE )
+	{
+	    key[-1] = 0;
+	    printf ( "ERROR: %s too long in EFM-KEYS\n",
+	             buffer );
+	    exit ( 1 );
+	}
+	strcpy ( location, key );
     }
 }
 
@@ -2365,7 +2414,7 @@ int execute_command ( FILE * in )
     return result;
 }
 
-char password [200];
+char password [MAX_KEY_SIZE+2];
     /* Password read from user for EFM-INDEX.*. */
 
 int main ( int argc, char ** argv )
@@ -2501,6 +2550,28 @@ int main ( int argc, char ** argv )
 		exit ( 1 );
 	    }
 	    password[len-1] = 0;
+	}
+
+	if ( access ( "EFM-KEYS.gpg", R_OK ) >= 0 )
+	{
+	    int keyschild;
+	    int keysfd;
+	    FILE * keysf;
+	    keysfd =
+		crypt ( 1, "EFM-KEYS.gpg", NULL,
+			password,
+			strlen ( password ),
+			& keyschild );
+	    if ( keysfd < 0 ) exit ( 1 );
+	    keysf = fdopen ( keysfd, "r" );
+	    read_keys ( keysf );
+	    fclose ( keysf );
+	    if ( cwait ( keyschild ) < 0 )
+	    {
+		printf ( "ERROR: error decypting"
+			 " EFM-KEYS.gpg\n" );
+		exit ( 1 );
+	    }
 	}
 
 	{
