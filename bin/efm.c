@@ -32,7 +32,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <sys/stat.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <termios.h>
@@ -1442,7 +1441,7 @@ int add ( const char * filename )
     const char * p;
     struct entry * e;
     char sum [33];
-    struct stat s;
+    struct stat st;
     char key[33];
 
     p = filename;
@@ -1468,7 +1467,7 @@ int add ( const char * filename )
 	return -1;
     }
 
-    if ( stat ( filename, & s ) < 0 )
+    if ( stat ( filename, & st ) < 0 )
     {
         printf ( "ERROR: cannot stat %s\n", filename );
 	return -1;
@@ -1496,9 +1495,9 @@ int add ( const char * filename )
         malloc ( sizeof ( struct entry ) );
     e->current  = 1;
     e->filename = strdup ( filename );
-    e->mode     = s.st_mode & 07777;
-    e->mtime    = s.st_mtime;
-    e->size     = s.st_size;
+    e->mode     = st.st_mode & 07777;
+    e->mtime    = st.st_mtime;
+    e->size     = st.st_size;
     e->md5sum   = strdup ( sum );
 
     e->emd5sum  = strdup ( "" );
@@ -1791,7 +1790,6 @@ int execute_command ( FILE * in )
 
 		struct entry * e =
 		    find_filename ( arg );
-		struct stat st;
 		char efile [40];
 		pid_t child;
 
@@ -1806,10 +1804,10 @@ int execute_command ( FILE * in )
 		{
 		    char sum [33];
 
-		    if ( stat ( arg, & st ) < 0 )
+		    if ( access ( arg, R_OK ) < 0 )
 		    {
-		        printf ( "ERROR: file %s does"
-			         " not exist\n", arg );
+		        printf ( "ERROR: file %s is not"
+			         " readable\n", arg );
 			printf ( "    Processing %s"
 			         " aborted.\n", arg );
 			result = -1;
@@ -1866,7 +1864,7 @@ int execute_command ( FILE * in )
 		    e = find_filename ( arg );
 		    assert ( e != NULL );
 		}
-		else if ( stat ( arg, & st ) >= 0 )
+		else if ( access ( arg, R_OK ) >= 0 )
 		{
 		    char sum [33];
 		    if ( md5sum ( sum, arg ) < 0 )
@@ -1908,6 +1906,7 @@ int execute_command ( FILE * in )
 		strcpy ( dend, efile );
 		if ( direction == 't' )
 		{
+		    struct stat st;
 		    char efile_sum[33];
 		    char dbegin_sum[33];
 
@@ -2090,11 +2089,12 @@ int execute_command ( FILE * in )
 			    continue;
 			}
 		    }
-		    else if ( stat ( efile, & st ) < 0 )
+		    else if ( access ( efile, R_OK )
+		              < 0 )
 		    {
 		        printf ( "ERROR: encrypted %s\n"
-			         "    (%s) does not"
-				 " exist\n",
+			         "    (%s) cannot be"
+				 " read\n",
 				 arg, efile );
 			printf ( "    Processing %s"
 				 " aborted.\n", arg );
@@ -2373,10 +2373,6 @@ int main ( int argc, char ** argv )
     line_buffer buffer;
     int tofd;
     struct sockaddr_un sa;
-    const char * pass;
-    int indexchild;
-    int indexfd;
-    FILE * indexf;
     int listenfd;
     pid_t childpid;
     FILE * tof;
@@ -2387,8 +2383,7 @@ int main ( int argc, char ** argv )
 	 strncmp ( argv[1], "-doc", 4 ) == 0 )
     {
 	const char ** p = documentation;
-	struct stat st;
-	if ( stat ( "/usr/bin/less", &st ) < 0 )
+	if ( access ( "/usr/bin/less", X_OK ) < 0 )
 	    while ( * p ) printf ( "%s\n", * p ++ );
 	else
 	{
@@ -2463,6 +2458,7 @@ int main ( int argc, char ** argv )
 	else
 	    error ( errno );
 
+        /* const char * pass; */
 	/* pass = getpass ( "Password: " ); */
 	/* if ( pass == NULL ) error ( errno ); */
 	/* password = strdup ( pass ); */
@@ -2494,6 +2490,10 @@ int main ( int argc, char ** argv )
 	    if ( fgets ( password, sizeof ( password ),
 	                 stdin ) == NULL )
 		error ( errno );
+	    tios.c_lflag |= ECHO;
+	    if ( tcsetattr ( 0, TCSANOW, & tios ) < 0 )
+	        error ( errno );
+
 	    len = strlen ( password );
 	    if ( password[len-1] != '\n' )
 	    {
@@ -2501,26 +2501,29 @@ int main ( int argc, char ** argv )
 		exit ( 1 );
 	    }
 	    password[len-1] = 0;
-	    tios.c_lflag |= ECHO;
-	    if ( tcsetattr ( 0, TCSANOW, & tios ) < 0 )
-	        error ( errno );
 	}
 
-	indexfd =
-	    crypt ( 1, "EFM-INDEX.gpg", NULL,
-	            password,
-		    strlen ( password ),
-		    & indexchild );
-	if ( indexfd < 0 ) exit ( 1 );
-	indexf = fdopen ( indexfd, "r" );
-	read_index ( indexf );
-	fclose ( indexf );
-	if ( cwait ( indexchild ) < 0 )
 	{
-	    printf ( "ERROR: error decypting"
-	             " EFM-INDEX.gpg\n" );
-	    exit ( 1 );
+	    int indexchild;
+	    int indexfd;
+	    FILE * indexf;
+	    indexfd =
+		crypt ( 1, "EFM-INDEX.gpg", NULL,
+			password,
+			strlen ( password ),
+			& indexchild );
+	    if ( indexfd < 0 ) exit ( 1 );
+	    indexf = fdopen ( indexfd, "r" );
+	    read_index ( indexf );
+	    fclose ( indexf );
+	    if ( cwait ( indexchild ) < 0 )
+	    {
+		printf ( "ERROR: error decypting"
+			 " EFM-INDEX.gpg\n" );
+		exit ( 1 );
+	    }
 	}
+
 	listenfd =
 	    socket ( PF_UNIX, SOCK_STREAM, 0 );
 	if ( bind ( listenfd,
@@ -2533,7 +2536,6 @@ int main ( int argc, char ** argv )
 	if ( childpid < 0 ) error ( errno );
 	if ( childpid == 0 )
 	{
-	    struct stat st;
 	    int done;
 
 	    close ( tofd );
@@ -2601,7 +2603,8 @@ int main ( int argc, char ** argv )
 			exit ( 1 );
 		    }
 
-		    if ( stat ( "EFM-INDEX.gpg-", & st )
+		    if ( access ( "EFM-INDEX.gpg-",
+		                  F_OK )
 		         >= 0 )
 		    {
 			if ( trace )
