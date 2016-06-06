@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Sat Mar 21 15:37:18 EDT 2009
+** Date:	Mon Jun  6 05:55:41 EDT 2016
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -2385,7 +2385,46 @@ int main ( int argc, char ** argv )
 	 strncmp ( argv[1], "-doc", 4 ) == 0 )
     {
 	const char ** p = documentation;
-	while ( * p ) printf ( "%s\n", * p ++ );
+	struct stat st;
+	if ( stat ( "/usr/bin/less", &st ) < 0 )
+	    while ( * p ) printf ( "%s\n", * p ++ );
+	else
+	{
+	    FILE * out;
+	    int fd[2];
+	    fflush ( stdout );
+	    if ( pipe ( fd ) < 0 ) error ( errno );
+	    childpid = fork ( );
+	    if ( childpid < 0 ) error ( errno );
+	    if ( childpid == 0 )
+	    {
+		int fdx;
+		char buf[100];
+		close ( 0 );
+		dup2 ( fd[0], 0 );
+		fdx = getdtablesize() - 1;
+		while ( fdx >= 3 ) close ( fdx -- );
+		if ( execlp ( "less",
+		              "less", "-F", NULL ) < 0 )
+		{
+		    printf ( "ERROR: executing"
+		             " `less -F'\n" );
+		    error ( errno );
+		}
+	    }
+	    close ( 1 );
+	    close ( 2 );
+	    close ( fd[0] );
+	    out = fdopen ( fd[1], "w" );
+	    while ( * p )
+	        fprintf ( out, "%s\n", * p ++ );
+	    fclose ( out );
+
+	    /* If you do not wait for `less' it does
+	     * not work.
+	     */
+	    cwait ( childpid );
+	}
 	exit (1);
     }
 
