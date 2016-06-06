@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Mon Jun  6 14:45:05 EDT 2016
+** Date:	Mon Jun  6 15:08:26 EDT 2016
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -1211,12 +1211,13 @@ int md5sum ( char * buffer,
     line_buffer name, line;
     int remote = 0;
     int retries = RETRIES;
-    int at_found, error_found;
+    int is_s3, at_found, error_found;
     char * p;
 
     strcpy ( name, filename );
     p = name;
     at_found = 0;
+    is_s3 = ( strncmp ( "s3:", name, 3 ) == 0 );
     for ( ; * p; ++ p )
     {
 	if ( * p == '@' )
@@ -1226,7 +1227,9 @@ int md5sum ( char * buffer,
 	}
 	else if ( * p == ':' ) break;
     }
-    if ( * p == ':' )
+    if ( is_s3 )
+        remote = 1;
+    else if ( * p == ':' && at_found )
     {
         remote = 1;
 	* p ++ = 0;
@@ -1255,7 +1258,7 @@ int md5sum ( char * buffer,
 	    /* Set fd's as follows:
 	     * 	0 -> /dev/null
 	     *	1 -> fd[1]
-	     *	2 -> parent's 1
+	     *	2 -> parent's fd 1
 	     */
 	    newfd = open ( "/dev/null", O_RDONLY );
 	    if ( newfd < 0 ) error ( errno );
@@ -1288,9 +1291,34 @@ int md5sum ( char * buffer,
 			      filename, NULL ) < 0 )
 		    error ( errno );
 	    }
+	    else if ( is_s3 )
+	    {
+		/* Remote s3cmd file. */
+
+		char access[MAX_KEY_SIZE+100];
+		char secret[MAX_KEY_SIZE+100];
+
+		if ( trace )
+		{
+		    fprintf ( stderr,
+			      "* executing s3cmd"
+			      " info \\\n"
+			      "    %s\n",
+			      name );
+		    fflush ( stderr );
+		}
+		sprintf ( access, "--access_key=%s",
+		          s3_access_key );
+		sprintf ( secret, "--secret_key=%s",
+		          s3_secret_key );
+		if ( execlp ( "s3cmd", "s3cmd",
+		              access, secret,
+		              "info", name, NULL ) < 0 )
+		    error ( errno );
+	    }
 	    else
 	    {
-		/* Remote file. */
+		/* Remote scp/ssh file. */
 
 		if ( trace )
 		{
@@ -1309,11 +1337,88 @@ int md5sum ( char * buffer,
 	close ( fd[1] );
 	inf = fdopen ( fd[0], "r" );
 
-	error_found = 1;
+	error_found = 0;
 
-	if ( get_line ( line, inf ) )
+	if ( is_s3 )
+	{
+	    int first = 1;
+	    while ( get_line ( line, inf ) )
+	    {
+	        const char * p = line;
+	        if ( first )
+		{
+		    /* First line is object name */
+		    if ( strncmp ( "s3:", line, 3 )
+		         != 0 )
+		    {
+			do {
+			    printf ( "%s\n", line );
+			} while
+			    ( get_line ( line, inf ) );
+			error_found = 1;
+		    }
+		    first = 0;
+		    continue;
+		}
+		while ( isspace ( * p ) ) ++ p;
+		if ( strncmp ( "MD5 sum:", p, 8 ) == 0 )
+		{
+		    p += 8;
+		    while ( isspace ( * p ) ) ++ p;
+		    if ( strlen ( p ) == 32 )
+			strcpy ( buffer, p );
+		    else
+		    {
+		        printf ( "ERROR: wrong size MD5"
+			         " sum: %s\n", p );
+			error_found = 1;
+		    }
+		}
+		else
+		{
+		    if ( p != line )
+		        while ( * p && * p != ':' )
+			    ++ p;
+		    if ( p == line || * p == 0 ) do {
+			/* Likely error messages */
+			printf ( "%s\n", line );
+			error_found = 1;
+		    } while ( get_line ( line, inf ) );
+		}
+	    }
+	}
+	else if ( get_line ( line, inf ) )
 	{
 	    char * p = line;
+	    while ( * p != 0 && ! isspace ( p ) ) ++ p;
+	    if ( p - line == 32 )
+	    {
+	        strncpy ( buffer, line, 32 );
+		buffer[32] = 0;
+	    }
+	    else
+	    {
+		printf ( "ERROR: wrong size MD5"
+			 " sum: %s\n", line );
+		error_found = 1;
+	    }
+	    while ( get_line ( line, inf ) )
+	    {
+		/* Extra lines indicate an error */
+	        printf ( "%s\n", line );
+		error_found = 1;
+	    }
+	}
+	else
+	{
+	    printf ( "ERROR: md5sum produced no"
+	             " output\n" );
+	    error_found = 1;
+	}
+
+	if ( ! error_found )
+	{
+	    char * p = buffer;
 	    for ( ; * p; ++ p )
 	    {
 		char c = * p;
@@ -1322,20 +1427,11 @@ int md5sum ( char * buffer,
 		if ( 'A' <= c && c <= 'F' ) continue;
 		break;
 	    }
-	    if ( p == line + 32 && isspace ( * p ) )
+	    if ( * p )
 	    {
-		strncpy ( buffer, line, 32 );
-		buffer[32] = 0;
-		error_found = 0;
-	    }
-	    else
-	    {
-		/* Print output that may contain error
-		 * messages.
-		 */
-		do {
-		    printf ( "%s\n", line );
-		} while ( get_line ( line, inf ) );
+	        printf ( "ERROR: bad digits in MD5 sum:"
+		         " %s\n", buffer );
+		error_found = 1;
 	    }
 	}
 	fclose ( inf );
@@ -1347,7 +1443,7 @@ int md5sum ( char * buffer,
 	    -- retries;
 	    continue;
 	}
-	else if ( error_found < 0 )
+	else if ( error_found != 0 )
 	{
 	    printf ( "ERROR: cannot compute MD5 sum of"
 		     " %s\n", filename );
