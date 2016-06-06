@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Mon Jun  6 13:11:39 EDT 2016
+** Date:	Mon Jun  6 14:45:05 EDT 2016
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -361,6 +361,16 @@ struct comment {
 };
 struct comment * first_comment = NULL;
 
+/* Print error message from errno value and then call
+ * exit ( 1 );
+ */
+void error ( int err_no )
+{
+    const char * s = strerror ( err_no );
+    printf ( "ERROR: %s\n", s );
+    exit ( 1 );
+}
+
 /* Given a pointer into the line buffer, scan the next
  * lexeme.  A lexeme is a sequence of non-whitespace
  * characters, or is " quoted.  "" denotes " in quoted
@@ -450,6 +460,53 @@ void put_lexeme ( char ** buffer, const char * lexeme )
 	* q ++ = '"';
 	* buffer = q;
     }
+}
+
+/* Read password from input terminal only.  On error
+ * print error message to stdout and exit ( 1 ).
+ *
+ * Note: getpass(3) has been marked OBSOLETE.
+ */
+char password [MAX_KEY_SIZE+2];
+void read_password ( void )
+{
+    struct termios tios;
+    size_t len;
+    if ( tcgetattr ( 0, & tios ) < 0 )
+    {
+	printf ( "ERROR: password required"
+		 " and input is not"
+		 " terminal\n" );
+	exit ( 1 );
+    }
+    if ( ( tios.c_lflag & ICANON ) == 0
+	 ||
+	 ( tios.c_lflag & ECHO ) == 0 )
+    {
+	printf ( "ERROR: password required and"
+		 " terminal is non-canonical or"
+		 " not echoing\n" );
+	exit ( 1 );
+    }
+    tios.c_lflag &= ~ ECHO;
+    if ( tcsetattr ( 0, TCSANOW, & tios ) < 0 )
+	error ( errno );
+    printf ( "Password: " );
+    fflush ( stdout );
+    if ( fgets ( password, sizeof ( password ),
+		 stdin ) == NULL )
+	error ( errno );
+    tios.c_lflag |= ECHO;
+    if ( tcsetattr ( 0, TCSANOW, & tios ) < 0 )
+	error ( errno );
+
+    len = strlen ( password );
+    if ( password[len-1] != '\n' )
+    {
+	printf ( "ERROR: password too long\n" );
+	exit ( 1 );
+    }
+    password[len-1] = 0;
 }
 
 /* Read keys from file stream.  On error print error
@@ -916,16 +973,6 @@ struct entry * find_md5sum
 	    return e;
     } while ( ( e = e->next ) != first_entry );
     return NULL;
-}
-
-/* Print error message from errno value and then call
- * exit ( 1 );
- */
-void error ( int err_no )
-{
-    const char * s = strerror ( err_no );
-    printf ( "ERROR: %s\n", s );
-    exit ( 1 );
 }
 
 /* Wait for a child to terminate.  Return -1 if child
@@ -2414,9 +2461,6 @@ int execute_command ( FILE * in )
     return result;
 }
 
-char password [MAX_KEY_SIZE+2];
-    /* Password read from user for EFM-INDEX.*. */
-
 int main ( int argc, char ** argv )
 {
     line_buffer buffer;
@@ -2507,50 +2551,7 @@ int main ( int argc, char ** argv )
 	else
 	    error ( errno );
 
-        /* const char * pass; */
-	/* pass = getpass ( "Password: " ); */
-	/* if ( pass == NULL ) error ( errno ); */
-	/* password = strdup ( pass ); */
-	/* getpass has been declared OBSOLETE */
-	{
-	    struct termios tios;
-	    size_t len;
-	    if ( tcgetattr ( 0, & tios ) < 0 )
-	    {
-	        printf ( "ERROR: password required"
-		         " and input is not"
-			 " terminal\n" );
-		exit ( 1 );
-	    }
-	    if ( ( tios.c_lflag & ICANON ) == 0
-	         ||
-		 ( tios.c_lflag & ECHO ) == 0 )
-	    {
-	        printf ( "ERROR: password required and"
-	                 " terminal is non-canonical or"
-		         " not echoing\n" );
-		exit ( 1 );
-	    }
-	    tios.c_lflag &= ~ ECHO;
-	    if ( tcsetattr ( 0, TCSANOW, & tios ) < 0 )
-	        error ( errno );
-	    printf ( "Password: " );
-	    fflush ( stdout );
-	    if ( fgets ( password, sizeof ( password ),
-	                 stdin ) == NULL )
-		error ( errno );
-	    tios.c_lflag |= ECHO;
-	    if ( tcsetattr ( 0, TCSANOW, & tios ) < 0 )
-	        error ( errno );
-
-	    len = strlen ( password );
-	    if ( password[len-1] != '\n' )
-	    {
-	        printf ( "ERROR: password too long\n" );
-		exit ( 1 );
-	    }
-	    password[len-1] = 0;
-	}
+	read_password();
 
 	if ( access ( "EFM-KEYS.gpg", R_OK ) >= 0 )
 	{
