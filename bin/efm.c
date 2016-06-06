@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Mon Jun  6 05:55:41 EDT 2016
+** Date:	Mon Jun  6 10:18:36 EDT 2016
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -35,6 +35,8 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <time.h>
+#include <termios.h>
+#include <unistd.h>
 #undef crypt
     /* We redefine crypt */
 
@@ -2363,7 +2365,7 @@ int execute_command ( FILE * in )
     return result;
 }
 
-char * password = NULL;
+char password [200];
     /* Password read from user for EFM-INDEX.*. */
 
 int main ( int argc, char ** argv )
@@ -2461,9 +2463,48 @@ int main ( int argc, char ** argv )
 	else
 	    error ( errno );
 
-	pass = getpass ( "Password: " );
-	if ( pass == NULL ) error ( errno );
-	password = strdup ( pass );
+	/* pass = getpass ( "Password: " ); */
+	/* if ( pass == NULL ) error ( errno ); */
+	/* password = strdup ( pass ); */
+	/* getpass has been declared OBSOLETE */
+	{
+	    struct termios tios;
+	    size_t len;
+	    if ( tcgetattr ( 0, & tios ) < 0 )
+	    {
+	        printf ( "ERROR: password required"
+		         " and input is not"
+			 " terminal\n" );
+		exit ( 1 );
+	    }
+	    if ( ( tios.c_lflag & ICANON ) == 0
+	         ||
+		 ( tios.c_lflag & ECHO ) == 0 )
+	    {
+	        printf ( "ERROR: password required and"
+	                 " terminal is non-canonical or"
+		         " not echoing\n" );
+		exit ( 1 );
+	    }
+	    tios.c_lflag &= ~ ECHO;
+	    if ( tcsetattr ( 0, TCSANOW, & tios ) < 0 )
+	        error ( errno );
+	    printf ( "Password: " );
+	    fflush ( stdout );
+	    if ( fgets ( password, sizeof ( password ),
+	                 stdin ) == NULL )
+		error ( errno );
+	    len = strlen ( password );
+	    if ( password[len-1] != '\n' )
+	    {
+	        printf ( "ERROR: password too long\n" );
+		exit ( 1 );
+	    }
+	    password[len-1] = 0;
+	    tios.c_lflag |= ECHO;
+	    if ( tcsetattr ( 0, TCSANOW, & tios ) < 0 )
+	        error ( errno );
+	}
 
 	indexfd =
 	    crypt ( 1, "EFM-INDEX.gpg", NULL,
