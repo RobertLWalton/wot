@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Tue Jun  7 11:15:40 EDT 2016
+** Date:	Tue Jun  7 14:15:26 EDT 2016
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -84,6 +84,9 @@ const char * documentation [] = {
 "    target/source directory may be \".\" to encrypt",
 "    or decrypt in place.",
 "",
+"    Move is like copy except that the source file",
+"    copied is also deleted.",
+"",
 "    The \"remove\" command is like \"movefrom\" fol-",
 "    lowed by discarding the decrypted file.  The",
 "    \"check\" command is like \"copyfrom\" followed",
@@ -99,13 +102,13 @@ const char * documentation [] = {
 "    File names must not contain any '/'s (files must",
 "    be in the current directory).  Source and target",
 "    names can be any directory names acceptable to",
-"    scp.  Efm makes temporary files in the current",
-"    directory whose base names are the 32 character",
-"    MD5 sums of the decrypted files.  No two encryp-",
-"    ted files may have the same MD5 sum.  It is ex-",
-"    pected that files will be tar files of director-",
-"    ies.",
-"",
+"    scp or s3cmd.  Efm makes temporary files in the",
+"    current directory whose base names are the 32",
+"    character MD5 sums of the decrypted files.  No",
+"    two encrypted files may have the same MD5 sum.",
+"    It is expected that files will be tar files of",
+"    directories.",
+"\f",
 "    Efm maintains an index of encrypted files.  This",
 "    index is itself encrypted, and is stored in the",
 "    file named \"EFM-INDEX.gpg\".  You must create",
@@ -113,12 +116,24 @@ const char * documentation [] = {
 "",
 "               echo > EFM-INDEX",
 "               gpg -c EFM-INDEX",
-"\f",
+"",
 "    You choose the password that protects the index",
 "    when you do this.  You may put comments at the",
 "    beginning of EFM-INDEX before you encrypt.  All",
 "    comment lines must have `#' as their first char-",
 "    acter, and there can be no blank lines.",
+"",
+"    If S3 is used, there must also be an encrypted",
+"    file \"EFM-KEYS.gpg\" whose decrypted version has",
+"    lines of the form:",
+"",
+"         s3_access_key:<S3-ACCESS-KEY>",
+"         s3_secret_key:<S3-SECRET-ACCESS-KEY>",
+"",
+"    This decrypted file may also contain comment",
+"    lines that begin with `#'.  This file is",
+"    encrypted with the same password as",
+"    \"EFM-INDEX.gpg\".",
 "",
 "    The index is REQUIRED to decrypt files, as each",
 "    encrypted file has its own unique random encryp-",
@@ -127,7 +142,7 @@ const char * documentation [] = {
 "    crypted files, the user changes just the pass-",
 "    word of the index, and not the keys encrypting",
 "    the files.",
-"",
+"\f",
 "    Once listed in the index, files are not normally",
 "    removed from the index.  Instead index entries",
 "    are marked as being either current or obsolete.",
@@ -136,6 +151,8 @@ const char * documentation [] = {
 					" \"re-",
 "    move\" commands make a file's entry obsolete.",
 "    The \"copyfrom\" command does not change index.",
+"    The \"del\" command is like \"remove\" but does",
+"    not change the index.",
 "",
 "    The \"list\" command lists for current index",
 "    entries the file name, protection mode, modifi-",
@@ -151,12 +168,12 @@ const char * documentation [] = {
 "    The list commands can also be given encrypted",
 "    file names (that consist of MD sum basenames",
 "    plus .gpg extension).",
-"\f",
+"",
 "    This program returns exit status 0 if there is",
 "    no error and if there is an error, returns exit",
 "    status 1 and prints the error message to the",
 "    standard output.",
-"",
+"\f",
 "    The efm program asks for a password to decrypt",
 "    the index only the first time it is run during",
 "    a login session.  It then sets up a background",
@@ -255,8 +272,8 @@ const char * documentation [] = {
 "    tries without encrypting or moving files.  The",
 "    \"sub\" command deletes index entries without",
 "    decrypting or moving files.  The \"del\" command",
-"    deletes encrypted files without changing index",
-"    entries.",
+"    deletes encrypted files like \"remove\" but does",
+"    not change index entries.",
 "",
 "    An external program is used to encrypt/decrypt",
 "    files.  By default this is gpg.  The encrypted",
@@ -371,26 +388,6 @@ void error ( int err_no )
     const char * s = strerror ( err_no );
     printf ( "ERROR: %s\n", s );
     exit ( 1 );
-}
-
-int is_s3 ( const char * filename )
-{
-    return strncmp ( "s3:", filename, 3 ) == 0;
-}
-const char * is_remote ( const char * filename )
-{
-    int at_found = 0;
-    const char * p = filename;
-    for ( ; * p; ++ p )
-    {
-	if ( * p == '@' )
-	{
-	    if ( at_found ) break;
-	    at_found = 1;
-	}
-	else if ( * p == ':' ) break;
-    }
-    return * p == ':' && at_found ? p : NULL;
 }
 
 /* Given a pointer into the line buffer, scan the next
@@ -1225,6 +1222,51 @@ int crypt ( int decrypt,
         return cwait ( * child );
     else
 	return result;
+}
+
+/* Return true iff filename begins with `s3:'.  Also,
+ * if true is returned, checks that s3_access_key
+ * and s3_secret_key are defined and if not, prints
+ * an error message and exits program.
+ */
+int is_s3 ( const char * filename )
+{
+    if ( strncmp ( "s3:", filename, 5 ) == 0 )
+    {
+        if ( s3_access_key[0] == 0
+	     ||
+	     s3_secret_key[0] == 0 )
+	{
+	    printf ( "ERROR: S3 use in %s\n"
+	             "       but needed S3 key(s)"
+		     " missing from EFM-KEYS.gpg\n",
+		     filename );
+	    exit ( 1 );
+	}
+	return 1;
+    }
+    else
+        return 0;
+}
+
+/* Return a pointer to the first `:' in the file name
+ * if there is a `:' and the first `:' is preceeded
+ * by exactly one `@'.
+ */
+const char * is_remote ( const char * filename )
+{
+    int at_found = 0;
+    const char * p = filename;
+    for ( ; * p; ++ p )
+    {
+	if ( * p == '@' )
+	{
+	    if ( at_found ) break;
+	    at_found = 1;
+	}
+	else if ( * p == ':' ) break;
+    }
+    return * p == ':' && at_found ? p : NULL;
 }
 
 /* Compute the MD5 sum of a file.  The filename may have
