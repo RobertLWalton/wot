@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Tue Jun  7 06:30:04 EDT 2016
+** Date:	Tue Jun  7 07:51:48 EDT 2016
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -1099,22 +1099,25 @@ int crypt ( int decrypt,
 
     if ( * child == 0 )
     {
-        int fd;
+        int fd, nullfd;
 
 	/* Set fd's as follows:
 	 * 	0 -> infd
 	 *	1 -> outfd
-	 *	2 -> parent's 1
+	 *	2 -> /dev/null
 	 *	3 -> passfd
 	 */
 	close ( 0 );
 	if ( dup2 ( infd, 0 ) < 0 ) error ( errno );
 	close ( infd );
-	close ( 2 );
-	if ( dup2 ( 1, 2 ) < 0 ) error ( errno );
 	close ( 1 );
 	if ( dup2 ( outfd, 1 ) < 0 ) error ( errno );
 	close ( outfd );
+	nullfd = open ( "/dev/null", O_RDONLY );
+	if ( nullfd < 0 ) error ( errno );
+	close ( 2 );
+	if ( dup2 ( nullfd, 2 ) < 0 ) error ( errno );
+	close ( nullfd );
 	if ( passfd != 3 )
 	{
 	    close ( 3 );
@@ -1405,6 +1408,7 @@ int md5sum ( char * buffer,
 	    }
 	    else
 	    {
+		* p = 0;
 		printf ( "ERROR: wrong size MD5"
 			 " sum: %s\n", line );
 		error_found = 1;
@@ -2604,7 +2608,7 @@ int main ( int argc, char ** argv )
 		close ( 0 );
 		dup2 ( fd[0], 0 );
 		fdx = getdtablesize() - 1;
-		while ( fdx >= 3 ) close ( fdx -- );
+		while ( fdx > 2 ) close ( fdx -- );
 		if ( execlp ( "less",
 		              "less", "-F", NULL ) < 0 )
 		{
