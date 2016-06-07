@@ -14,7 +14,7 @@ unicode2latin1:	unicode2latin1.c
 
 efm:	efm.c
 	rm -f efm
-	gcc -ansi -pedantic -o efm efm.c
+	gcc -std=c99 -pedantic -o efm efm.c
 	chmod 555 efm
 
 conf_helper:	conf_helper.c

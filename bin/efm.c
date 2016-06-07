@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Mon Jun  6 15:08:26 EDT 2016
+** Date:	Tue Jun  7 06:30:04 EDT 2016
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -23,17 +23,19 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <utime.h>
+#include <time.h>
 #include <string.h>
 #include <assert.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/wait.h>
-#include <time.h>
 #include <termios.h>
 #include <unistd.h>
 #undef crypt
@@ -371,6 +373,11 @@ void error ( int err_no )
     exit ( 1 );
 }
 
+int is_s3 ( const char * filename )
+{
+    return strncmp ( "s3:", filename, 3 ) == 0;
+}
+
 /* Given a pointer into the line buffer, scan the next
  * lexeme.  A lexeme is a sequence of non-whitespace
  * characters, or is " quoted.  "" denotes " in quoted
@@ -700,7 +707,7 @@ void read_index ( FILE * f )
 	ts = (const char *)
 	     strptime ( mtime, time_format, & td );
 	d = ( ts == NULL || * ts != 0 ) ?
-	    -1 : timegm ( & td );
+	    -1 : mktime ( & td );
 	if ( d == -1 )
 	{
 	    printf ( "ERROR: bad EFM-INDEX mtime"
@@ -1211,13 +1218,13 @@ int md5sum ( char * buffer,
     line_buffer name, line;
     int remote = 0;
     int retries = RETRIES;
-    int is_s3, at_found, error_found;
+    int s3_name, at_found, error_found;
     char * p;
 
     strcpy ( name, filename );
     p = name;
     at_found = 0;
-    is_s3 = ( strncmp ( "s3:", name, 3 ) == 0 );
+    s3_name = is_s3 ( name );
     for ( ; * p; ++ p )
     {
 	if ( * p == '@' )
@@ -1227,7 +1234,7 @@ int md5sum ( char * buffer,
 	}
 	else if ( * p == ':' ) break;
     }
-    if ( is_s3 )
+    if ( s3_name )
         remote = 1;
     else if ( * p == ':' && at_found )
     {
@@ -1291,7 +1298,7 @@ int md5sum ( char * buffer,
 			      filename, NULL ) < 0 )
 		    error ( errno );
 	    }
-	    else if ( is_s3 )
+	    else if ( s3_name )
 	    {
 		/* Remote s3cmd file. */
 
@@ -1339,7 +1346,7 @@ int md5sum ( char * buffer,
 
 	error_found = 0;
 
-	if ( is_s3 )
+	if ( s3_name )
 	{
 	    int first = 1;
 	    while ( get_line ( line, inf ) )
@@ -1348,8 +1355,7 @@ int md5sum ( char * buffer,
 	        if ( first )
 		{
 		    /* First line is object name */
-		    if ( strncmp ( "s3:", line, 3 )
-		         != 0 )
+		    if ( ! is_s3 ( line ) )
 		    {
 			do {
 			    printf ( "%s\n", line );
@@ -1390,7 +1396,8 @@ int md5sum ( char * buffer,
 	else if ( get_line ( line, inf ) )
 	{
 	    char * p = line;
-	    while ( * p != 0 && ! isspace ( p ) ) ++ p;
+	    while ( * p != 0 && ! isspace ( * p ) )
+	        ++ p;
 	    if ( p - line == 32 )
 	    {
 	        strncpy ( buffer, line, 32 );
@@ -1455,16 +1462,24 @@ int md5sum ( char * buffer,
 
 /* Copy file.  0 is returned on success, -1 on error.
  * Error messages are written on stdout.  The mode
- * and mtime of the file are preserved.  The filenames
- * may have any format acceptable to scp.  RETRIES
- * retries are done on failure (it is assumed that
- * one of the file names is probably remote).
+ * and mtime of the file are preserved if this is
+ * easy to do, but not for files stored in S3 (it
+ * would be possible using the MIME type to do so,
+ * but we do not).  The filenames may have any format
+ * acceptable to scp or s3cmd.  If a filename has
+ * S3 form (begins with `s3:'), the other file name
+ * must be local (not have `@' before a `:' or begin
+ * with `s3:').  RETRIES retries are done on failure
+ * (it is assumed that one of the file names is
+ * probably remote).
  */
 int copyfile
 	( const char * source, const char * target )
 {
     int child;
     int retries = RETRIES;
+    int s3_source = is_s3 ( source );
+    int s3_target = is_s3 ( target );
 
     while ( 1 )
     {
@@ -2613,6 +2628,13 @@ int main ( int argc, char ** argv )
 	}
 	exit (1);
     }
+
+    /* We use UTC for all published times.  We need
+     * mktime(3) to use UTC so we reset the TZ
+     * environment variable.
+     */
+    putenv ( "TZ=" );
+    tzset();
 
     tofd = socket ( PF_UNIX, SOCK_STREAM, 0 );
     if ( tofd < 0 ) error ( errno );
