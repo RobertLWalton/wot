@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Tue Jun  7 07:51:48 EDT 2016
+** Date:	Tue Jun  7 11:15:40 EDT 2016
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -377,6 +377,21 @@ int is_s3 ( const char * filename )
 {
     return strncmp ( "s3:", filename, 3 ) == 0;
 }
+const char * is_remote ( const char * filename )
+{
+    int at_found = 0;
+    const char * p = filename;
+    for ( ; * p; ++ p )
+    {
+	if ( * p == '@' )
+	{
+	    if ( at_found ) break;
+	    at_found = 1;
+	}
+	else if ( * p == ':' ) break;
+    }
+    return * p == ':' && at_found ? p : NULL;
+}
 
 /* Given a pointer into the line buffer, scan the next
  * lexeme.  A lexeme is a sequence of non-whitespace
@@ -521,6 +536,8 @@ void read_password ( void )
  */
 char s3_access_key[MAX_KEY_SIZE+1];
 char s3_secret_key[MAX_KEY_SIZE+1];
+char s3_access_arg[MAX_KEY_SIZE+101];
+char s3_secret_arg[MAX_KEY_SIZE+101];
 void read_keys ( FILE * f )
 {
     line_buffer buffer;
@@ -562,6 +579,10 @@ void read_keys ( FILE * f )
 	}
 	strcpy ( location, key );
     }
+    sprintf ( s3_access_arg,
+              "--access_key=%s", s3_access_key );
+    sprintf ( s3_secret_arg,
+              "--secret_key=%s", s3_secret_key );
 }
 
 /* Read index from file stream.  On error print error
@@ -1225,21 +1246,11 @@ int md5sum ( char * buffer,
     char * p;
 
     strcpy ( name, filename );
-    p = name;
-    at_found = 0;
+    p = (char *) is_remote ( name );
     s3_name = is_s3 ( name );
-    for ( ; * p; ++ p )
-    {
-	if ( * p == '@' )
-	{
-	    if ( at_found ) break;
-	    at_found = 1;
-	}
-	else if ( * p == ':' ) break;
-    }
     if ( s3_name )
         remote = 1;
-    else if ( * p == ':' && at_found )
+    else if ( p != NULL )
     {
         remote = 1;
 	* p ++ = 0;
@@ -1305,9 +1316,6 @@ int md5sum ( char * buffer,
 	    {
 		/* Remote s3cmd file. */
 
-		char access[MAX_KEY_SIZE+100];
-		char secret[MAX_KEY_SIZE+100];
-
 		if ( trace )
 		{
 		    fprintf ( stderr,
@@ -1317,12 +1325,9 @@ int md5sum ( char * buffer,
 			      name );
 		    fflush ( stderr );
 		}
-		sprintf ( access, "--access_key=%s",
-		          s3_access_key );
-		sprintf ( secret, "--secret_key=%s",
-		          s3_secret_key );
 		if ( execlp ( "s3cmd", "s3cmd",
-		              access, secret,
+		              s3_access_arg,
+			      s3_secret_arg,
 		              "info", name, NULL ) < 0 )
 		    error ( errno );
 	    }
@@ -1514,17 +1519,89 @@ int copyfile
 	    d = getdtablesize() - 1;
 	    while ( d > 2 ) close ( d -- );
 
-	    if ( trace )
+	    if ( s3_source )
 	    {
-		fprintf ( stderr,
-			  "* executing scp -p %s \\\n"
-			  "                   %s\n",
-			  source, target );
-		fflush ( stderr );
+		if ( s3_target)
+		{
+		    printf ( "ERROR: both source %s\n"
+		             "       and target %s\n"
+			     "       of file copy are"
+			     " S3\n",
+			     source, target );
+		    exit ( 1 );
+		}
+		else if ( is_remote ( target ) )
+		{
+		    printf ( "ERROR: attempt to copy S3"
+		             " source %s\n"
+		             "       to remote target"
+			     " %s\n",
+			     source, target );
+		    exit ( 1 );
+		}
+		 
+		if ( trace )
+		{
+		    fprintf ( stderr,
+			      "* executing s3cmd"
+			      " get %s \\\n"
+			      "                 "
+			      "     %s\n",
+			      source, target );
+		    fflush ( stderr );
+		}
+		if ( execlp ( "s3cmd", "s3cmd",
+		              s3_access_arg,
+			      s3_secret_arg,
+		              "get", source, target,
+			      NULL ) < 0 )
+		    error ( errno );
 	    }
-	    if ( execlp ( "scp", "scp", "-p",
-			  source, target, NULL ) < 0 )
-		error ( errno );
+	    else if ( s3_target )
+	    {
+		if ( is_remote ( target ) )
+		{
+		    printf ( "ERROR: attempt to copy"
+		             " remote source %s\n"
+		             "       to S3 target"
+			     " %s\n",
+			     source, target );
+		    exit ( 1 );
+		}
+		 
+		if ( trace )
+		{
+		    fprintf ( stderr,
+			      "* executing s3cmd"
+			      " put %s \\\n"
+			      "                 "
+			      "     %s\n",
+			      source, target );
+		    fflush ( stderr );
+		}
+		if ( execlp ( "s3cmd", "s3cmd",
+		              s3_access_arg,
+			      s3_secret_arg,
+		              "put", source, target,
+			      NULL ) < 0 )
+		    error ( errno );
+	    }
+	    else
+	    {
+		if ( trace )
+		{
+		    fprintf ( stderr,
+			      "* executing scp -p"
+			      " %s \\\n"
+			      "                   %s\n",
+			      source, target );
+		    fflush ( stderr );
+		}
+		if ( execlp ( "scp", "scp", "-p",
+			      source, target, NULL )
+		     < 0 )
+		    error ( errno );
+	    }
 	}
 
 	if ( cwait ( child ) < 0 )
@@ -1554,20 +1631,11 @@ int delfile ( const char * filename )
     char * p;
     line_buffer name;
     int retries = RETRIES;
+    int s3_file = is_s3 ( filename );
 
     strcpy ( name, filename );
-    p = name;
-    at_found = 0;
-    for ( ; * p; ++ p )
-    {
-        if ( * p == '@' )
-	{
-	    if ( at_found ) break;
-	    at_found = 1;
-	}
-	else if ( * p == ':' ) break;
-    }
-    if ( * p != ':' || ! at_found )
+    p = (char *) is_remote ( name );
+    if ( ! s3_file && ! p )
     {
         /* Not a remote file. */
 	if ( unlink ( filename ) < 0
@@ -1583,8 +1651,6 @@ int delfile ( const char * filename )
 	else
 	    return 0;
     }
-
-    * p ++ = 0;
 
     /* Now name points at account and p at file
      * within account.
@@ -1618,17 +1684,40 @@ int delfile ( const char * filename )
 	    d = getdtablesize() - 1;
 	    while ( d > 2 ) close ( d -- );
 
-	    if ( trace )
+	    if ( s3_file )
 	    {
-		fprintf ( stderr,
-			  "* executing ssh %s \\\n"
-			  "            rm -f %s\n",
-			  name, p );
-		fflush ( stderr );
+		if ( trace )
+		{
+		    fprintf ( stderr,
+			      "* executing s3cmd"
+			      " del; %s \n",
+			      filename );
+		    fflush ( stderr );
+		}
+		if ( execlp ( "s3cmd", "s3cmd",
+		              s3_access_arg,
+			      s3_secret_arg,
+		              "del", filename,
+			      NULL ) < 0 )
+		    error ( errno );
 	    }
-	    if ( execlp ( "ssh", "ssh", name,
-			  "rm", "-f", p, NULL ) < 0 )
-		error ( errno );
+	    else
+	    {
+		* p ++ = 0;
+
+		if ( trace )
+		{
+		    fprintf ( stderr,
+			      "* executing ssh %s \\\n"
+			      "            rm -f %s\n",
+			      name, p );
+		    fflush ( stderr );
+		}
+		if ( execlp ( "ssh", "ssh", name,
+			      "rm", "-f", p, NULL )
+		     < 0 )
+		    error ( errno );
+	    }
 	}
 
 	if ( cwait ( child ) < 0 )
