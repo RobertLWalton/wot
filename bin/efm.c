@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Wed Jun  8 03:43:35 EDT 2016
+** Date:	Wed Jun  8 06:51:09 EDT 2016
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -1044,6 +1044,9 @@ void newkey ( char * buffer )
 /* Encrypt/decrypt file.  If input file is NULL, return
  * file descriptor to write input into.  If output file
  * is NULL, return file descriptor to read output from.
+ * Either the input file or the output file or both must
+ * be non-NULL.
+ *
  * If a descriptor is returned, the child process on
  * the other end of the descriptor pipe has its pid
  * returned in the child argument.  This can be passed
@@ -1546,8 +1549,8 @@ int copyfile
 
 	    /* Set fd's as follows:
 	     * 	0 -> /dev/null
-	     *	1 -> parent's 1
-	     *	2 -> parent's 1
+	     *	1 -> parent's fd 1
+	     *	2 -> parent's fd 1
 	     */
 	    newfd = open ( "/dev/null", O_RDONLY );
 	    if ( newfd < 0 ) error ( errno );
@@ -1713,8 +1716,8 @@ int delfile ( const char * filename )
 
 	    /* Set fd's as follows:
 	     * 	0 -> /dev/null
-	     *	1 -> parent's 1
-	     *	2 -> parent's 1
+	     *	1 -> parent's fd 1
+	     *	2 -> parent's fd 1
 	     */
 	    newfd = open ( "/dev/null", O_RDONLY );
 	    if ( newfd < 0 ) error ( errno );
@@ -1931,9 +1934,9 @@ char * get_argument ( line_buffer buffer, FILE * in )
 
 /* Execute one command.  Arguments are gotten from the
  * input stream via get_argument, and results are writ-
- * ten to stdout.  Return 1 to if kill command proces-
- * sed (do nothing else for kill), 0 if command proces-
- * sed without error, and -1 if command processed with
+ * ten to stdout.  Return 1 if kill command processed
+ * (do nothing else for kill), 0 if command processed
+ * without error, and -1 if command processed with
  * error.
  */
 int execute_command ( FILE * in )
