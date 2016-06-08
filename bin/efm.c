@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Tue Jun  7 14:15:26 EDT 2016
+** Date:	Wed Jun  8 03:43:35 EDT 2016
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -1231,7 +1231,7 @@ int crypt ( int decrypt,
  */
 int is_s3 ( const char * filename )
 {
-    if ( strncmp ( "s3:", filename, 5 ) == 0 )
+    if ( strncmp ( "s3:", filename, 3 ) == 0 )
     {
         if ( s3_access_key[0] == 0
 	     ||
@@ -1595,6 +1595,7 @@ int copyfile
 		if ( execlp ( "s3cmd", "s3cmd",
 		              s3_access_arg,
 			      s3_secret_arg,
+			      trace ? "-v" : "-q",
 		              "get", source, target,
 			      NULL ) < 0 )
 		    error ( errno );
@@ -1624,6 +1625,7 @@ int copyfile
 		if ( execlp ( "s3cmd", "s3cmd",
 		              s3_access_arg,
 			      s3_secret_arg,
+			      trace ? "-v" : "-q",
 		              "put", source, target,
 			      NULL ) < 0 )
 		    error ( errno );
@@ -1739,6 +1741,7 @@ int delfile ( const char * filename )
 		if ( execlp ( "s3cmd", "s3cmd",
 		              s3_access_arg,
 			      s3_secret_arg,
+			      trace ? "-v" : "-q",
 		              "del", filename,
 			      NULL ) < 0 )
 		    error ( errno );

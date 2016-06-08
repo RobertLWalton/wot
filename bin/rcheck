@@ -1,5 +1,0 @@
-#! /bin/csh -f
-echo rsync -avzHcn $argv[1]:q $argv[2]:q
-rsync -avzHcn $argv[1]:q $argv[2]:q
-echo rsync -avzHcn $argv[2]:q $argv[1]:q
-rsync -avzHcn $argv[2]:q $argv[1]:q
