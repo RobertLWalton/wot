@@ -2,7 +2,7 @@
 #
 # File:		gitstat
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sat Sep  5 16:42:04 EDT 2015
+# Date:		Fri Jun 10 12:48:41 EDT 2016
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -20,9 +20,9 @@ esac
 
 if [ -n "`git branch -r | grep origin`" ]
 then
-    if [ "`git diff --name-only HEAD origin/HEAD`" ]
+    if [ "`git diff --name-only HEAD origin/master`" ]
     then
-	echo "HEAD and origin/HEAD differ"
+	echo "HEAD and origin/master differ"
     fi
 fi
 git status --porcelain -uno

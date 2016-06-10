@@ -2,7 +2,7 @@
 #
 # File:		gitfilter
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Wed Nov 25 03:30:48 EST 2015
+# Date:		Fri Jun 10 12:50:55 EDT 2016
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -28,9 +28,9 @@ esac
 askcontinue=0
 if [ -n "`git branch -r | grep origin`" ]
 then
-    if [ "`git diff --name-only HEAD origin/HEAD`" ]
+    if [ "`git diff --name-only HEAD origin/master`" ]
     then
-	echo "HEAD and origin/HEAD differ"
+	echo "HEAD and origin/master differ"
 	askcontinue=1
     fi
 fi
