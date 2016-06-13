@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Wed Jun  8 06:51:09 EDT 2016
+** Date:	Sun Jun 12 21:31:14 EDT 2016
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -518,6 +518,7 @@ void read_password ( void )
     tios.c_lflag |= ECHO;
     if ( tcsetattr ( 0, TCSANOW, & tios ) < 0 )
 	error ( errno );
+    printf ( "\n" );
 
     len = strlen ( password );
     if ( password[len-1] != '\n' )
@@ -535,11 +536,14 @@ char s3_access_key[MAX_KEY_SIZE+1];
 char s3_secret_key[MAX_KEY_SIZE+1];
 char s3_access_arg[MAX_KEY_SIZE+101];
 char s3_secret_arg[MAX_KEY_SIZE+101];
+int keys_read = 0;
 void read_keys ( FILE * f )
 {
     line_buffer buffer;
     s3_access_key[0] = 0;
     s3_secret_key[0] = 0;
+    keys_read = 1;
+
     while ( get_line ( buffer, f ) )
     {
         char * key;
@@ -582,14 +586,50 @@ void read_keys ( FILE * f )
               "--secret_key=%s", s3_secret_key );
 }
 
+/* Return 1 if S3 keys both read, otherwise print
+ * error message and return 0.
+ */
+int check_keys ( void )
+{
+    if ( ! keys_read )
+    {
+    	printf ( "ERROR: EFM-KEYS.gpg not read\n" );
+	return 0;
+    }
+
+    int ok_count = ( s3_access_key[0] != 0 )
+    		 + ( s3_secret_key[0] != 0 );
+    switch ( ok_count )
+    {
+    case 0:
+    default:
+    	printf ( "ERROR: no s3 keys read from"
+	         " EFM-KEYS.gpg\n" );
+	return 0;
+    case 1:
+    	printf ( "ERROR: %s not read from"
+	         " EFM-KEYS.gpg\n",
+		 s3_access_key != 0 ?
+		 "s3 secret key" :
+		 "s3 access key" );
+	return 0;
+    case 2:
+	return 1;
+    }
+}
+
 /* Read index from file stream.  On error print error
  * message to stdout and exit ( 1 );
  */
+int index_read = 0;
 void read_index ( FILE * f )
 {
     line_buffer buffer;
     int begin = 1;
     char * filename;
+
+    index_read = 1;
+
     while ( get_line ( buffer, f ) )
     {
 	struct tm td;
@@ -866,6 +906,19 @@ void read_index ( FILE * f )
 	    e->previous->next = e->next->previous = e;
 	}
 	index_modified = 1;
+    }
+}
+
+/* Return 1 if EFM-INDEX.gpg read, otherwise print
+ * error message and return 0.
+ */
+int check_index ( void )
+{
+    if ( index_read ) return 1;
+    else
+    {
+    	printf ( "ERROR: EFM-INDEX.gpg not read\n" );
+	return 0;
     }
 }
 
@@ -1956,6 +2009,103 @@ int execute_command ( FILE * in )
 	printf ( "efm killed\n" );
         result = 1;
     }
+    else if ( strcmp ( arg, "trace" ) == 0 )
+    {
+	arg = get_argument ( buffer, in );
+	if ( arg == NULL )
+	{
+	    printf ( "* efm trace %s\n",
+	             trace ? "on" : "off" );
+	}
+	else if ( strcmp ( arg, "on" ) == 0 )
+	{
+	    trace = 1;
+	    printf ( "* efm trace on\n" );
+	}
+	else if ( strcmp ( arg, "off" ) == 0 )
+	{
+	    if ( trace ) printf ( "* efm trace off\n" );
+	    trace = 0;
+	}
+	else
+	{
+	    printf ( "ERROR: bad argument to trace:"
+	             " %s\n", arg );
+	    result = -1;
+	}
+    }
+    else if ( strcmp ( arg, "s3cmd" ) == 0 )
+    {
+        if ( ! check_keys() )
+	    result = -1;
+	else
+	{
+#	    define ARG_LIST_SIZE 1000
+	    char * arg_list[ARG_LIST_SIZE+4];
+	    int child;
+	    char ** p = arg_list;
+	    * p ++ = "s3cmd";
+	    * p ++ = s3_access_arg;
+	    * p ++ = s3_secret_arg;
+	    while ( arg = get_argument
+			      ( buffer, in ) )
+	    {
+		if (   p - arg_list
+		     >= ARG_LIST_SIZE + 3 )
+		{
+		    printf ( "ERROR: too many"
+			     " arguments (more than"
+			     " %d)\n",
+			     ARG_LIST_SIZE );
+		    result = -1;
+		    break;
+		}
+		* p ++ = strdup ( arg );
+	    }
+	    * p = NULL;
+
+	    fflush ( stdout );
+	    fflush ( stderr );
+
+	    if ( result == -1 )
+	        child = -1;
+	    else
+	    {
+		child = fork();
+		if ( child < 0 ) error ( errno );
+	    }
+
+	    if ( child == 0 )
+	    {
+		int newfd, d;
+
+		/* Set fd's as follows:
+		 * 	0 -> /dev/null
+		 */
+		newfd = open ( "/dev/null", O_RDONLY );
+		if ( newfd < 0 ) error ( errno );
+		close ( 0 );
+		if ( dup2 ( newfd, 0 ) < 0 )
+		    error ( errno );
+		close ( newfd );
+		d = getdtablesize() - 1;
+		while ( d > 2 ) close ( d -- );
+
+		if ( result == 0
+		     &&
+		     execvp ( "s3cmd", arg_list ) < 0 )
+		    error ( errno );
+	    }
+	    p = arg_list + 3;
+	    while ( * p ) free ( * p ++ );
+	    if ( child >= 0 && cwait ( child ) < 0 )
+	        result = -1;
+	}
+    }
+    /* Rest of commands require EFM-INDEX.gpg be read.
+     */
+    else if ( ! check_index() )
+    	result = -1;
     else if ( strcmp ( arg, "listfiles" ) == 0
               ||
 	      strcmp ( arg, "listcurfiles" ) == 0
@@ -2667,31 +2817,6 @@ int execute_command ( FILE * in )
 	    }
 	}
     }
-    else if ( strcmp ( arg, "trace" ) == 0 )
-    {
-	arg = get_argument ( buffer, in );
-	if ( arg == NULL )
-	{
-	    printf ( "* efm trace %s\n",
-	             trace ? "on" : "off" );
-	}
-	else if ( strcmp ( arg, "on" ) == 0 )
-	{
-	    trace = 1;
-	    printf ( "* efm trace on\n" );
-	}
-	else if ( strcmp ( arg, "off" ) == 0 )
-	{
-	    if ( trace ) printf ( "* efm trace off\n" );
-	    trace = 0;
-	}
-	else
-	{
-	    printf ( "ERROR: bad argument to trace:"
-	             " %s\n", arg );
-	    result = -1;
-	}
-    }
     else
     {
         printf ( "ERROR: bad command (ignored):"
@@ -2834,6 +2959,7 @@ int main ( int argc, char ** argv )
 	    }
 	}
 
+	if ( access ( "EFM-INDEX.gpg", R_OK ) >= 0 )
 	{
 	    int indexchild;
 	    int indexfd;
