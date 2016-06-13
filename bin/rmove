@@ -1,0 +1,91 @@
+#!/bin/sh
+#
+# File:		rmove
+# Author:	walton@acm.org
+# Date:		Mon Jun 13 15:23:19 EDT 2016
+
+case "$1" in
+-doc* | "" )
+	echo "
+rmove file ... directory
+
+    Moves the files to the directory, like mv(1), except
+    that the file names may be in the format of scp(1).
+    The files are copied and then deleted.  The file
+    names may have scp(1) widecards, e.g., as in
+    A@H:D/F'*'.  The directory must be local.
+
+    scp is used to the the copying, and ssh(1) is used
+    to delete the files after copying, and also to do
+    an MD5 sum check after copying and before deleting.
+    
+    Actually the files are copied to a local temporary
+    directory before deleting them, so there are no
+    problems in the otherwise unfortunate case
+    \`rmove D/F F'.  However, the files are always
+    copied, even if the effect is to do nothing."
+    ;;
+esac
+
+rmovetmp=/tmp/$$.rmove
+trap "rm -rf $rmovetmp" EXIT
+echo mkdir $rmovetmp
+mkdir $rmovetmp
+
+# find_md5sum F returns md5sum of F in MD5SUM even if F
+# is remote.  If error, prints error message and returns
+# status 1; if no error returns status 0.
+#
+MD5SUM=
+function find_md5sum {
+    local out A F
+    if [[ "$1" =~ ^([^:]*):(.*)$ ]]
+    then
+        A="$BASH_REMATCH[1]"
+        F="$BASH_REMATCH[2]"
+	echo ssh "$A" md5sum "$F"
+	out=`ssh "$A" md5sum "$F"`
+    else
+	echo md5sum "$1"
+	out=`md5sum "$1"`
+    fi
+
+    if [[ "$out" =~ ^([0-9a-fA-F]*)\ \ *([^ ]*)$ ]]
+    then
+	MD5SUM="$BASH_REMATCH[1]"
+	if [[ "$md5sum" =~ \
+	      ^................................$ ]]
+	then
+	    return 0
+	fi
+    fi
+    echo ERROR: bad output from md5sum:
+    echo "       $out"
+    return 1
+}
+
+last="$1"
+declare -a files
+shift
+while [ "$1" ]
+do
+    if [[ "$last" =~ ^([^:]*):(.*)$ ]]
+    then
+        A="$BASH_REMATCH[1]"
+        F="$BASH_REMATCH[2]"
+	for f in ` ssh "$A" ls "$F" `
+	do
+	    files+="$A:$f"
+	done
+    else
+    	files+="$last"
+    fi
+    last="$1"
+    shift
+done
+
+directory="$last"
+
+echo "FILE[1] ${files[1]}"
+echo "FILES ${files[@]}"
+echo "DIRECTORY $directory"
