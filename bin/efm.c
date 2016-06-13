@@ -24,20 +24,20 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
+
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <utime.h>
 #include <time.h>
-#include <string.h>
-#include <assert.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/wait.h>
 #include <termios.h>
-#include <unistd.h>
 #undef crypt
     /* We redefine crypt */
 
@@ -74,6 +74,8 @@ const char * documentation [] = {
 "efm add file ...",
 "efm sub file ...",
 "efm del source file ...",
+"",
+"efm s3cmd ...",
 "\f",
 "    A file in the current directory may have an en-",
 "    crypted version in the target/source directory.",
@@ -284,6 +286,11 @@ const char * documentation [] = {
 "\f",
 "    Similarly the extension of the index indicates",
 "    the program used to encrypt the index.",
+"",
+"    The \"s3cmd\" command simply executes a s3cmd(1)",
+"    command with the given arguments and with the",
+"    --access_key=... and --secret_key=... arguments",
+"    added with values from EFM-KEYS.gpg.",
 "",
 "    Currently only gpg is supported as an encryp-",
 "    ing program.",
@@ -1053,14 +1060,45 @@ struct entry * find_md5sum
     return NULL;
 }
 
+int sigcount = 0;
+int sigchild = -1;
+void handler ( int signum )
+{
+    if ( ++ sigcount > 1 || sigchild < 0 ) exit ( 1 );
+    printf ( "WAITING FOR CHILD: next interrupt"
+             " terminates parent" );
+    fflush ( stdout );
+}
+
+void setcatch ( void )
+{
+    struct sigaction act;
+    act.sa_flags = 0;
+    sigfillset ( & act.sa_mask );
+    act.sa_handler = handler;
+    if ( sigaction ( SIGHUP, & act, NULL ) < 0 )
+        error ( errno );
+    if ( sigaction ( SIGINT, & act, NULL ) < 0 )
+        error ( errno );
+    if ( sigaction ( SIGQUIT, & act, NULL ) < 0 )
+        error ( errno );
+}
+
 /* Wait for a child to terminate.  Return -1 if child
  * suffered error and 0 otherwise.
  */
 int cwait ( pid_t child )
 {
     int status;
-    if ( waitpid ( child, & status, 0 ) < 0 )
-        error ( errno );
+
+    sigcount = 0;
+    sigchild = child;
+    while ( waitpid ( child, & status, 0 ) < 0 )
+    {
+        if ( errno != EINTR ) error ( errno );
+    }
+    sigchild = -1;
+
     if ( WIFEXITED ( status )
          &&
 	 WEXITSTATUS ( status ) == 0 )
@@ -2894,6 +2932,8 @@ int main ( int argc, char ** argv )
 	}
 	exit (1);
     }
+
+    setcatch();
 
     /* We use UTC for all published times.  We need
      * mktime(3) to use UTC so we reset the TZ
