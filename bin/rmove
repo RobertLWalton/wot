@@ -2,7 +2,7 @@
 #
 # File:		rmove
 # Author:	walton@acm.org
-# Date:		Tue Jun 14 04:31:28 EDT 2016
+# Date:		Tue Jun 14 05:41:31 EDT 2016
 
 case "$1" in
 -doc* | "" )
@@ -97,11 +97,12 @@ done
 directory="$last"
 if [[ "$directory" =~ : ]]
 then
-    echo "ERROR: directory is not local: $directory"
+    echo "ERROR: directory name is not local:" \
+         "$directory"
     exit 1
 elif [ ! -d "$directory" ]
 then
-    echo "ERROR: directory does not exist: $directory"
+    echo "ERROR: not a directory: $directory"
     exit 1
 fi
 
@@ -116,6 +117,10 @@ do
 	then
 	    G=${BASH_REMATCH[2]}
 	fi
+
+	# The following may never be used
+	# as ls changes A: to A:.
+	#
 	if [ -z "$G" ]
 	then
 	    echo "ERROR: bad name $f"
@@ -156,6 +161,8 @@ do
 	if [ $? -ne 0 ]
 	then
 	    echo "$md5des"
+	    echo "REMOVING $directory/$G"
+	    rm -f "$directory/$G"
 	    echo "IGNORING $f"
 	    not_moved+=("$f")
 	    continue
@@ -166,7 +173,7 @@ do
 	                "match that of source:"
 	    echo "       $md5src $f"
 	    echo "       $md5des $directory/$G"
-	    echo "       REMOVING $directory/$G"
+	    echo "REMOVING $directory/$G"
 	    rm -f "$directory/$G"
 	    echo "IGNORING $f"
 	    not_moved+=("$f")
