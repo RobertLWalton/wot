@@ -2,7 +2,7 @@
 #
 # File:		rmove
 # Author:	walton@acm.org
-# Date:		Mon Jun 13 21:16:54 EDT 2016
+# Date:		Tue Jun 14 04:31:28 EDT 2016
 
 case "$1" in
 -doc* | "" )
@@ -10,35 +10,39 @@ case "$1" in
 rmove file ... directory
 
     Moves the files to the directory, like mv(1), except
-    that the file names may be in the format of scp(1).
-    The files are copied and then deleted.  The file
-    names may have scp(1) widecards, e.g., as in
+    that the file names must be remote in the format of
+    scp(1).  The files are copied and then deleted.  The
+    file names may have scp(1) widecards, e.g., as in
     A@H:D/F'*'.  The directory must be local.
 
-    scp is used to the the copying, and ssh(1) is used
+    scp is used to do the copying, and ssh(1) is used
     to delete the files after copying, and also to do
-    an MD5 sum check after copying and before deleting.
-    
-    Actually the files are copied to a local temporary
-    directory before deleting them, so there are no
-    problems in the otherwise unfortunate case
-    \`rmove D/F F'.  However, the files are always
-    copied, even if the effect is to do nothing."
+    an MD5 sum check after copying and before deleting."
+    exit 0
     ;;
 esac
 
-# find_md5sum F returns md5sum of F in MD5SUM even if F
-# is remote.  If error, prints error message and returns
-# status 1; if no error returns status 0.
+declare -a files moved not_moved
+
+# find_md5sum F returns md5sum of F even if F is remote.
+# If error, returns error message and status 1;  if no
+# error returns MD5 sum and status 0.
+#
 function find_md5sum {
-    local out A F md5sum
+    local A F command out md5sum
     if [[ "$1" =~ ^([^:]*):(.*)$ ]]
     then
         A="${BASH_REMATCH[1]}"
         F="${BASH_REMATCH[2]}"
-	out=`ssh "$A" md5sum "$F"`
+	command="ssh '$A' md5sum '$F'"
     else
-	out=`md5sum "$1"`
+	command="md5sum '$1'"
+    fi
+    out=`eval $command`
+    if [ $? -ne 0 ]
+    then
+        echo "ERROR: executing $command"
+	return 1
     fi
 
     if [[ "$out" =~ ^([0-9a-fA-F]*)\ \ *([^ ]*)$ ]]
@@ -51,13 +55,12 @@ function find_md5sum {
 	    return 0
 	fi
     fi
-    echo 1>&2 ERROR: bad output from md5sum:
-    echo 1>&2 "       $out"
+    echo "ERROR: bad output from $command"
+    echo "       $out"
     return 1
 }
 
 last="$1"
-declare -a files moved not_moved
 shift
 while [ "$1" ]
 do
@@ -66,13 +69,21 @@ do
         A="${BASH_REMATCH[1]}"
         F="${BASH_REMATCH[2]}"
 	found=0
-	for f in ` ssh "$A" ls "$F" `
+	for f in ` ssh "$A" ls -d "$F" `
 	do
-	    files+=("$A:$f")
 	    found=1
+	    if ssh "$A" test \! -f "$F"
+	    then
+		echo "ERROR: not a file: $A:$f"
+		echo "IGNORING $A:$f"
+		not_moved+=("$A:$f")
+	    else
+		files+=("$A:$f")
+	    fi
 	done
 	if [ $found -eq 0 ]
 	then
+	    echo "ERROR: executing ssh $A ls -d $F"
 	    echo "IGNORING $last"
 	    not_moved+=("$last")
 	fi
@@ -115,32 +126,59 @@ do
 	md5src=`find_md5sum "$f"`
 	if [ $? -ne 0 ]
 	then
+	    echo "$md5src"
 	    echo "IGNORING $f"
 	    not_moved+=("$f")
 	    continue
 	fi
 	if [ -e "$directory/$G" ]
 	then
-	    echo rm -f "$directory/$G"
 	    rm -f "$directory/$G"
+	    if [ $? -ne 0 ]
+	    then
+		echo "ERROR: executing" \
+		     "rm -f $directory/$G"
+		echo "IGNORING $f"
+		not_moved+=("$f")
+		continue
+	    fi
 	fi
-	echo scp -p "$f" "$directory"
 	scp -p "$f" "$directory"
+	if [ $? -ne 0 ]
+	then
+	    echo "ERROR: executing" \
+		 "scp -f $f $directory"
+	    echo "IGNORING $f"
+	    not_moved+=("$f")
+	    continue
+	fi
 	md5des=`find_md5sum "$directory/$G"`
+	if [ $? -ne 0 ]
+	then
+	    echo "$md5des"
+	    echo "IGNORING $f"
+	    not_moved+=("$f")
+	    continue
+	fi
 	if [ "$md5src" != "$md5des" ]
 	then
 	    echo "ERROR: MD5 sum of copy does not" \
 	                "match that of source:"
 	    echo "       $md5src $f"
 	    echo "       $md5des $directory/$G"
-	    echo rm -f "$directory/$G"
+	    echo "       REMOVING $directory/$G"
 	    rm -f "$directory/$G"
 	    echo "IGNORING $f"
 	    not_moved+=("$f")
 	    continue
 	else
-	    echo ssh "$A" rm -f "$F"
 	    ssh "$A" rm -f "$F"
+	    if [ $? -ne 0 ]
+	    then
+		echo "ERROR: executing" \
+		     "ssh $A rm -f $F"
+		echo "BUT FILE WAS COPIED!"
+	    fi
 	    moved+=("$f")
 	fi
     else
