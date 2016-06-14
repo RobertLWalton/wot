@@ -2,7 +2,7 @@
 #
 # File:		rmove
 # Author:	walton@acm.org
-# Date:		Mon Jun 13 15:23:19 EDT 2016
+# Date:		Mon Jun 13 21:16:54 EDT 2016
 
 case "$1" in
 -doc* | "" )
@@ -27,65 +27,144 @@ rmove file ... directory
     ;;
 esac
 
-rmovetmp=/tmp/$$.rmove
-trap "rm -rf $rmovetmp" EXIT
-echo mkdir $rmovetmp
-mkdir $rmovetmp
-
 # find_md5sum F returns md5sum of F in MD5SUM even if F
 # is remote.  If error, prints error message and returns
 # status 1; if no error returns status 0.
-#
-MD5SUM=
 function find_md5sum {
-    local out A F
+    local out A F md5sum
     if [[ "$1" =~ ^([^:]*):(.*)$ ]]
     then
-        A="$BASH_REMATCH[1]"
-        F="$BASH_REMATCH[2]"
-	echo ssh "$A" md5sum "$F"
+        A="${BASH_REMATCH[1]}"
+        F="${BASH_REMATCH[2]}"
 	out=`ssh "$A" md5sum "$F"`
     else
-	echo md5sum "$1"
 	out=`md5sum "$1"`
     fi
 
     if [[ "$out" =~ ^([0-9a-fA-F]*)\ \ *([^ ]*)$ ]]
     then
-	MD5SUM="$BASH_REMATCH[1]"
+	md5sum="${BASH_REMATCH[1]}"
 	if [[ "$md5sum" =~ \
 	      ^................................$ ]]
 	then
+	    echo $md5sum
 	    return 0
 	fi
     fi
-    echo ERROR: bad output from md5sum:
-    echo "       $out"
+    echo 1>&2 ERROR: bad output from md5sum:
+    echo 1>&2 "       $out"
     return 1
 }
 
 last="$1"
-declare -a files
+declare -a files moved not_moved
 shift
 while [ "$1" ]
 do
     if [[ "$last" =~ ^([^:]*):(.*)$ ]]
     then
-        A="$BASH_REMATCH[1]"
-        F="$BASH_REMATCH[2]"
+        A="${BASH_REMATCH[1]}"
+        F="${BASH_REMATCH[2]}"
+	found=0
 	for f in ` ssh "$A" ls "$F" `
 	do
-	    files+="$A:$f"
+	    files+=("$A:$f")
+	    found=1
 	done
+	if [ $found -eq 0 ]
+	then
+	    echo "IGNORING $last"
+	    not_moved+=("$last")
+	fi
     else
-    	files+="$last"
+    	files+=("$last")
     fi
     last="$1"
     shift
 done
 
 directory="$last"
+if [[ "$directory" =~ : ]]
+then
+    echo "ERROR: directory is not local: $directory"
+    exit 1
+elif [ ! -d "$directory" ]
+then
+    echo "ERROR: directory does not exist: $directory"
+    exit 1
+fi
 
-echo "FILE[1] ${files[1]}"
-echo "FILES ${files[@]}"
-echo "DIRECTORY $directory"
+for f in ${files[@]}
+do
+    if [[ "$f" =~ ^([^:]*):(.*)$ ]]
+    then
+        A="${BASH_REMATCH[1]}"
+        F="${BASH_REMATCH[2]}"
+	G="$F"
+	if [[ "$F" =~ ^(.*)/([^/]*)$ ]]
+	then
+	    G=${BASH_REMATCH[2]}
+	fi
+	if [ -z "$G" ]
+	then
+	    echo "ERROR: bad name $f"
+	    echo "IGNORING $f"
+	    not_moved+=("$f")
+	    continue
+	fi
+	md5src=`find_md5sum "$f"`
+	if [ $? -ne 0 ]
+	then
+	    echo "IGNORING $f"
+	    not_moved+=("$f")
+	    continue
+	fi
+	if [ -e "$directory/$G" ]
+	then
+	    echo rm -f "$directory/$G"
+	    rm -f "$directory/$G"
+	fi
+	echo scp -p "$f" "$directory"
+	scp -p "$f" "$directory"
+	md5des=`find_md5sum "$directory/$G"`
+	if [ "$md5src" != "$md5des" ]
+	then
+	    echo "ERROR: MD5 sum of copy does not" \
+	                "match that of source:"
+	    echo "       $md5src $f"
+	    echo "       $md5des $directory/$G"
+	    echo rm -f "$directory/$G"
+	    rm -f "$directory/$G"
+	    echo "IGNORING $f"
+	    not_moved+=("$f")
+	    continue
+	else
+	    echo ssh "$A" rm -f "$F"
+	    ssh "$A" rm -f "$F"
+	    moved+=("$f")
+	fi
+    else
+        echo "ERROR: file name is local: $f"
+	echo "IGNORING $f"
+	not_moved+=("$f")
+	continue
+    fi
+done
+
+echo ""
+if [ ${#moved[@]} -ne 0 ]
+then
+    echo "MOVED:"
+    for f in ${moved[@]}
+    do
+    	echo "  $f"
+    done
+fi
+if [ ${#not_moved[@]} -ne 0 ]
+then
+    echo "NOT MOVED DUE TO ERRORS:"
+    for f in ${not_moved[@]}
+    do
+    	echo "  $f"
+    done
+fi
