@@ -1,13 +1,13 @@
 #!/bin/sh
 #
-# File:		rmove
+# File:		remmove
 # Author:	walton@acm.org
-# Date:		Tue Jun 14 05:41:31 EDT 2016
+# Date:		Tue Jun 14 07:00:37 EDT 2016
 
 case "$1" in
 -doc* | "" )
 	echo "
-rmove file ... directory
+remmove file ... directory
 
     Moves the files to the directory, like mv(1), except
     that the file names must be remote in the format of
@@ -184,9 +184,11 @@ do
 	    then
 		echo "ERROR: executing" \
 		     "ssh $A rm -f $F"
-		echo "BUT FILE WAS COPIED!"
+		echo "BUT FILE WAS COPIED"
+		not_moved+=("$f")
+	    else
+		moved+=("$f")
 	    fi
-	    moved+=("$f")
 	fi
     else
         echo "ERROR: file name is local: $f"
@@ -207,7 +209,8 @@ then
 fi
 if [ ${#not_moved[@]} -ne 0 ]
 then
-    echo "NOT MOVED DUE TO ERRORS:"
+    echo "NOT MOVED; SOURCE FILE NOT DELETED;" \
+         "SEE ERRORS:"
     for f in ${not_moved[@]}
     do
     	echo "  $f"
