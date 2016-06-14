@@ -2,7 +2,7 @@
 #
 # File:		remmove
 # Author:	walton@acm.org
-# Date:		Tue Jun 14 07:00:37 EDT 2016
+# Date:		Tue Jun 14 07:14:23 EDT 2016
 
 case "$1" in
 -doc* | "" )
@@ -72,7 +72,7 @@ do
 	for f in ` ssh "$A" ls -d "$F" `
 	do
 	    found=1
-	    if ssh "$A" test \! -f "$F"
+	    if ssh "$A" test \! -f "$f"
 	    then
 		echo "ERROR: not a file: $A:$f"
 		echo "IGNORING $A:$f"
