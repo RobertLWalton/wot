@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Sun Jun 12 21:31:14 EDT 2016
+** Date:	Wed Jun 15 06:54:04 EDT 2016
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -1113,14 +1113,28 @@ int cwait ( pid_t child )
  */
 void newkey ( char * buffer )
 {
-    int fd, size;
+    int fd, size, result, delays;
     unsigned char b[16];
 
     fd = open ( "/dev/random", O_RDONLY );
     if ( fd < 0 ) error ( errno );
-    size = read ( fd, b, 16 );
-    if ( size < 0 ) error ( errno );
-    assert ( size == 16 );
+    unsigned char * p = b;
+    size = 0;
+    delays = 0;
+    while ( size < 16 )
+    {
+	result = read ( fd, b + size, 16 - size );
+	if ( result < 0 ) error ( errno );
+	if ( result == 0 )
+	{
+	    if ( delays == 2 )
+	        printf ( "WAITING FOR RANDOM NUMBER"
+		         " GENERATOR\n" );
+	    sleep ( 1 );
+	    ++ delays;
+	}
+	else size += result;
+    }
     close ( fd );
 
     sprintf ( buffer,
