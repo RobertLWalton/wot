@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	efm.c
-** Date:	Wed Jun 15 06:54:04 EDT 2016
+** Date:	Tue Jun 21 16:00:34 EDT 2016
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -536,93 +536,49 @@ void read_password ( void )
     password[len-1] = 0;
 }
 
-/* Read keys from file stream.  On error print error
- * message to stdout and exit ( 1 );
+/* Save of s3 configuration file.  Zero length if none
+ * (yet).
  */
-char s3_access_key[MAX_KEY_SIZE+1];
-char s3_secret_key[MAX_KEY_SIZE+1];
-char s3_access_arg[MAX_KEY_SIZE+101];
-char s3_secret_arg[MAX_KEY_SIZE+101];
-int keys_read = 0;
-void read_keys ( FILE * f )
+char s3_config[100000];
+
+/* Create EFM-S3CONFIG.pipe but no NOT write into it.
+ * Execute in PARENT process if child is going to
+ * execute s3cmd.
+ *
+ * Does return -1 if EFM-S3CONFIG.gpg does not exist,
+ * return 0 if no errors, and exit on system error.
+ */
+int setup_s3_pipe ( void )
 {
-    line_buffer buffer;
-    s3_access_key[0] = 0;
-    s3_secret_key[0] = 0;
-    keys_read = 1;
-
-    while ( get_line ( buffer, f ) )
+    if ( trace )
     {
-        char * key;
-	char * location;
-	if ( buffer[0] == '#' ) continue;
-	else if ( strncmp ( "s3_access_key:",
-	                    buffer, 14 )
-	          == 0 )
-	{
-	    key = buffer + 14;
-	    location = s3_access_key;
-	}
-	else if ( strncmp ( "s3_secret_key:",
-	                    buffer, 14 )
-	          == 0 )
-	{
-	    key = buffer + 14;
-	    location = s3_secret_key;
-	}
-	else
-	{
-	    buffer[5] = 0;
-	    printf ( "ERROR: unrecognized EFM-KEYS-gpg"
-	             " line beginning `%s'\n", buffer );
-	    exit ( 1 );
-	}
-
-	if ( strlen ( key ) > MAX_KEY_SIZE )
-	{
-	    key[-1] = 0;
-	    printf ( "ERROR: %s too long in EFM-KEYS\n",
-	             buffer );
-	    exit ( 1 );
-	}
-	strcpy ( location, key );
+	fprintf ( stderr,
+		  "Making and loading"
+		  " EFM-S3CONFIG.pipe\n" );
+	fflush ( stderr );
     }
-    sprintf ( s3_access_arg,
-              "--access_key=%s", s3_access_key );
-    sprintf ( s3_secret_arg,
-              "--secret_key=%s", s3_secret_key );
+    if ( s3_config[0] == 0 )
+    {
+	printf ( "ERROR: EFM-S3CONFIG.gpg missing\n" );
+	return -1;
+    }
+    unlink ( "EFM-S3CONFIG.pipe" );
+    if ( mkfifo ( "EFM-S3CONFIG.pipe", 0600 ) < 0 )
+        error ( errno );
+    return 0;
 }
 
-/* Return 1 if S3 keys both read, otherwise print
- * error message and return 0.
+/* Write EFM-S3CONFIG into EFM-S3CONFIG.pipe.  Exits
+ * if error.  Execute in parent AFTER STARTING child.
  */
-int check_keys ( void )
+void write_s3_pipe ( void )
 {
-    if ( ! keys_read )
-    {
-    	printf ( "ERROR: EFM-KEYS.gpg not read\n" );
-	return 0;
-    }
-
-    int ok_count = ( s3_access_key[0] != 0 )
-    		 + ( s3_secret_key[0] != 0 );
-    switch ( ok_count )
-    {
-    case 0:
-    default:
-    	printf ( "ERROR: no s3 keys read from"
-	         " EFM-KEYS.gpg\n" );
-	return 0;
-    case 1:
-    	printf ( "ERROR: %s not read from"
-	         " EFM-KEYS.gpg\n",
-		 s3_access_key != 0 ?
-		 "s3 secret key" :
-		 "s3 access key" );
-	return 0;
-    case 2:
-	return 1;
-    }
+    int fd = open ( "EFM-S3CONFIG.pipe", O_WRONLY );
+    if ( fd < 0 ) error ( errno );
+    if ( write ( fd, s3_config, strlen ( s3_config ) )
+         < 0 )
+        error ( errno );
+    close ( fd );
 }
 
 /* Read index from file stream.  On error print error
@@ -1333,21 +1289,19 @@ int crypt ( int decrypt,
 }
 
 /* Return true iff filename begins with `s3:'.  Also,
- * if true is returned, checks that s3_access_key
- * and s3_secret_key are defined and if not, prints
- * an error message and exits program.
+ * if true is returned, checks that s3_config read,
+ * and if not, prints an error message and exits
+ * program.
  */
 int is_s3 ( const char * filename )
 {
     if ( strncmp ( "s3:", filename, 3 ) == 0 )
     {
-        if ( s3_access_key[0] == 0
-	     ||
-	     s3_secret_key[0] == 0 )
+        if ( s3_config[0] == 0 )
 	{
-	    printf ( "ERROR: S3 use in %s\n"
-	             "       but needed S3 key(s)"
-		     " missing from EFM-KEYS.gpg\n",
+	    printf ( "ERROR: S3 used in %s\n"
+		     "       but EFM-S3CONFIG.gpg"
+		     " missing\n",
 		     filename );
 	    exit ( 1 );
 	}
@@ -1417,8 +1371,17 @@ int md5sum ( char * buffer,
 	fflush ( stdout );
 	fflush ( stderr );
 
+	if ( s3_name && setup_s3_pipe() < 0 )
+	    return -1;
+
 	child = fork();
-	if ( child < 0 ) error ( errno );
+	if ( child < 0 )
+	{
+	    int saved_errno = errno;
+	    if ( s3_name )
+	        unlink ( "EFM-S3CONFIG.pipe" );
+	    error ( saved_errno );
+	}
 
 	if ( child == 0 )
 	{
@@ -1475,11 +1438,12 @@ int md5sum ( char * buffer,
 			      name );
 		    fflush ( stderr );
 		}
-		if ( execlp ( "s3cmd", "s3cmd",
-		              s3_access_arg,
-			      s3_secret_arg,
-		              "info", name, NULL ) < 0 )
-		    error ( errno );
+		execlp ( "s3cmd", "s3cmd",
+		         "-c", "EFM-S3CONFIG.pipe",
+		         "info", name, NULL );
+		int saved_errno = errno;
+		unlink ( "EFM-S3CONFIG.pipe" );
+		error ( saved_errno );
 	    }
 	    else
 	    {
@@ -1506,6 +1470,8 @@ int md5sum ( char * buffer,
 
 	if ( s3_name )
 	{
+	    write_s3_pipe();
+
 	    int first = 1;
 	    while ( get_line ( line, inf ) )
 	    {
@@ -1602,6 +1568,7 @@ int md5sum ( char * buffer,
 	}
 	fclose ( inf );
 	if ( cwait ( child ) < 0 ) error_found = 1;
+	if ( s3_name ) unlink ( "EFM-S3CONFIG.pipe" );
 
 	if ( error_found && retries > 0 )
 	{
@@ -1645,8 +1612,18 @@ int copyfile
 	fflush ( stdout );
 	fflush ( stderr );
 
+	if ( ( s3_source || s3_target )
+	      && setup_s3_pipe() < 0 )
+	    return -1;
+
 	child = fork();
-	if ( child < 0 ) error ( errno );
+	if ( child < 0 )
+	{
+	    int saved_errno = errno;
+	    if ( s3_source || s3_target )
+	        unlink ( "EFM-S3CONFIG.pipe" );
+	    error ( saved_errno );
+	}
 
 	if ( child == 0 )
 	{
@@ -1700,13 +1677,14 @@ int copyfile
 			      source, target );
 		    fflush ( stderr );
 		}
-		if ( execlp ( "s3cmd", "s3cmd",
-		              s3_access_arg,
-			      s3_secret_arg,
-			      trace ? "-v" : "-q",
-		              "get", source, target,
-			      NULL ) < 0 )
-		    error ( errno );
+		execlp ( "s3cmd", "s3cmd",
+		         "-c", "EFM-S3CONFIG.pipe",
+			 trace ? "-v" : "-q",
+		         "get", source, target,
+			 NULL );
+		int saved_errno = errno;
+		unlink ( "EFM-S3CONFIG.pipe" );
+		error ( saved_errno );
 	    }
 	    else if ( s3_target )
 	    {
@@ -1730,13 +1708,14 @@ int copyfile
 			      source, target );
 		    fflush ( stderr );
 		}
-		if ( execlp ( "s3cmd", "s3cmd",
-		              s3_access_arg,
-			      s3_secret_arg,
-			      trace ? "-v" : "-q",
-		              "put", source, target,
-			      NULL ) < 0 )
-		    error ( errno );
+		execlp ( "s3cmd", "s3cmd",
+		         "-c", "EFM-S3CONFIG.pipe",
+			 trace ? "-v" : "-q",
+		         "put", source, target,
+			 NULL );
+		int saved_errno = errno;
+		unlink ( "EFM-S3CONFIG.pipe" );
+		error ( saved_errno );
 	    }
 	    else
 	    {
@@ -1756,8 +1735,13 @@ int copyfile
 	    }
 	}
 
+	if ( s3_source || s3_target )
+	    write_s3_pipe();
+
 	if ( cwait ( child ) < 0 )
 	{
+	    if ( s3_source || s3_target )
+	        unlink ( "EFM-S3CONFIG.pipe" );
 	    if ( retries -- )
 	    {
 		printf ( "RETRYING scp -p %s \\\n"
@@ -1766,7 +1750,10 @@ int copyfile
 	    }
 	    else return -1;
 	}
-	else return 0;
+
+	if ( s3_source || s3_target )
+	    unlink ( "EFM-S3CONFIG.pipe" );
+	return 0;
     }
 }
 
@@ -1812,8 +1799,18 @@ int delfile ( const char * filename )
     {
 	fflush ( stdout );
 	fflush ( stderr );
+
+	if ( s3_file && setup_s3_pipe() < 0 )
+	    return -1;
+
 	child = fork();
-	if ( child < 0 ) error ( errno );
+	if ( child < 0 )
+	{
+	    int saved_errno = errno;
+	    if ( s3_file )
+	        unlink ( "EFM-S3CONFIG.pipe" );
+	    error ( saved_errno );
+	}
 
 	if ( child == 0 )
 	{
@@ -1846,13 +1843,14 @@ int delfile ( const char * filename )
 			      filename );
 		    fflush ( stderr );
 		}
-		if ( execlp ( "s3cmd", "s3cmd",
-		              s3_access_arg,
-			      s3_secret_arg,
-			      trace ? "-v" : "-q",
-		              "del", filename,
-			      NULL ) < 0 )
-		    error ( errno );
+		execlp ( "s3cmd", "s3cmd",
+		         "-c", "EFM-S3CONFIG.pipe",
+			 trace ? "-v" : "-q",
+		         "del", filename,
+			 NULL );
+		int saved_errno = errno;
+		unlink ( "EFM-S3CONFIG.pipe" );
+		error ( saved_errno );
 	    }
 	    else
 	    {
@@ -1873,8 +1871,12 @@ int delfile ( const char * filename )
 	    }
 	}
 
+	if (s3_file ) write_s3_pipe();
+
 	if ( cwait ( child ) < 0 )
 	{
+	    if (s3_file )
+		unlink ( "EFM-S3CONFIG.pipe" );
 	    if ( retries -- )
 	    {
 		printf ( "RETRYING deletion of %s\n",
@@ -1882,7 +1884,10 @@ int delfile ( const char * filename )
 	    }
 	    else return -1;
 	}
-	else return 0;
+
+	if (s3_file )
+	    unlink ( "EFM-S3CONFIG.pipe" );
+	return 0;
     }
 }
 
@@ -2088,71 +2093,92 @@ int execute_command ( FILE * in )
     }
     else if ( strcmp ( arg, "s3cmd" ) == 0 )
     {
-        if ( ! check_keys() )
+#	define ARG_LIST_SIZE 1000
+	char * arg_list[ARG_LIST_SIZE+4];
+	int child;
+	char ** p = arg_list;
+	* p ++ = "s3cmd";
+	* p ++ = "-c";
+	* p ++ = "EFM-S3CONFIG.pipe";
+	while ( arg = get_argument
+			  ( buffer, in ) )
+	{
+	    if (   p - arg_list
+		 >= ARG_LIST_SIZE + 3 )
+	    {
+		printf ( "ERROR: too many"
+			 " arguments (more than"
+			 " %d)\n",
+			 ARG_LIST_SIZE );
+		result = -1;
+		break;
+	    }
+	    * p ++ = strdup ( arg );
+	}
+	* p = NULL;
+
+	fflush ( stdout );
+	fflush ( stderr );
+
+	if ( result == -1 )
+	    child = -1;
+	else if ( setup_s3_pipe() < 0 )
+	{
 	    result = -1;
+	    child = -1;
+	}
 	else
 	{
-#	    define ARG_LIST_SIZE 1000
-	    char * arg_list[ARG_LIST_SIZE+4];
-	    int child;
-	    char ** p = arg_list;
-	    * p ++ = "s3cmd";
-	    * p ++ = s3_access_arg;
-	    * p ++ = s3_secret_arg;
-	    while ( arg = get_argument
-			      ( buffer, in ) )
+	    child = fork();
+	    if ( child < 0 )
 	    {
-		if (   p - arg_list
-		     >= ARG_LIST_SIZE + 3 )
-		{
-		    printf ( "ERROR: too many"
-			     " arguments (more than"
-			     " %d)\n",
-			     ARG_LIST_SIZE );
-		    result = -1;
-		    break;
-		}
-		* p ++ = strdup ( arg );
+		int saved_errno = errno;
+		unlink ( "EFM-S3CONFIG.pipe" );
+		error ( saved_errno );
 	    }
-	    * p = NULL;
-
-	    fflush ( stdout );
-	    fflush ( stderr );
-
-	    if ( result == -1 )
-	        child = -1;
-	    else
-	    {
-		child = fork();
-		if ( child < 0 ) error ( errno );
-	    }
-
-	    if ( child == 0 )
-	    {
-		int newfd, d;
-
-		/* Set fd's as follows:
-		 * 	0 -> /dev/null
-		 */
-		newfd = open ( "/dev/null", O_RDONLY );
-		if ( newfd < 0 ) error ( errno );
-		close ( 0 );
-		if ( dup2 ( newfd, 0 ) < 0 )
-		    error ( errno );
-		close ( newfd );
-		d = getdtablesize() - 1;
-		while ( d > 2 ) close ( d -- );
-
-		if ( result == 0
-		     &&
-		     execvp ( "s3cmd", arg_list ) < 0 )
-		    error ( errno );
-	    }
-	    p = arg_list + 3;
-	    while ( * p ) free ( * p ++ );
-	    if ( child >= 0 && cwait ( child ) < 0 )
-	        result = -1;
 	}
+
+	if ( child == 0 )
+	{
+	    int newfd, d;
+
+	    /* Set fd's as follows:
+	     * 	0 -> /dev/null
+	     */
+	    newfd = open ( "/dev/null", O_RDONLY );
+	    if ( newfd < 0 ) error ( errno );
+	    close ( 0 );
+	    if ( dup2 ( newfd, 0 ) < 0 )
+		error ( errno );
+	    close ( newfd );
+	    d = getdtablesize() - 1;
+	    while ( d > 2 ) close ( d -- );
+
+	    if ( trace )
+	    {
+		fprintf ( stderr,
+			  "* executing s3cmd" );
+		char ** argp = arg_list;
+		while ( * argp != NULL )
+		    fprintf ( stderr, " %s",
+		              * argp ++ );
+		fprintf ( stderr, "\n" );
+		fflush ( stderr );
+	    }
+
+	    execvp ( "s3cmd", arg_list );
+	    int saved_errno = errno;
+	    unlink ( "EFM-S3CONFIG.pipe" );
+	    error ( saved_errno );
+	}
+
+	if ( child >= 0  ) write_s3_pipe();
+
+	p = arg_list + 3;
+	while ( * p ) free ( * p ++ );
+	if ( child >= 0 && cwait ( child ) < 0 )
+	    result = -1;
+	unlink ( "EFM-S3CONFIG.pipe" );
     }
     /* Rest of commands require EFM-INDEX.gpg be read.
      */
@@ -2991,20 +3017,41 @@ int main ( int argc, char ** argv )
 
 	read_password();
 
-	if ( access ( "EFM-KEYS.gpg", R_OK ) >= 0 )
+	if ( access ( "EFM-S3CONFIG.gpg", R_OK ) >= 0 )
 	{
 	    int keyschild;
 	    int keysfd;
 	    FILE * keysf;
 	    keysfd =
-		crypt ( 1, "EFM-KEYS.gpg", NULL,
+		crypt ( 1, "EFM-S3CONFIG.gpg", NULL,
 			password,
 			strlen ( password ),
 			& keyschild );
 	    if ( keysfd < 0 ) exit ( 1 );
-	    keysf = fdopen ( keysfd, "r" );
-	    read_keys ( keysf );
-	    fclose ( keysf );
+
+	    char * p = s3_config;
+	    char * endp = p + sizeof ( s3_config );
+	    while ( 1 )
+	    {
+	        size_t s =
+		    read ( keysfd, p, endp - p );
+		if ( s < 0 )
+		    error ( errno );
+		if ( s == 0 ) break;
+		p += s;
+		if ( p == endp )
+		{
+		    printf ( "ERROR: EFM-S3CONFIG too"
+		             " large (>= %lu bytes)\n",
+			     (unsigned long)
+			     sizeof ( s3_config) - 1 );
+		    exit ( 1 );
+		}
+	    }
+	    * p = 0;
+
+	        
+	    close ( keysfd );
 	    if ( cwait ( keyschild ) < 0 )
 	    {
 		printf ( "ERROR: error decypting"
