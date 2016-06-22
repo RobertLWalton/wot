@@ -1,8 +1,8 @@
 /* Encrypted File Management (EFM) Program.
 **
-** Author:	Bob Walton (walton@deas.harvard.edu)
+** Author:	Bob Walton (walton@acm.org)
 ** File:	efm.c
-** Date:	Tue Jun 21 16:00:34 EDT 2016
+** Date:	Wed Jun 22 02:40:50 EDT 2016
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -308,7 +308,8 @@ int RETRIES = 3;	/* Number of retries. */
 typedef char line_buffer[MAX_LINE_SIZE+2];
 
 const char * time_format = "%Y/%m/%d %H:%M:%S";
-#define END_STRING "\001\002\003\004"
+#define BEGIN_STRING "\001\002\003\004"
+#define END_STRING "\001\002\003\005"
 
 /* The following lines are filtered out of the output
  * (we could find no other way to keep gpg quiet).
@@ -925,7 +926,8 @@ void write_index_entry
 	strftime ( tbuffer, 100, time_format, 
 		   gmtime ( & e->mtime ) );
 	put_lexeme ( & b, tbuffer );
-	sprintf ( b, " %lu", (unsigned long) e->size );
+	sprintf ( b, " %llu",
+	          (unsigned long long) e->size );
 	b += strlen ( b );
 	if ( ( mode & 4 ) != 0 )
 	{
@@ -941,7 +943,8 @@ void write_index_entry
 	b = buffer;
 	strcpy ( b, "    " );
 	b += 4;
-	sprintf ( b, "%lu", (unsigned long) e->esize );
+	sprintf ( b, "%llu",
+	          (unsigned long long) e->esize );
 	b += strlen ( b );
 	* b ++ = ' ';
 	put_lexeme ( & b, e->emd5sum );
@@ -1016,14 +1019,19 @@ struct entry * find_md5sum
     return NULL;
 }
 
-int sigcount = 0;
-int sigchild = -1;
+/* The background process ignores signals.  Its
+ * children have default settings, and terminate.
+ * The foreground process receives a BEGIN_STRING
+ * line from the background process on connection,
+ * uses it to set siggroup, and thereafter routes
+ * signals to the process group named in the
+ * BEGIN_STRING line.
+ */
+
+pid_t siggroup = 0;
 void handler ( int signum )
 {
-    if ( ++ sigcount > 1 || sigchild < 0 ) exit ( 1 );
-    printf ( "WAITING FOR CHILD: next interrupt"
-             " terminates parent" );
-    fflush ( stdout );
+    if ( siggroup > 0 ) killpg ( siggroup, signum );
 }
 
 void setcatch ( void )
@@ -1047,13 +1055,10 @@ int cwait ( pid_t child )
 {
     int status;
 
-    sigcount = 0;
-    sigchild = child;
     while ( waitpid ( child, & status, 0 ) < 0 )
     {
         if ( errno != EINTR ) error ( errno );
     }
-    sigchild = -1;
 
     if ( WIFEXITED ( status )
          &&
@@ -1679,7 +1684,7 @@ int copyfile
 		}
 		execlp ( "s3cmd", "s3cmd",
 		         "-c", "EFM-S3CONFIG.pipe",
-			 trace ? "-v" : "-q",
+			 // trace ? "-v" : "-q",
 		         "get", source, target,
 			 NULL );
 		int saved_errno = errno;
@@ -1710,7 +1715,7 @@ int copyfile
 		}
 		execlp ( "s3cmd", "s3cmd",
 		         "-c", "EFM-S3CONFIG.pipe",
-			 trace ? "-v" : "-q",
+			 // trace ? "-v" : "-q",
 		         "put", source, target,
 			 NULL );
 		int saved_errno = errno;
@@ -1845,7 +1850,7 @@ int delfile ( const char * filename )
 		}
 		execlp ( "s3cmd", "s3cmd",
 		         "-c", "EFM-S3CONFIG.pipe",
-			 trace ? "-v" : "-q",
+			 // trace ? "-v" : "-q",
 		         "del", filename,
 			 NULL );
 		int saved_errno = errno;
@@ -2534,9 +2539,12 @@ int execute_command ( FILE * in )
 		    else if ( e->esize != st.st_size )
 		    {
 		        printf ( "ERROR: esize has"
-			         " changed from %lu to"
-				 " %lu\n    for %s\n",
-				 e->esize, st.st_size,
+			         " changed from %llu to"
+				 " %llu\n    for %s\n",
+				 (unsigned long long)
+				 e->esize,
+				 (unsigned long long)
+				 st.st_size,
 				 efile );
 			printf ( "    Processing %s"
 			         " aborted.\n", arg );
@@ -3042,8 +3050,8 @@ int main ( int argc, char ** argv )
 		if ( p == endp )
 		{
 		    printf ( "ERROR: EFM-S3CONFIG too"
-		             " large (>= %lu bytes)\n",
-			     (unsigned long)
+		             " large (>= %llu bytes)\n",
+			     (unsigned long long)
 			     sizeof ( s3_config) - 1 );
 		    exit ( 1 );
 		}
@@ -3127,6 +3135,8 @@ int main ( int argc, char ** argv )
 		dup2 ( fromfd, 1 );
 		inf = fdopen ( fromfd, "r" );
 
+		printf ( "%s%lld\n", BEGIN_STRING,
+		         (long long) getpgrp() );
 		index_modified = 0;
 		done = execute_command ( inf );
 		if ( index_modified )
@@ -3217,6 +3227,23 @@ int main ( int argc, char ** argv )
      * reason.
      */
     tof = fdopen ( tofd, "a+" );
+
+    if ( ! get_line ( buffer, tof ) )
+    {
+	printf ( "ERROR: efm background process has"
+	         " died\n" );
+	exit ( 1 );
+    }
+    if ( strncmp ( buffer, BEGIN_STRING,
+                   strlen ( BEGIN_STRING ) ) != 0 )
+    {
+	printf ( "ERROR: efm background process sent"
+	         " bad hello message\n" );
+	exit ( 1 );
+    }
+
+    siggroup = (pid_t)
+        atoll ( buffer + strlen ( BEGIN_STRING ) );
 
     /* Send arguments to child.  Each argument sent as
      * a lexeme on its own line.  At the end of the
