@@ -1,0 +1,23 @@
+#!/bin/bash
+#
+# File:		gitrestore
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Wed Jul 13 04:07:10 EDT 2016
+#
+# The author(s) have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+
+case $1 in -doc*)
+    echo "
+gitrestore
+    If you have copied a .git directory into the current
+    directory, but have an otherwise empty current
+    directory, this command will restore the working
+    directory."
+
+    exit 1
+    ;;
+esac
+
+git checkout -f HEAD
