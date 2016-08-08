@@ -1,0 +1,72 @@
+#!/bin/bash
+#
+# File:		safestart
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Mon Aug  8 06:12:36 EDT 2016
+#
+# The author(s) have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+
+case "$1" in -doc* | "")
+    echo "
+safestart directory tar-file
+
+    Remove /run/user/<ID>/directory where <ID> is the
+    current numeric user id.  Copy the tar file to
+    /run/user/<ID>.  If the tar-file has extension .gpg,
+    call gpg to decrypt it.  Then call tar to unpack
+    it."
+
+    exit 1
+    ;;
+esac
+
+directory="$1"
+tarfile="$2"
+
+id=`id -ru`
+target=/run/user/$id
+if test ! -w $target
+then
+    echo CANNOT WRITE $target
+    exit 1
+fi
+if test ! -r "$tarfile"
+then
+    echo CANNOT READ "$tarfile"
+    exit 1
+fi
+
+tarbase=`basename "$tarfile"`
+if test -e $target/"$tarbase"
+then
+    echo rm -f $target/"$tarbase"
+    rm -f $target/"$tarbase"
+fi
+if test -e $target/"$directory"
+then
+    echo rm -rf $target/"$directory"
+    rm -rf $target/"$directory"
+fi
+
+echo cp "$tarfile" $target
+cp "$tarfile" $target
+
+case "$tarbase" in *.gpg )
+    tarbase=`basename "$tarbase" .gpg`
+    if test -e $target/"$tarbase"
+    then
+	echo rm -f $target/"$tarbase"
+	rm -f $target/"$tarbase"
+    fi
+    echo gpg $target/"$tarbase".gpg
+    gpg $target/"$tarbase".gpg
+    ;;
+esac
+
+echo "(cd $target; tar xpf $tarbase)"
+(cd $target; tar xpf "$tarbase")
+
+echo ls -l $target/"$directory"
+ls -l $target/"$directory"
