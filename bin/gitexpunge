@@ -2,7 +2,7 @@
 #
 # File:		gitexpunge
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Fri Jun 10 12:49:53 EDT 2016
+# Date:		Mon Aug  8 23:53:52 EDT 2016
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -16,6 +16,10 @@ gitexpunge directory filename ...
     directory REMOVE all files and subdirectories that
     ARE NAMED from all commits, pruning empty commits.
     The commits are renamed.
+
+    The filenames are relative to the workspace root
+    directory and may contain metacharacters such as
+    \`*'.
     
     Note this is the opposite of gitfilter which KEEPS
     the named files and subdirectories instead of
@@ -54,21 +58,6 @@ fi
 
 directory="$1"
 shift
-
-command='rm -rf'
-while [ $# -ne 0 ]
-do
-    name="$1"
-    case "$name" in */)
-        name=`expr "$name" : '\(.*\)/$'`
-    esac
-    case "$name" in */*)
-        echo "ERROR: $name contains /"
-	exit 1
-    esac
-    command="$command $name"
-    shift
-done
 
 if [ -e "$directory" ]
 then
@@ -116,7 +105,7 @@ then
 fi
 
 if git filter-branch --prune-empty \
-                     --tree-filter "$command" HEAD
+                     --tree-filter "rm -rf $*" HEAD
 then
     echo "Cloned repository in $directory has been" \
          "filtered"
@@ -126,6 +115,6 @@ then
 	    | xargs -0 echo `"
 else
     echo "FAILED: git filter-branch --prune-empty" \
-                     "--tree-filter '$command' HEAD"
+                     "--tree-filter 'rm -rf $*' HEAD"
     exit 1
 fi
