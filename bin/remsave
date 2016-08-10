@@ -1,15 +1,33 @@
 #!/bin/bash
-. ~/.remsaverc
+#
+# Remote save/restore program using rsync and
+# ~/.remsaverc.
+#
+# File:		remsave
+# Author:	walton@acm.org
+# Date:		Wed Aug 10 15:50:06 EDT 2016
+
 flags='-av --delete'
+ask=yes
+quiet=no
 while [ x = x ]
 do
     case "$1" in
+    -y) ask=no
+        shift ;;
+    -q) quiet=yes
+        shift ;;
     -*)
         flags="$flags $1"
 	shift ;;
     *)  break;;
     esac
 done
+
+# This exits if no media.  If quiet=no it echos
+# error message.
+#
+. ~/.remsaverc
 
 local=LOCAL_$1
 local=${!local}
@@ -24,7 +42,7 @@ then
         y=`expr "$x" : 'LOCAL_\(.*\)'`
 	list="$list $y"
     done
-    echo "$0 DIR"
+    echo "$0 [-n] [-w] [-y] DIR"
     echo ""
     echo "where DIR is one of:$list"
     exit 1
@@ -52,12 +70,15 @@ esac
 
 echo rsync $flags '\'
 echo "   " "${src}" "${des}"
-echo 'OK (y or n)?'
-read
-if test "$REPLY" != "y"
+if [ $ask = yes ]
 then
-    echo ABORTING
-    exit 1
+    echo 'OK (y or n)?'
+    read
+    if test "$REPLY" != "y"
+    then
+	echo ABORTING
+	exit 1
+    fi
 fi
 
 rsync $flags "${src}" "${des}"
