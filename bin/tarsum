@@ -1,0 +1,34 @@
+#!/bin/bash
+#
+# File:		tarsum
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Thu Aug 25 15:04:25 EDT 2016
+#
+# The author(s) have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+
+case $1 in -doc*)
+    echo "
+tarsum FILE.tar
+tarsum FILE.tgz
+    Output FILE.sum containing the sha256 sums of the
+    files in the tar file FILE.tar or FILE.tgz."
+
+    exit 1
+    ;;
+esac
+
+if [[ "$1" =~ ^(.*)\.(tgz|tar)$ ]]
+then
+    tmpdir=/tmp/tarsum-$$-tmp
+    trap "rm -rf $tmpdir" EXIT
+    rm -rf $tmpdir
+    mkdir $tmpdir
+    tarfile="`pwd -P`/$1"
+    sumfile="`pwd -P`/${BASH_REMATCH[1]}.sum"
+    (cd $tmpdir; tar xpf $tarfile; \
+     find . -type f -exec sha256sum {} \; >$sumfile)
+else
+    echo "ERROR: $1 must have extension .tgz or .tar"
+fi
