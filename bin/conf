@@ -4,7 +4,7 @@
 #
 # File:		conf
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sat Mar 12 15:24:56 EST 2016
+# Date:		Mon Oct 31 05:34:07 EDT 2016
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,6 +13,16 @@
 # The undocumented -d option is used for debugging.
 # WARNING: This option leaves the last tmp file
 #          unremoved.
+
+
+if [ -e /usr/sbin/selinuxenabled ]
+then
+    CHCON=chcon
+    LSZ="ls -Z"
+else
+    CHCON=nop
+    LSZ=nop
+fi
 
 nop() {
     do_nothing=
@@ -31,13 +41,13 @@ cptime() {
 
 cpattronly() {
     chmod --reference="$1" "$2"
-    chcon --reference="$1" "$2"
+    $CHCON --reference="$1" "$2"
     chown --reference="$1" "$2"
 }
 
 cpattrandtime() {
     chmod --reference="$1" "$2"
-    chcon --reference="$1" "$2"
+    $CHCON --reference="$1" "$2"
     chown --reference="$1" "$2"
     touch --reference="$1" "$2"
 }
@@ -387,7 +397,7 @@ change_file() {
 	$debug cpall "$1" "$2"
 	$debug echo KEEPING "$1"
 	echo "NOTE: created $2:"
-	ls -Z "$2"
+	$LSZ "$2"
 	return 0
     elif cmp -s "$1" "$2"
     then
@@ -592,7 +602,7 @@ do
 		    rm -f $target
 		    cpall $source $target
 		    echo "NOTE: created $target"
-		    ls -Z "$target"
+		    $LSZ "$target"
 		elif ! cmp -s $source $target
 		then
 		    case "$command" in
