@@ -5,7 +5,7 @@
 #
 # File:		print
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Thu Apr 12 13:25:04 EDT 2012
+# Date:		Mon Aug 14 12:10:53 EDT 2017
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -28,10 +28,11 @@ font=10
 titlefont=12
 switches=""
 style="Courier"
+oswitch=0
 
 case "$PRINTER" in
-    "" ) output="" ;;
-    * )  output="-P $PRINTER"
+    "" ) printer= ;;
+    * )  printer="-P $PRINTER"
 esac
 
 case "$1" in
@@ -41,6 +42,14 @@ print [-12FfdlpWNVEbo] [-P printer] [filename ...]
 
     Print the files named, or the standard input if no
     files are named.
+
+    Any file with a name ending in .pdf is simply copied
+    to the output.  Any file with a name ending in .ps
+    is passed through ps2pdf(1) and the result copied to
+    the output.  In both cases the files should produce
+    an integral number of pages.  All other files are
+    printed by enscript(1) followed by ps2pdf(1), using
+    options determined by the following paragraphs.
 
     Normally one column is printed; -2 prints two
     columns per page in landscape.  -1 prints one column
@@ -80,7 +89,8 @@ print [-12FfdlpWNVEbo] [-P printer] [filename ...]
     The printer used is the value of the PRINTER
     environment variable, if that exists, or the default
     printer otherwise.  The -P printer option changes
-    the printer used.  The -o option routes output
+    the printer used.  The -o option merges all the pdf
+    files using pdfunite(1) and routes the merged result
     to the standard output, instead of to a printer.
     Note that remarks are always printed on the standard
     error, so the standard error and standard output
@@ -193,7 +203,11 @@ print [-12FfdlpWNVEbo] [-P printer] [filename ...]
 	esac
 
 	case "$1" in
-	*o*)	output="-p -"
+	*o*)	oswitch=1
+		tmpdir=/tmp/print-$$-tmp
+		trap "rm -rf $tmpdir" EXIT
+		rm -rf $tmpdir
+		mkdir $tmpdir
 	esac
 
 	case "$1" in
@@ -216,14 +230,14 @@ case "$1" in
 		;;
 	esac
     	shift
-	output="-P $1"
+	output="lpr -P $1"
 	echo >&2 Printer is $1
 	shift
     	;;
 esac
 
 options=
-done_one=0
+number=0
 for file in "$@" "" ""
 do
     DATE=""
@@ -233,7 +247,7 @@ do
 	continue
 	;;
     "")
-        if [ $done_one -eq 1 ]
+        if [ $number -ne 0 ]
 	then
 	    break
 	fi
@@ -242,6 +256,26 @@ do
 	then
 	    DATE=`date +"$date"`
 	fi
+	;;
+    *.pdf )
+	number=$((number+1))
+	if [ $oswitch -eq 1 ]
+	then
+	    cp -p $file $tmpdir/${number}.pdf
+	else
+	    lpr $printer $file
+	fi
+	continue
+	;;
+    *.ps )
+	number=$((number+1))
+	if [ $oswitch -eq 1 ]
+	then
+	    ps2pdf $file $tmpdir/${number}.pdf
+	else
+	    lpr $printer $file
+	fi
+	continue
 	;;
     *)
 	case "$filename" in
@@ -261,14 +295,31 @@ do
 	fi
     esac
 
-    cat $file | unicode2latin1 | \
-	enscript $landscape $border \
-	    -b "$FILENAME|$DATE$login|$pagenumber" \
-	    --margins=48:48:: \
-	    -F Courier-Bold$titlefont -f $style$font \
-	    $output $options
-    done_one=1
+    number=$((number+1))
+    if [ $oswitch -eq 1 ]
+    then
+	cat $file | unicode2latin1 | \
+	    enscript $landscape $border \
+		-b "$FILENAME|$DATE$login|$pagenumber" \
+		--margins=48:48:: \
+		-F Courier-Bold$titlefont -f $style$font \
+		-p - $options | \
+		ps2pdf - $tmpdir/${number}.pdf
+    else
+	cat $file | unicode2latin1 | \
+	    enscript $landscape $border \
+		-b "$FILENAME|$DATE$login|$pagenumber" \
+		--margins=48:48:: \
+		-F Courier-Bold$titlefont -f $style$font \
+		$printer $options
+    fi
 done
+
+if [ $oswitch -eq 1 ]
+then
+    pdfunite $tmpdir/*.pdf $tmpdir/result.pdf
+    cat $tmpdir/result.pdf
+fi
 
 exit 0
 
