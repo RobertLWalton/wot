@@ -1,0 +1,4 @@
+#! /bin/sh
+git log --diff-filter=D --summary | \
+    sed -n -e \
+        '/delete/s/^ *delete *mode *[0-9][0-9]* //p'
