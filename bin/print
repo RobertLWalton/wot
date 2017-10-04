@@ -5,7 +5,7 @@
 #
 # File:		print
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Mon Aug 14 12:10:53 EDT 2017
+# Date:		Wed Oct  4 15:04:44 EDT 2017
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -238,6 +238,7 @@ esac
 
 options=
 number=0
+filelist=
 for file in "$@" "" ""
 do
     DATE=""
@@ -262,6 +263,7 @@ do
 	if [ $oswitch -eq 1 ]
 	then
 	    cp -p $file $tmpdir/${number}.pdf
+	    filelist="$filelist $tmpdir/${number}.pdf"
 	else
 	    lpr $printer $file
 	fi
@@ -272,21 +274,19 @@ do
 	if [ $oswitch -eq 1 ]
 	then
 	    ps2pdf $file $tmpdir/${number}.pdf
+	    filelist="$filelist $tmpdir/${number}.pdf"
 	else
 	    lpr $printer $file
 	fi
 	continue
 	;;
     *)
-	case "$filename" in
-	*n)
-	    FILENAME=`basename $file`
-	    ;;
-	*N)
-	    FILENAME="$file"
+	case "$switches" in
+	*f*)
+	    FILENAME=""
 	    ;;
 	*)
-	    FILENAME=""
+	    FILENAME=`basename $file`
 	    ;;
 	esac
 	if [ -n "$date" ]
@@ -302,22 +302,25 @@ do
 	    enscript $landscape $border \
 		-b "$FILENAME|$DATE$login|$pagenumber" \
 		--margins=48:48:: \
-		-F Courier-Bold$titlefont -f $style$font \
+		-F Courier-Bold$titlefont \
+		-f $style$font \
 		-p - $options | \
 		ps2pdf - $tmpdir/${number}.pdf
+	filelist="$filelist $tmpdir/${number}.pdf"
     else
 	cat $file | unicode2latin1 | \
 	    enscript $landscape $border \
 		-b "$FILENAME|$DATE$login|$pagenumber" \
 		--margins=48:48:: \
-		-F Courier-Bold$titlefont -f $style$font \
+		-F Courier-Bold$titlefont \
+		-f $style$font \
 		$printer $options
     fi
 done
 
 if [ $oswitch -eq 1 ]
 then
-    pdfunite $tmpdir/*.pdf $tmpdir/result.pdf
+    pdfunite $filelist $tmpdir/result.pdf
     cat $tmpdir/result.pdf
 fi
 
