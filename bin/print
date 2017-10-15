@@ -5,24 +5,17 @@
 #
 # File:		print
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Wed Oct  4 15:04:44 EDT 2017
+# Date:		Sun Oct 15 09:44:10 EDT 2017
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
 # for this program.
-#
-# RCS Info (may not be true date or author):
-#
-#   $Author: walton $
-#   $Date: 2009/01/14 15:36:34 $
-#   $RCSfile: print,v $
-#   $Revision: 1.19 $
 
 landscape=""
 border="-j"
-filename="\$n"
+filename="n"
 date="%D %T"
-login=" %n "
+login=" %n"
 pagenumber="\$% of \$="
 font=10
 titlefont=12
@@ -174,7 +167,7 @@ print [-12FfdlpWNVEbo] [-P printer] [filename ...]
 	esac
 
 	case "$1" in
-	*F*)	filename="\$N"
+	*F*)	filename="N"
 	esac
 
 	case "$1" in
@@ -241,6 +234,7 @@ number=0
 filelist=
 for file in "$@" "" ""
 do
+    FILENAME=
     DATE=""
     case "$file" in
     -*)
@@ -252,7 +246,10 @@ do
 	then
 	    break
 	fi
-	FILENAME="STANDARD INPUT"
+	if [ -n $filename]
+	then
+	    FILENAME="STANDARD INPUT"
+	fi
 	if [ -n "$date" ]
 	then
 	    DATE=`date +"$date"`
@@ -281,11 +278,11 @@ do
 	continue
 	;;
     *)
-	case "$switches" in
-	*f*)
-	    FILENAME=""
+	case "$filename" in
+	N)
+	    FILENAME="$file"
 	    ;;
-	*)
+	n)
 	    FILENAME=`basename $file`
 	    ;;
 	esac
