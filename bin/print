@@ -5,7 +5,7 @@
 #
 # File:		print
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Sun Oct 15 09:44:10 EDT 2017
+# Date:		Sat Feb 10 18:40:08 EST 2018
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -246,7 +246,7 @@ do
 	then
 	    break
 	fi
-	if [ -n $filename]
+	if [ -n $filename ]
 	then
 	    FILENAME="STANDARD INPUT"
 	fi
