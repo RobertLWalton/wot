@@ -5,7 +5,7 @@
 #
 # File:		print
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Sat Feb 10 18:40:08 EST 2018
+# Date:		Tue May  1 15:44:59 EDT 2018
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -223,7 +223,7 @@ case "$1" in
 		;;
 	esac
     	shift
-	output="lpr -P $1"
+	printer="-P $1"
 	echo >&2 Printer is $1
 	shift
     	;;
