@@ -5,7 +5,7 @@
 #
 # File:		print
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Sun Jul  8 04:47:27 EDT 2018
+# Date:		Sun Jul  8 05:11:51 EDT 2018
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -19,9 +19,9 @@ login=" %n"
 pagenumber="\$% of \$="
 font=10
 titlefont=12
-switches=""
 style="Courier"
 oswitch=0
+pswitch=0
 
 case "$PRINTER" in
     "" ) printer= ;;
@@ -92,9 +92,19 @@ print [-12FfdlpWNVEbo] [-P printer] [filename ...]
 
     	exit 1
 	;;
-    -P ) ;;
+esac
+
+while [ x = x ]
+do
+    case "$1" in
+    -P )
+	shift
+	printer="-P $1"
+	pswitch=1
+	echo >&2 "Printer is $1"
+	shift
+	;;
     -* )
-    	switches="$1"
 	if test `expr "$1" : '\-[21FfdlphHWNVEboB]*$'` \
 	        -le 1
 	then
@@ -208,26 +218,21 @@ print [-12FfdlpWNVEbo] [-P printer] [filename ...]
 	esac
 
 	shift
-esac
+	;;
+    *)
+        break
+	;;
+    esac
+done
 
-
-case "$1" in
-    -P )
-	case "$switches" in
-	*o* )
-		echo ERROR: both -o and -P options \
-		     given.
-		echo \`print -doc\' prints \
-		     documentation.
-		exit 1
-		;;
-	esac
-    	shift
-	printer="-P $1"
-	echo >&2 Printer is $1
-	shift
-    	;;
-esac
+if [ $pswitch -ne 0 -a $oswitch -ne 0 ]
+then
+    echo ERROR: both -o and -P options \
+	 given.
+    echo \`print -doc\' prints \
+	 documentation.
+    exit 1
+fi
 
 options=
 number=0
