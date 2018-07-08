@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	unicode2latin1.c
-** Date:	Wed Jul 16 15:35:25 EDT 2014
+** Date:	Sun Jul  8 04:13:57 EDT 2018
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -134,7 +134,7 @@ int main ( int argc, char ** argv )
 	    {
 		fprintf ( stderr,
 			  "unicode2latin1:"
-			  " write error at line %d:"
+			  " read error at line %d:"
 			  "\n    %s\n",
 			  line_number,
 			  strerror ( errno ) );
@@ -149,8 +149,8 @@ int main ( int argc, char ** argv )
 	    else
 		ends += length;
 	}
-	else if ( eof_found && s == ends )
-	    break;
+
+	if ( eof_found && s == ends ) break;
 
 	begs = s;
 	c = utf8_to_unicode ( & s );

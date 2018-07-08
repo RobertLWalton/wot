@@ -5,7 +5,7 @@
 #
 # File:		print
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Tue May  1 15:44:59 EDT 2018
+# Date:		Sun Jul  8 04:47:27 EDT 2018
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -232,6 +232,7 @@ esac
 options=
 number=0
 filelist=
+readerror=0
 for file in "$@" "" ""
 do
     FILENAME=
@@ -242,7 +243,20 @@ do
 	continue
 	;;
     "")
-        if [ $number -ne 0 ]
+	;;
+    *)
+	if [ ! -r "$file" ]
+	then
+	    echo >&2 "ERROR: cannot read $file; ignored"
+	    readerror=1
+	    continue
+	fi
+	;;
+    esac
+
+    case "$file" in
+    "" )
+        if [ $number -ne 0 -o $readerror -ne 0 ]
 	then
 	    break
 	fi
@@ -254,7 +268,7 @@ do
 	then
 	    DATE=`date +"$date"`
 	fi
-	;;
+       ;;
     *.pdf )
 	number=$((number+1))
 	if [ $oswitch -eq 1 ]
@@ -315,7 +329,7 @@ do
     fi
 done
 
-if [ $oswitch -eq 1 ]
+if [ $oswitch -eq 1 -a -n "$filelist" ]
 then
     pdfunite $filelist $tmpdir/result.pdf
     cat $tmpdir/result.pdf
