@@ -1,5 +1,15 @@
 all:	chkpage efm conf_helper remrestore \
-        unicode2latin1
+        unicode2latin1 help
+
+help:	../help/git.help ../help/wot.help
+
+../help/git.help:	git*
+	rm -f ../help/git.help
+	githelp > ../help/git.help
+
+../help/wot.help:	*
+	rm -f ../help/wot.help
+	wothelp > ../help/wot.help
 
 chkpage:	chkpage.c
 	rm -f chkpage

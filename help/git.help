@@ -1,0 +1,364 @@
+
+Overview
+--------
+
+A git repository is a parent directory and its descend-
+ants in the directory tree.  The repository proper is in
+the ./.git subdirectory of the parent directory.  The
+files in the parent directory and its descendants are
+called the working files.  The repository holds commits,
+which are snapshots of all the working files and their
+containing directories taken together.  Commits cannot
+be changed.
+
+The repository also holds an `index', which contains
+instructions to change, add, remove, or rename files
+when making a new commit from the last commit.  The
+index can be changed.  The index also holds versions of
+files, but we view this as just a convenience for compu-
+ting the differences between sets of changes to a file
+when none of the changes have been committed.
+
+A file is said to be `committable' if it is mentioned
+in the index or is in the last commit.  The `commit'
+operation makes a new commit that includes all commit-
+table files except those which the index instructions
+remove or rename.  The commit operation uses the index
+instructions to make the new commit from the last
+commit and the working files, and then clears the index.
+
+At any time the `current repository' is the repository
+containing the current directory, which may be a
+descendant of the parent directory of the repository.
+
+A git repository can have a remote copy called the
+`remote origin' of the repository.  This copy is
+generally `bare', meaning it has just an equivalent
+of the .git directory and has no working files.  The
+last commit of the current repository can be pushed to
+the remote origin, and the last commit pushed to the
+remote origin can be pulled to the current repository.
+Thus if several repositories on different machines share
+the same remote origin, a new commit can be made in one
+of these repositories, pushed to the remote origin, and
+pulled to the other repositories.
+
+There can be a conflict if two different commits are
+made in different repositories with the same remote
+origin.  The first commit to be pushed will succeed.
+The second will fail, and the conflict will have to
+be resolved by whoever did the second push.
+
+Note that for each file version git saves the contents
+of the file and the user executable bit of the file
+mode, but does not save any other file mode bit.  Two
+versions of the file with the same content still differ
+if one has the user executable bit on and the other does
+not.  Upon being retrieved from a commit, the file mode
+will be 666 or 777 according to the saved executable
+bit, and this will be modified by the umask setting
+(typically to 640 or 750).
+
+Also, each repository has a `user' whose name and email
+address are associated with commits made using the
+repository.  In addition, commits can be given symbolic
+names called `tags'.
+
+Commits have names of the form {...}.  A name of the
+form {n} where n is a natural number names the n'th
+commit before the most recent, so {0} is the most recent
+commit, {1} the previous commit, etc.  Names such as
+'{Apr 6 7:00}' and '{two days ago}' can also be used
+in most situations, but these must be in quotes when
+used as arguments because they contain spaces.
+
+If you have imported a repository from CVS, you may want
+to use alternative commit names of the form ~n: see
+gitcvsimport.  WARNING: ~0 must be quoted as it denotes
+the current directory; but ~1 need not be quoted.
+
+Some programs also accept `r' as the name of the cur-
+rent remote repository (aka origin/HEAD) and `l' as a
+synonym for ~0.
+
+
+Initialization
+--------------
+
+gitinit
+    Make the current directory the parent of a brand new
+    repository.  The git repository files will be placed
+    in ./.git.  The repository is initially empty, and
+    files must be added to it using gitadd.
+
+gitbare repositoryname
+    Make a bare copy named `repositoryname' of the
+    current repository and make `repositoryname' the
+    remote origin of the current repository.  The
+    current repository can have only one such remote
+    origin.
+
+    `repositoryname' must be the name of a directory
+    that does not exist before gitbare is executed.  If
+    it is not a local directory, `repositoryname'
+    should have the form
+
+        user@host:pathname
+
+    where pathname is local to the user's home directory
+    on the host.  Note this is a name that will be feed
+    directly to rsync(1).
+
+gitclone repositoryname directory
+    Make `directory' into a repository holding a copy
+    of the `repositoryname' repository, and make
+    `repositoryname' the remote origin of this copy.
+    A repository can have only one remote origin.
+
+    The `repositoryname' directory should not exist
+    before gitclone is executed.  It may be a remote
+    directory.  It may be an ssh accessible directory
+    with a name of the form
+
+        user@host:pathname
+
+    where pathname is local to the user's home directory
+    on the host.  Note this is a name that could be feed
+    directly to rsync(1).
+
+    Alternatively `repositoryname' can be a URL of the
+    form
+
+        http://...
+
+    or
+    	ftp://...
+
+    which should reference an internet accessible repo-
+    sitory directory.  Note that in this case it will
+    not be possible to use gitpush to push commits from
+    the current repository to its remote origin.
+
+gitconfig [name email-address]
+    With no arguments, list the current repository
+    user's name and email address.  With arguments,
+    change these.
+
+
+Committing
+----------
+
+gitstat
+    List all committable files that differ from their
+    last committed versions.
+
+gitcom
+    List all the committable files that differ from
+    their last committed versions, just as gitstat
+    would, ask if the commit should proceed, and
+    perform a commit operation if yes.
+
+gitpush
+    Push commits in the current repository to that
+    repository's remote origin (see gitbare and
+    gitclone).
+
+    gitpush will fail if the remote origin has been
+    updated by someone else since you did the last
+    gitpush or gitpull.  In his case use gitconflict,
+    then gitmerge, then gitpush.
+
+gitpull
+    Pull all the commits from current repository's
+    remote origin to the current repository and merge
+    the latest pulled commit with the latest commit in
+    the current repository to form a new commit.
+
+    If the remote origin contains changes that conflict
+    with the current repository, this fails, and you
+    should use gitconflict, then gitmerge, then gitpush.
+
+    The index must be committed first, so all working
+    files match their last committed version.  If this
+    is not the case, gitpull complains and aborts.
+
+
+Indexing
+--------
+
+gitdiff [ l | r | {m} | ~m ] [ l | r | {n} | ~n ] \
+        [-n | -R | git-diff-option ...] \
+        [-a | [--] filename ...]
+    Lists differences between the working versions of
+    files and either a previous committed version of the
+    files or the last gitadd'ed versions.
+
+    `l' is synonymous with `~0', and `r' is synonymous
+    with `origin/HEAD'.
+
+    With no filenames or -a, lists differences for all
+    files in the current directory and its subdirector-
+    ies.  With -a, for all files in all repository
+    directories.  Otherwise only for the listed files.
+
+    With no commit name arguments, diffs working ver-
+    sions the last gitadd'ed version if that exists,
+    or the last committed version otherwise.  With one
+    commit name, diffs the working version with the
+    version in the commit.  With two commit names, diffs
+    the versions in the two commits.
+
+    The -n option is shorthand for the git diff option
+    --name-status that just lists the names and status
+    of the files with differences.  The -R option is a
+    standard git diff option the reverses order of the
+    files being diff'ed and may be useful in `gitdiff
+    r -R' when the remote is more up to date than the
+    local version.
+
+gitadd [filename ...]
+
+    Copy working files to the index if they differ from
+    copies already in the index or from any last
+    committed version if there is no version of a file
+    in the index.
+    
+    If no filenames are given, only files in the current
+    directory and its subdirectories are considered.
+    These are first listed, and you are asked whether to
+    continue.
+
+    If filenames are given that were not previously
+    committed or added to the index, these are added to
+    the index so they will be added to the next commit.
+    Directory names should NOT be given unless you want
+    all files in the named directories and their sub-
+    directories to be added.
+
+gitsub filename ...
+    For each filename, first copies any working version
+    of the file to filename-, then restores the working
+    version to the last version either gitadd'ed or
+    committed, if such exists.  Lastly removes the file
+    and any instruction to delete the file from the
+    index.  This undoes a gitrm or gitadd, more or less.
+    Cannot undo gitmv's (just gitmv the file back).
+
+gitrm filename ...
+    Move filename if it exists to filename-, and indi-
+    cate in the index that filename is to be removed
+    from the next commit.
+
+gitmv oldfilename newfilename
+gitmv filename ... directory
+    Rename (move) a file or files.  The working
+    directories are changed, and instructions are left
+    in the index to make the change in the next commit.
+
+
+Checking
+--------
+
+gituntracked
+    List all untracked files.
+
+gitcheck
+    Check the current git repository for errors, e.g.,
+    objects that do not have the signature they are
+    supposed to have.  If a repository checks, it
+    probably has not been damaged by miscopying, etc.,
+    as the signatures act like checksums.
+
+
+Resolving Conflicts
+--------- ---------
+
+
+gitconflict [ filename ...]
+    Examine differences between the remote origin and
+    the working files.  Does an implicit fetch of the
+    `origin' branch of the current repository.  Then
+    if no arguments are given, just lists the files that
+    differ between the remote origin and the working
+    files.
+
+    With arguments, produces gitdiff listings for chang-
+    ing the remote origin versions of the named files to
+    the working versions.  The argument `.' will do
+    this for just all files in the current directory and
+    its subdirectories.  gitmerge can be used to merge
+    remote origin files into the working files (which
+    must be committed first).
+
+gitmerge
+    Merge files from the current repository's remote
+    origin to the current repository.  Does an implicit
+    fetch of the `origin' branch of the current reposi-
+    tory, and then merges this branch into the current
+    repository.
+
+    Use this if gitpull fails.  Use gitconflict first
+    to see the nature of the failure.  Some files may
+    have merge conflicts that have to be adjusted by
+    editing and committing them after running gitmerge,
+    in which case you may need to run gitpush after
+    committing the files to finish resolving the
+    conflicts.
+
+    All files must be committed first.  If this is
+    not the case, gitmerge complains and aborts.
+
+
+History and Tags
+------- --- ----
+
+gitlog [{n} | ~n ]
+    List all commits and file changes beginning at
+    a given commit and proceeding backward in time.
+    If no commit is given, ~0 is assumed.
+
+gitls [ {n} | ~n ] [-r]
+    
+    List the files and subdirectories of the current
+    working directory that are in the named commit.  If
+    no commit name is given, use the most recent commit.
+
+    -r follows subdirectories and lists only file
+    names.
+
+gitold [ {n} | ~n ] filename
+    Retrieve files from the named commit.  A file named
+    F is retrieved to a file named F{n} or F~n.  A com-
+    mit name MUST be given.
+
+gittag
+    List all existing tags.
+gittag [ {n} | ~n ] tagname
+    Create a tag referring to the named commit or
+    if no name is given, to the last commit.
+
+gituntag tagname
+    Delete the named tag.  Also warns about problems
+    with deleting tags that have been exported to
+    others.
+
+
+Importing
+---------
+
+gitcvsimport [-v] cvsroot module directory
+    Make a new git repository in `directory' which
+    is a copy of the CVS module obtained from cvsroot.
+    With the -v option full verbosity is enabled. 
+
+    In such a repository the {n} naming scheme for
+    commits will not work for imported CVS commits,
+    and instead you should use ~n, where n is a natural
+    number.  ~n and {n} are similar, but there are some
+    differences, and {n} is better when imported CVS
+    commits are not involved.
+
+    If you get an error fetching a file that should not
+    be in the CVS repository, remove all lines naming
+    the file from the file CVSROOT/history in the
+    repository, and try again.
