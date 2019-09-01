@@ -133,10 +133,11 @@ Indexing
 `gitmv -doc`
 
 
-Checking
---------
+Checking and Maintenance
+-------- --- -----------
 `gituntracked -doc`
 `gitcheck -doc`
+`gitgc -doc`
 
 
 Resolving Conflicts
@@ -144,6 +145,13 @@ Resolving Conflicts
 
 `gitconflict -doc`
 `gitmerge -doc`
+
+
+Expunging All Records of Files
+--------- --- ------- -- -----
+
+`gitexpunge -doc`
+`gitfilter -doc`
 
 
 History and Tags
@@ -157,4 +165,7 @@ History and Tags
 
 Importing
 ---------
-`gitcvsimport -doc`" | less -F
+`gitcp -doc`
+`gitcvsimport -doc`
+
+" | less -F
