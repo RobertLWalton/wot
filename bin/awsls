@@ -1,0 +1,28 @@
+#!/bin/bash
+#
+# File:		awsls
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Mon Aug  8 07:47:42 EDT 2016
+#
+# The author(s) have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+
+case "$1" in -doc* | "")
+    echo "
+awsls target
+
+    List target contents with summary."
+
+    exit 1
+    ;;
+esac
+
+if test ! -e ~/.aws
+then
+    echo safestart .aws ~/.aws.tar.gpg
+    safestart .aws ~/.aws.tar.gpg
+fi
+
+echo aws s3 ls --summarize "$1"
+aws s3 ls --summarize "$1"
