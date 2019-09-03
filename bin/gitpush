@@ -11,10 +11,10 @@
 
 case $1 in -doc*)
     echo "
-gitpush
+gitpush [remote]
     Push commits in the current repository to that
     repository's remote origin (see gitbare and
-    gitclone).
+    gitclone), or to the designated remote origin.
 
     gitpush will fail if the remote origin has been
     updated by someone else since you did the last
@@ -25,4 +25,4 @@ gitpush
     ;;
 esac
 
-git push --mirror --no-force
+git push --mirror --no-force $1
