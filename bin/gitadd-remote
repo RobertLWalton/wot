@@ -1,0 +1,24 @@
+#!/bin/bash
+#
+# File:		gitadd-remote
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Tue Sep  3 07:41:29 EDT 2019
+#
+# The author(s) have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+
+case $1 in -doc*)
+    echo "
+gitadd-remote remote url
+
+    Add the given remote to the configuration, or change
+    it if it already exists.  The remote is given the
+    designated URL."
+
+    exit 1
+    ;;
+esac
+
+git remote add "$1" "$2"
+

@@ -1,0 +1,21 @@
+#!/bin/bash
+#
+# File:		gitrm-remote
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Tue Sep  3 07:46:06 EDT 2019
+#
+# The author(s) have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+
+case $1 in -doc*)
+    echo "
+gitrm-remote remote
+
+    Remove the given remote to the configuration."
+
+    exit 1
+    ;;
+esac
+
+git remote remove "$1"
