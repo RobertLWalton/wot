@@ -40,4 +40,9 @@ then
     exit 1
 fi
 
-git pull --ff-only $1
+if test "$1" != ""
+then
+    git pull --ff-only "$1" master
+else
+    git pull --ff-only
+fi
