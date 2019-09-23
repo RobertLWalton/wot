@@ -15,7 +15,7 @@ rmtex filename ...
 
     	pdflatex filename    or    latex filename
 
-    such as filename.aux, and including filename.ps
+    such as filename.aux, and EXCLUDING filename.ps
     and filename.pdf."
 
     exit 1
@@ -24,7 +24,7 @@ esac
 
 for x in $@
 do
-    for y in dvi ps pdf log aux bbl blg idx ilg ind \
+    for y in dvi log aux bbl blg idx ilg ind \
              toc lof lot
     do
 	rm -f "${x:r}.$y"
