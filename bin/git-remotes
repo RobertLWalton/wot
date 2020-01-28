@@ -1,0 +1,22 @@
+#!/bin/bash
+#
+# File:		git-remotes
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Tue Jan 28 05:53:40 EST 2020
+#
+# The author(s) have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+
+case $1 in -doc*)
+    echo "
+git-remotes
+
+    List the current set of remotes and their URLs.
+    The default remote is named 'origin'."
+
+    exit 1
+    ;;
+esac
+
+git remote -v

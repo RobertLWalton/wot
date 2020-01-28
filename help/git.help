@@ -183,6 +183,9 @@ gitpull [remote]
     files match their last committed version.  If this
     is not the case, gitpull complains and aborts.
 
+gituntracked
+    List all untracked files.
+
 
 Indexing
 --------
@@ -257,27 +260,8 @@ gitmv filename ... directory
     in the index to make the change in the next commit.
 
 
-Checking and Maintenance
--------- --- -----------
-
-gituntracked
-    List all untracked files.
-
-gitcheck
-    Check the current git repository for errors, e.g.,
-    objects that do not have the signature they are
-    supposed to have.  If a repository checks, it
-    probably has not been damaged by miscopying, etc.,
-    as the signatures act like checksums.
-
-gitgc
-    Agressively garbage collect the repository to save
-    space.
-
-
 Resolving Conflicts
 --------- ---------
-
 
 gitconflict [ filename ...]
     Examine differences between the remote origin and
@@ -314,35 +298,34 @@ gitmerge
     not the case, gitmerge complains and aborts.
 
 
-Expunging All Records of Files
---------- --- ------- -- -----
+Managing Remotes
+-------- -------
 
+git-remotes
 
-gitexpunge directory filename ...
-    Clone the current git repository in the directory
-    which must not previously exist, and then in that
-    directory REMOVE all files and subdirectories that
-    ARE NAMED from all commits, pruning empty commits.
-    The commits are renamed.
+    List the current set of remotes and their URLs.
+    The default remote is named 'origin'.
 
-    The filenames are relative to the workspace root
-    directory and may contain metacharacters such as
-    `*'.
-    
-    Note this is the opposite of gitfilter which KEEPS
-    the named files and subdirectories instead of
-    REMOVING them.
+gitadd-remote remote url
 
-gitfilter directory filename ...
-    Clone the current git repository in the directory
-    which must not previously exist, and then in that
-    directory remove all files and subdirectories NOT
-    NAMED from all commits, pruning empty commits.  The
-    commits are renamed.
-    
-    Note that this is the opposite of gitexpunge which
-    REMOVES all the files and subdirectories instead of
-    KEEPING them.
+    Add the given remote to the configuration, or change
+    it if it already exists.  The remote is given the
+    designated URL.
+
+gitrm-remote remote
+
+    Remove the given remote to the configuration.
+
+gitch-remote remote url
+
+    Change the URL of an existing remote.
+
+git-make-local
+    Set the current repository so it does NOT have any
+    upstream and delete all remote branches.  Makes
+    gitpull impossible and eliminates complaints from
+    gitstat and gitcom that remote HEAD does not match
+    current branch.
 
 
 History and Tags
@@ -377,6 +360,52 @@ gituntag tagname
     Delete the named tag.  Also warns about problems
     with deleting tags that have been exported to
     others.
+
+
+Checking and Maintenance
+-------- --- -----------
+
+gitcheck
+    Check the current git repository for errors, e.g.,
+    objects that do not have the signature they are
+    supposed to have.  If a repository checks, it
+    probably has not been damaged by miscopying, etc.,
+    as the signatures act like checksums.
+
+gitgc
+    Agressively garbage collect the repository to save
+    space.
+
+
+Expunging All Records of Files
+--------- --- ------- -- -----
+
+
+gitexpunge directory filename ...
+    Clone the current git repository in the directory
+    which must not previously exist, and then in that
+    directory REMOVE all files and subdirectories that
+    ARE NAMED from all commits, pruning empty commits.
+    The commits are renamed.
+
+    The filenames are relative to the workspace root
+    directory and may contain metacharacters such as
+    `*'.
+    
+    Note this is the opposite of gitfilter which KEEPS
+    the named files and subdirectories instead of
+    REMOVING them.
+
+gitfilter directory filename ...
+    Clone the current git repository in the directory
+    which must not previously exist, and then in that
+    directory remove all files and subdirectories NOT
+    NAMED from all commits, pruning empty commits.  The
+    commits are renamed.
+    
+    Note that this is the opposite of gitexpunge which
+    REMOVES all the files and subdirectories instead of
+    KEEPING them.
 
 
 Importing

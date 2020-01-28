@@ -1,0 +1,23 @@
+#!/bin/bash
+#
+# File:		gitch-remote
+# Author:	Bob Walton <walton@acm.org>
+# Date:		Tue Jan 28 06:04:20 EST 2020
+#
+# The author(s) have placed this program in the public
+# domain; they make no warranty and accept no liability
+# for this program.
+
+case $1 in -doc*)
+    echo "
+gitch-remote remote url
+
+    Change the URL of an existing remote."
+
+    exit 1
+    ;;
+esac
+
+git remote set-url "$1" "$2"
+
+

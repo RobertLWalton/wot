@@ -2,7 +2,7 @@
 #
 # File:		githelp
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Tue Jan 27 04:07:39 EST 2015
+# Date:		Tue Jan 28 06:07:26 EST 2020
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -122,6 +122,7 @@ Committing
 `gitcom -doc`
 `gitpush -doc`
 `gitpull -doc`
+`gituntracked -doc`
 
 
 Indexing
@@ -133,25 +134,19 @@ Indexing
 `gitmv -doc`
 
 
-Checking and Maintenance
--------- --- -----------
-`gituntracked -doc`
-`gitcheck -doc`
-`gitgc -doc`
-
-
 Resolving Conflicts
 --------- ---------
-
 `gitconflict -doc`
 `gitmerge -doc`
 
 
-Expunging All Records of Files
---------- --- ------- -- -----
-
-`gitexpunge -doc`
-`gitfilter -doc`
+Managing Remotes
+-------- -------
+`git-remotes -doc`
+`gitadd-remote -doc`
+`gitrm-remote -doc`
+`gitch-remote -doc`
+`git-make-local -doc`
 
 
 History and Tags
@@ -161,6 +156,19 @@ History and Tags
 `gitold -doc`
 `gittag -doc`
 `gituntag -doc`
+
+
+Checking and Maintenance
+-------- --- -----------
+`gitcheck -doc`
+`gitgc -doc`
+
+
+Expunging All Records of Files
+--------- --- ------- -- -----
+
+`gitexpunge -doc`
+`gitfilter -doc`
 
 
 Importing
