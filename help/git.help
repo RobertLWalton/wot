@@ -158,21 +158,22 @@ gitcom
     would, ask if the commit should proceed, and
     perform a commit operation if yes.
 
-gitpush
+gitpush [remote]
     Push commits in the current repository to that
     repository's remote origin (see gitbare and
-    gitclone).
+    gitclone), or to the designated remote origin.
 
     gitpush will fail if the remote origin has been
     updated by someone else since you did the last
     gitpush or gitpull.  In his case use gitconflict,
     then gitmerge, then gitpush.
 
-gitpull
+gitpull [remote]
     Pull all the commits from current repository's
-    remote origin to the current repository and merge
-    the latest pulled commit with the latest commit in
-    the current repository to form a new commit.
+    remote origin, or the designated remote, to the
+    current repository, and merge the latest pulled
+    commit with the latest commit in the current
+    repository to form a new commit.
 
     If the remote origin contains changes that conflict
     with the current repository, this fails, and you
@@ -256,8 +257,8 @@ gitmv filename ... directory
     in the index to make the change in the next commit.
 
 
-Checking
---------
+Checking and Maintenance
+-------- --- -----------
 
 gituntracked
     List all untracked files.
@@ -268,6 +269,10 @@ gitcheck
     supposed to have.  If a repository checks, it
     probably has not been damaged by miscopying, etc.,
     as the signatures act like checksums.
+
+gitgc
+    Agressively garbage collect the repository to save
+    space.
 
 
 Resolving Conflicts
@@ -309,6 +314,37 @@ gitmerge
     not the case, gitmerge complains and aborts.
 
 
+Expunging All Records of Files
+--------- --- ------- -- -----
+
+
+gitexpunge directory filename ...
+    Clone the current git repository in the directory
+    which must not previously exist, and then in that
+    directory REMOVE all files and subdirectories that
+    ARE NAMED from all commits, pruning empty commits.
+    The commits are renamed.
+
+    The filenames are relative to the workspace root
+    directory and may contain metacharacters such as
+    `*'.
+    
+    Note this is the opposite of gitfilter which KEEPS
+    the named files and subdirectories instead of
+    REMOVING them.
+
+gitfilter directory filename ...
+    Clone the current git repository in the directory
+    which must not previously exist, and then in that
+    directory remove all files and subdirectories NOT
+    NAMED from all commits, pruning empty commits.  The
+    commits are renamed.
+    
+    Note that this is the opposite of gitexpunge which
+    REMOVES all the files and subdirectories instead of
+    KEEPING them.
+
+
 History and Tags
 ------- --- ----
 
@@ -346,6 +382,15 @@ gituntag tagname
 Importing
 ---------
 
+gitcp repository
+    Copy the contents of the designated repository into
+    the current repository.  Note the ENTIRE contents
+    of the designated repository are copied.  If you
+    only want to copy a few files, make a temporary
+    clone of the designated repository, remove what you
+    do not want from the temporary, and gitcp the
+    temporary.
+
 gitcvsimport [-v] cvsroot module directory
     Make a new git repository in `directory' which
     is a copy of the CVS module obtained from cvsroot.
@@ -362,3 +407,5 @@ gitcvsimport [-v] cvsroot module directory
     be in the CVS repository, remove all lines naming
     the file from the file CVSROOT/history in the
     repository, and try again.
+
+

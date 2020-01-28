@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# File:		gitdelete-remotes
+# File:		git-make-local
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sun Oct 18 04:29:34 EDT 2015
+# Date:		Tue Jan 28 05:49:29 EST 2020
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -10,7 +10,7 @@
 
 case $1 in -doc*)
     echo "
-gitdelete-remotes
+git-make-local
     Set the current repository so it does NOT have any
     upstream and delete all remote branches.  Makes
     gitpull impossible and eliminates complaints from
