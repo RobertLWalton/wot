@@ -2,7 +2,7 @@
 #
 # File:		gitdiff
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Wed Jun 17 14:44:24 EDT 2015
+# Date:		Sun Aug  2 02:57:55 EDT 2020
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -12,21 +12,25 @@ fetch=no
 
 case "$1" in -doc*)
     echo "
-gitdiff [ l | r | {m} | ~m ] [ l | r | {n} | ~n ] \\
+gitdiff [ l | r | f | {m} | ~m ] \\
+        [ l | r | f | {n} | ~n ] \\
         [-n | -R | git-diff-option ...] \\
         [-a | [--] filename ...]
     Lists differences between the working versions of
     files and either a previous committed version of the
     files or the last gitadd'ed versions.
 
-    \`l' is synonymous with \`~0', and \`r' is \
+    \`l' is synonymous with \`~0'; \`r' is \
 synonymous
-    with \`origin/HEAD'.
+    with \`FETCH_HEAD' after \`git fetch'; \`f' is syn-
+    onymous with \`FETCH_HEAD' withOUT any \`git fetch'
+    (use this with \`gitfetch remote').
 
-    With no filenames or -a, lists differences for all
-    files in the current directory and its subdirector-
-    ies.  With -a, for all files in all repository
-    directories.  Otherwise only for the listed files.
+    With no filenames and no -a option, lists differ-
+    ences for all files in the current directory and its
+    subdirectories.  With -a option, for all files in
+    all repository directories.  Otherwise only for the
+    listed files.
 
     With no commit name arguments, diffs working ver-
     sions the last gitadd'ed version if that exists,
@@ -54,8 +58,14 @@ l)
 
 r)
     src="remote"
-    commit="origin/HEAD"
+    commit="FETCH_HEAD"
     fetch=yes
+    shift
+    ;;
+
+f)
+    src="fetch"
+    commit="FETCH_HEAD"
     shift
     ;;
 
@@ -87,8 +97,14 @@ l)
 
 r)
     dst="remote"
-    commit="$commit origin/HEAD"
+    commit="$commit FETCH_HEAD"
     fetch=yes
+    shift
+    ;;
+
+f)
+    dst="fetch"
+    commit="$commit FETCH_HEAD"
     shift
     ;;
 
@@ -110,6 +126,7 @@ r)
 esac
 
 options=""
+no_files="."
 while [ $# -ne 0 ]
 do
     case "$1" in
@@ -120,6 +137,11 @@ do
 
     -n)
 	options="$options --name-status"
+	shift
+	;;
+
+    -a)
+        no_files=""
 	shift
 	;;
 
@@ -144,12 +166,7 @@ case "$1" in
 "")
     git diff --src-prefix="$src"/ \
              --dst-prefix="$dst"/ \
-             $commit $options .
-    ;;
-"-a")
-    git diff --src-prefix="$src"/ \
-             --dst-prefix="$dst"/ \
-             $commit $options
+             $commit $options $no_files
     ;;
 *)
     git diff --src-prefix="$src"/ \
