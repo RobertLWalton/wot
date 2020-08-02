@@ -2,41 +2,43 @@
 #
 # File:		gitconflict
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Thu Apr 12 08:11:49 EDT 2012
+# Date:		Sat Aug  1 21:46:59 EDT 2020
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
 # for this program.
 
-case $1 in -doc*)
+case $1 in -doc* | "")
     echo "
-gitconflict [ filename ...]
-    Examine differences between the remote origin and
-    the working files.  Does an implicit fetch of the
-    \`origin' branch of the current repository.  Then
-    if no arguments are given, just lists the files that
-    differ between the remote origin and the working
+gitconflict remote [ filename ...]
+    Examine differences between the remote repository
+    and the working files.  Here remote can be \`origin'
+    or some other remote repository.  Then if no 
+    arguments are given, this just lists the files that
+    differ between the remote repository and the working
     files.
 
     With arguments, produces gitdiff listings for chang-
-    ing the remote origin versions of the named files to
-    the working versions.  The argument \`.' will do
-    this for just all files in the current directory and
-    its subdirectories.  gitmerge can be used to merge
-    remote origin files into the working files (which
-    must be committed first)."  
+    ing the remote versions of the named files to the
+    working versions.  The argument \`.' will do this
+    for just all files in the current directory and its
+    subdirectories.  gitmerge can be used to merge
+    remote files into the working files (which must be
+    committed first)."  
 
     exit 1
     ;;
+esac
 
-"")
-    git fetch origin
-    git diff --name-status origin/master
+remote="$1"
+shift
+git fetch $remote
+
+case "$1" in
+"") git diff --name-status origin/master
     ;;
-?*)
-    git fetch origin
-    git diff origin/master \
-        --src-prefix=origin/ --dst-prefix=working/ \
-        -- "$@"
+*) git diff FETCH_HEAD \
+       --src-prefix=$remote/ --dst-prefix=working/ \
+       -- "$@"
     ;;
 esac

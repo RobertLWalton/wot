@@ -2,7 +2,7 @@
 #
 # File:		gitfetch
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Tue Jan 27 04:26:44 EST 2015
+# Date:		Sat Aug  1 22:20:59 EDT 2020
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -11,13 +11,13 @@
 
 case $1 in -doc*)
     echo "
-gitfetch
-    Fetch all the commits from current repository's
-    remote origin to the local version of the remote
-    repository (whose head is \`origin/HEAD').
+gitfetch [remote]
+    Fetch all the commits from current repository
+    or designated remote repository to the \`master'
+    branch of the repository.
     
     The current repository \`HEAD' can then be diffed
-    with \`origin/HEAD'.  Note that gitfetch is
+    with \`FETCH_HEAD'.  Note that \`gitfetch' is
     automatically executed by programs that accept
     \`r' as a commit name."
 
@@ -25,4 +25,4 @@ gitfetch
     ;;
 esac
 
-git fetch
+git fetch $1
