@@ -2,7 +2,7 @@
 #
 # File:		gitfetch
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sat Aug  1 22:20:59 EDT 2020
+# Date:		Sun Aug  2 03:20:36 EDT 2020
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -17,9 +17,7 @@ gitfetch [remote]
     branch of the repository.
     
     The current repository \`HEAD' can then be diffed
-    with \`FETCH_HEAD'.  Note that \`gitfetch' is
-    automatically executed by programs that accept
-    \`r' as a commit name."
+    with \`FETCH_HEAD'."
 
     exit 1
     ;;
