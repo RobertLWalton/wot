@@ -32,6 +32,11 @@ conf_helper:	conf_helper.c
 	gcc -ansi -pedantic -o conf_helper conf_helper.c
 	chmod 555 conf_helper
 
+lrcs:	lrcs.c
+	rm -f lrcs
+	gcc -ansi -pedantic -o lrcs lrcs.c
+	chmod 555 lrcs
+
 remrestore:
 	ln -s remsave remrestore
 

@@ -190,20 +190,24 @@ gituntracked
 Indexing
 --------
 
-gitdiff [ l | r | {m} | ~m ] [ l | r | {n} | ~n ] \
+gitdiff [ l | r | f | {m} | ~m ] \
+        [ l | r | f | {n} | ~n ] \
         [-n | -R | git-diff-option ...] \
         [-a | [--] filename ...]
     Lists differences between the working versions of
     files and either a previous committed version of the
     files or the last gitadd'ed versions.
 
-    `l' is synonymous with `~0', and `r' is synonymous
-    with `origin/HEAD'.
+    `l' is synonymous with `~0'; `r' is synonymous
+    with `FETCH_HEAD' after `git fetch'; `f' is syn-
+    onymous with `FETCH_HEAD' withOUT any `git fetch'
+    (use this with `gitfetch remote').
 
-    With no filenames or -a, lists differences for all
-    files in the current directory and its subdirector-
-    ies.  With -a, for all files in all repository
-    directories.  Otherwise only for the listed files.
+    With no filenames and no -a option, lists differ-
+    ences for all files in the current directory and its
+    subdirectories.  With -a option, for all files in
+    all repository directories.  Otherwise only for the
+    listed files.
 
     With no commit name arguments, diffs working ver-
     sions the last gitadd'ed version if that exists,
@@ -263,28 +267,28 @@ gitmv filename ... directory
 Resolving Conflicts
 --------- ---------
 
-gitconflict [ filename ...]
-    Examine differences between the remote origin and
-    the working files.  Does an implicit fetch of the
-    `origin' branch of the current repository.  Then
-    if no arguments are given, just lists the files that
-    differ between the remote origin and the working
+gitconflict remote [ filename ...]
+    Examine differences between the remote repository
+    and the working files.  Here remote can be `origin'
+    or some other remote repository.  Then if no 
+    arguments are given, this just lists the files that
+    differ between the remote repository and the working
     files.
 
     With arguments, produces gitdiff listings for chang-
-    ing the remote origin versions of the named files to
-    the working versions.  The argument `.' will do
-    this for just all files in the current directory and
-    its subdirectories.  gitmerge can be used to merge
-    remote origin files into the working files (which
-    must be committed first).
+    ing the remote versions of the named files to the
+    working versions.  The argument `.' will do this
+    for just all files in the current directory and its
+    subdirectories.  gitmerge can be used to merge
+    remote files into the working files (which must be
+    committed first).
 
-gitmerge
+gitmerge [remote]
     Merge files from the current repository's remote
-    origin to the current repository.  Does an implicit
-    fetch of the `origin' branch of the current reposi-
-    tory, and then merges this branch into the current
-    repository.
+    origin or designated remote to the current
+    repository.  Does an implicit fetch of the `master'
+    branch of the current or remote repository, and then
+    merges this branch into the working files.
 
     Use this if gitpull fails.  Use gitconflict first
     to see the nature of the failure.  Some files may
