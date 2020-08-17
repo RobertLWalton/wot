@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Mon Aug 17 13:51:59 EDT 2020
+** Date:	Mon Aug 17 17:58:37 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -1244,5 +1244,52 @@ int main ( int argc, char ** argv )
 		          repos_name );
 	    }
 	}
+	exit ( 0 );
+    }
+    else if ( strcmp ( op, "out" ) == 0 )
+    {
+	long rev;
+	int i;
+	char * final_name;
+	char * name;
+
+	if ( argc > 4 ) error ( "too many arguments" );
+        if ( repos == NULL )
+	    error ( "there is no repository for %s",
+	            filename );
+	s = read_header();
+	if ( s != NULL ) error ( s );
+
+	if ( argc == 3 ) rev = 1;
+	else
+	{
+	    char * endptr;
+	    rev = strtol ( argv[3], & endptr, 10 );
+	    if ( * endptr != 0 )
+	        error ( "revision argument is not"
+		        " integer" );
+	    if ( rev <= 0 )
+	        error ( "revision argument is <= 0" );
+	}
+
+	while ( rev -- )
+	{
+	    s = step_revision ( filename, 1 );
+	    if ( s != NULL ) error ( s );
+	}
+
+	name = current_revision->filename;
+	final_name = strdup ( name );
+	final_name[strlen(name)-1] = 0;
+	
+	if ( rename ( name, final_name )
+	     < 0 )
+	    error ( "cannot rename %s to %s",
+	            name, final_name );
+	tprintf ( "* renamed %s to %s\n",
+	          name, final_name );
+	current_revision->filename = NULL;
+
+	exit ( 0 );
     }
 }
