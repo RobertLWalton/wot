@@ -2,14 +2,14 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Mon Aug 17 17:58:37 EDT 2020
+** Date:	Mon Aug 17 18:28:39 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
 ** for this program.
 */
 
-#define _POSIX_C_SOURCE 2
+#define _POSIX_C_SOURCE 200112L
 #define __STDC_WANT_LIB_EXT2__ 1
 
 #include <stdlib.h>
@@ -210,6 +210,7 @@ char skip ( FILE * repos )
 	    ungetc ( c, repos );
 	    return c;
 	}
+	if ( c == '\n' ) ++ repos_line;
     }
 }
 
@@ -967,11 +968,13 @@ const char * read_legacy_header ( void )
  *
  * If there is no next revision, this function sets
  * current_revision to NULL.
+ *
+ * Errors call the error function.
  */
 revision * current_revision;
 int current_index = 0;
     /* Number of current revision.  0 if none yet. */
-const char * step_revision
+void step_revision
         ( const char * filename, int delete_previous )
 {
     revision * next_revision;
@@ -981,13 +984,13 @@ const char * step_revision
     if ( current_index == 0 )
         next_revision = first_revision;
     else
-        next_revision = current_revision -> next;
+        next_revision = current_revision->next;
 
     ++ current_index;
     if ( next_revision == NULL )
     {
         current_revision = NULL;
-	return NULL;
+	return;
     }
 
     sprintf ( context,
@@ -1002,6 +1005,40 @@ const char * step_revision
     if ( des == NULL )
         error ( "could not open %s for writing",
 	        next_revision->filename );
+
+    if ( repos_is_legacy )
+    {
+        /* We must position repository in front of
+	 * string for next_revision->rnum.
+	 */
+
+	const char * s;
+	int found = 0;
+	while ( 1 )
+	{
+	    s = read_id ( repos );
+	    if ( s != NULL ) error ( s );
+	    if ( strcmp ( id, "num" ) == 0 )
+	    {
+	        num n;
+		s = read_num ( n, repos );
+		if ( s != NULL ) error ( s );
+		found =
+		    ( numcmp ( n, next_revision
+		                    ->rnum ) == 0 );
+	    }
+	    else if ( strcmp ( id, "text" ) == 0
+	              &&
+		      found )
+		break;
+	    else 
+	    {
+	        s = skip_string ( repos );
+		if ( s != NULL ) error ( s );
+	    }
+	}
+    }
+
     if ( current_index == 1 )
         copy_from_string ( repos, des );
     else
@@ -1033,7 +1070,6 @@ const char * step_revision
     }
 
     current_revision = next_revision;
-    return NULL;
 }
 
 /* Function executed on exit to remove temporary files.
@@ -1176,8 +1212,7 @@ int main ( int argc, char ** argv )
 	    sprintf ( context,
 		      "copying old revision 1 to"
 		      " temporary file" );
-	    s = step_revision ( filename, 0 );
-	    if ( s != NULL ) error ( s );
+	    step_revision ( filename, 0 );
 	    sprintf ( context,
 		      "diffing old and new"
 		      " revision 1" );
@@ -1273,10 +1308,7 @@ int main ( int argc, char ** argv )
 	}
 
 	while ( rev -- )
-	{
-	    s = step_revision ( filename, 1 );
-	    if ( s != NULL ) error ( s );
-	}
+	    step_revision ( filename, 1 );
 
 	name = current_revision->filename;
 	final_name = strdup ( name );
