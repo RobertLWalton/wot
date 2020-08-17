@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Mon Aug 17 04:40:41 EDT 2020
+** Date:	Mon Aug 17 06:35:53 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -104,6 +104,21 @@ int repos_line = 0;
      * repository being mis-formatted.
      */
 
+/* A legacy RCS repository is viewed as a sequence of
+ * entries, each of the form `id ...;' or `id string'.
+ * Some entries contain revision numbers (rnum's) and
+ * some contain dates.  Rnums with a single . are
+ * on the trunk, and we are only interested in trunk
+ * entries.
+ *
+ * The lower level routines parse entries.  The next
+ * level parses deltas, which are sequences of entries
+ * beginning with an rnum entry.
+ */
+char id[100];   	/* entry id */
+int x, y;		/* rnum of form x.y */
+unsigned long date;	/* time read from date */
+
 char * context = "";
 void error ( const char * fmt, ... )
 {
@@ -118,24 +133,6 @@ void error ( const char * fmt, ... )
 	fprintf ( stderr, "      repository is at line"
 	                  " %d\n", repos_line );
     exit ( 1 );
-}
-
-/* Copy a file from src to des, and stop on an EOF.
- * Returns NULL on success and error message on
- * failure.
- */
-const char * copy ( FILE * src, FILE * des )
-{
-    int c;
-    while ( ( c = fgetc ( src ) ) != EOF )
-    {
-        if ( fputc ( c, des ) == EOF )
-	    return strerror ( errno );
-    }
-    if ( ferror ( src ) )
-        return strerror ( errno );
-    else
-        return NULL;
 }
 
 /* Skip whitespace in repository.  Return NULL on
@@ -154,6 +151,110 @@ const char * skip ( FILE * repos )
 	return NULL;
     }
     if ( ferror ( repos ) )
+        return strerror ( errno );
+    else
+        return NULL;
+}
+
+/* Read an id into the global id buffer.  Its an error
+ * if the id is too long.  If the next thing is a digit,
+ * do not skip over it and record the id as "rnum".
+ * We assume id must be all letters.
+ */
+const char * read_id ( FILE * repos )
+{
+    const char * s;
+    int c;
+    char * p, * endp;
+
+    s = skip ( repos );
+    if ( s != NULL ) return s;
+
+    p = id;
+    endp = id + sizeof ( id ) - 2;
+    while ( 1 )
+    {
+        c = fgetc ( repos );
+	if ( c == EOF )
+	{
+	    if ( ferror ( repos ) )
+		return strerror ( errno );
+	    if ( feof ( repos ) )
+	        return "unexpected end of file"
+		       " in repository";
+	}
+	if ( p == id && isdigit ( c ) )
+	{
+	    ungetc ( c, repos );
+	    strcpy ( id, "rnum" );
+	    return NULL;
+	}
+	if ( ! isalpha ( c ) )
+	{
+	    if ( p == id )
+	        return "bad id";
+	    ungetc ( c, repos );
+	    * p = 0;
+	    return NULL;
+	}
+	if ( p >= endp )
+	    return "id too long";
+	* p ++ = c;
+    }
+}
+
+/* Read a natural number from repos to num.  Whilespace
+ * before number is ignored.  Return NULL on success
+ * (must have at least one digit), or error message
+ * on failure.
+ */
+const char * read_natural
+	( unsigned long * natural, FILE * repos )
+{
+    int c;
+    const char * s;
+
+    s = skip ( repos );
+    if ( s != NULL ) return s;
+
+    c = fgetc ( repos );
+    if ( ferror ( repos ) )
+        return strerror ( errno );
+
+    if ( ! isdigit ( c ) )
+	return "expected number not found in"
+	       " repository";
+
+    * natural = c - '0';
+    while ( ( c = fgetc ( repos ) ) != EOF )
+    {
+	unsigned long old_natural = * natural;
+	if ( ! isdigit ( c ) ) break;
+	* natural *= 10;
+	* natural += c - '0';
+	if ( old_natural > * natural )
+	    return "number too large in repository";
+    }
+    if ( ferror ( repos ) )
+        return strerror ( errno );
+    ungetc ( c, repos );
+    return NULL;
+}
+
+
+/* Copy a file from src to des, and stop on an EOF.
+ * Returns NULL on success and error message on
+ * failure.
+ */
+const char * copy ( FILE * src, FILE * des )
+{
+    int c;
+    while ( ( c = fgetc ( src ) ) != EOF )
+    {
+        if ( fputc ( c, des ) == EOF )
+	    return strerror ( errno );
+    }
+    if ( ferror ( src ) )
         return strerror ( errno );
     else
         return NULL;
@@ -244,44 +345,6 @@ const char * copy_to_string ( FILE * src, FILE * repos )
 }
 
 
-/* Read a natural number from src to num.  Whilespace
- * before number is ignored.  Return NULL on success
- * (must have at least one digit), or error message
- * on failure.
- */
-const char * get_number
-	( unsigned long * num, FILE * repos )
-{
-    int c;
-    const char * s;
-
-    s = skip ( repos );
-    if ( s != NULL ) return s;
-
-    c = fgetc ( repos );
-    if ( ferror ( repos ) )
-        return strerror ( errno );
-
-    if ( ! isdigit ( c ) )
-	return "expected number not found in"
-	       " repository";
-
-    * num = c - '0';
-    while ( ( c = fgetc ( repos ) ) != EOF )
-    {
-	unsigned long old_num = * num;
-	if ( ! isdigit ( c ) ) break;
-	* num *= 10;
-	* num += c - '0';
-	if ( old_num > * num )
-	    return "number too large in repository";
-    }
-    if ( ferror ( repos ) )
-        return strerror ( errno );
-    ungetc ( c, repos );
-    return NULL;
-}
-
 /* Copy from file src to file des editing it on the fly
  * using a diff -n listing in a string in repos.
  * Returns NULL on success and error message on failure.
@@ -339,9 +402,9 @@ const char * edit
 	    return "expected edit command not found in"
 		   " repository";
 
-	s = get_number ( & location, repos );
+	s = read_natural ( & location, repos );
 	if ( s != NULL ) return s;
-	s = get_number ( & count, repos );
+	s = read_natural ( & count, repos );
 	if ( s != NULL ) return s;
 
 	if ( count == 0 )
@@ -555,7 +618,7 @@ const char * read_header ( void )
 
 	if ( ! isdigit ( c ) ) break;
 
-	s = get_number ( & t, repos );
+	s = read_natural ( & t, repos );
 	if ( s != NULL ) return s;
 	next = (revision *) malloc
 	    ( sizeof ( revision ) );
