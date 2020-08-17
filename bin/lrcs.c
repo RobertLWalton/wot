@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Sun Aug 16 13:48:34 EDT 2020
+** Date:	Sun Aug 16 20:47:01 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -14,9 +14,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-    /* __USE_POSIX2 must be just before stdio.h
-     * to enable popen(3).
-     */
+#include <stdarg.h>
 #include <string.h>
 #include <time.h>
 #include <ctype.h>
@@ -107,10 +105,15 @@ int repos_line = 0;
      */
 
 char * context = "";
-void error ( const char * message )
+void error ( const char * fmt, ... )
 {
+    va_list ap;
+    va_start ( ap, fmt );
+
     fprintf ( stderr, "lrcs: error %s\n", context );
-    fprintf ( stderr, "      %s\n", message );
+    fprintf ( stderr, "      " );
+    vfprintf ( stderr, fmt, ap );
+    fprintf ( stderr, "\n" );
     if ( repos_line > 0 )
 	fprintf ( stderr, "      repository is at line"
 	                  " %d\n", repos_line );
@@ -566,6 +569,79 @@ const char * read_header ( void )
     }
     if ( first_revision == NULL )
         return "the repository header is empty";
+    return NULL;
+}
+
+/* Move the current_revision pointer foward one revision
+ * and creat the file of the new current_revision.
+ * The file is named f,Vn where n is 1, 2, 3, ... for
+ * the revisions in order.  If delete_previous is true,
+ * the file of the previous revision is deleted and
+ * its name is set to NULL.
+ *
+ * repos must be positioned so the next thing to be
+ * read from it is the string of the next revision,
+ * and the previous revision, if it exists, must
+ * have its filename set.
+ *
+ * If there is no next revision, this function sets
+ * current_revision to NULL.
+ */
+revision * current_revision;
+int current_index = 0;
+    /* Number of current revision.  0 if none yet. */
+const char * step_revision
+        ( const char * filename, int delete_previous )
+{
+    revision * next_revision;
+    const char * s;
+    FILE * des, * src;
+
+    if ( current_index == 0 )
+        next_revision = first_revision;
+    else
+        next_revision = current_revision -> next;
+
+    ++ current_index;
+    if ( next_revision == NULL )
+    {
+        current_revision = NULL;
+	return NULL;
+    }
+
+    sprintf ( context,
+	      "copying revision %d to file",
+	      current_index );
+
+    next_revision->filename = malloc
+        ( strlen ( filename ) + 10 );
+    sprintf ( next_revision->filename,
+              "%s,V%d", filename, current_index );
+    des = fopen ( next_revision->filename, "w" );
+    if ( des == NULL )
+        error ( "could not open revision %d file for"
+	        " writing", current_index );
+    if ( current_index == 1 )
+        copy_from_string ( repos, des );
+    else
+    {
+        src = fopen
+	    ( current_revision->filename, "r" );
+	if ( src == NULL )
+	    error ( "could not open revision %d file"
+	            " for reading", current_index - 1 );
+	s = edit ( repos, src, des );
+	if ( s != NULL ) error ( s );
+	fclose ( src );
+    }
+    fclose ( des );
+    if ( delete_previous
+         &&
+	 unlink ( current_revision->filename ) < 0 )
+        error ( "cannot delete revision %d file",
+	        current_index - 1 );
+
+    current_revision = next_revision;
     return NULL;
 }
 
