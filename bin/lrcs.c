@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Sun Aug 16 20:47:01 EDT 2020
+** Date:	Sun Aug 16 21:35:38 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -637,6 +637,8 @@ const char * step_revision
     fclose ( des );
     if ( delete_previous
          &&
+	 current_revision != NULL
+	 &&
 	 unlink ( current_revision->filename ) < 0 )
         error ( "cannot delete revision %d file",
 	        current_index - 1 );
@@ -692,8 +694,9 @@ int main ( int argc, char ** argv )
     {
 	const char * s;
 	revision * r;
-	FILE * src;
+	FILE * src, * diff;
 	struct stat status;
+	char * command;
 
 	if ( argc > 3 ) error ( "too many arguments" );
         if ( repos != NULL )
@@ -730,5 +733,31 @@ int main ( int argc, char ** argv )
 	          "copying file to new repository" );
 	s = copy_to_string ( src, new_repos );
 	if ( s != NULL ) error ( s );
+	fclose ( src );
+
+	sprintf ( context,
+	          "copying old revision 1 to file" );
+	s = step_revision ( filename, 0 );
+	if ( s != NULL ) error ( s );
+	sprintf ( context,
+	          "diffing old and new revision 1" );
+
+	command = (char *) malloc 
+	    ( 2 * strlen ( filename ) + 100 );
+	sprintf ( command, "diff -n %s %s",
+	          filename,
+		  current_revision->filename );
+	diff = popen ( command, "r" );
+	if ( diff == NULL )
+	    error ( "cannot execute diff -n command" );
+	s = copy_to_string  ( diff, new_repos );
+	if ( s != NULL ) error ( s );
+	pclose ( diff );
+
+	s = copy ( repos, new_repos );
+	if ( s != NULL ) error ( s );
+	fclose ( repos );
+	fclose ( new_repos );
+
     }
 }
