@@ -459,7 +459,7 @@ const char * edit
 
 /* Find and open the input repository file for a given
  * file.  If found repos is set to a read-only stream
- * for the file.  Otherwise repos is set to NULL.
+ * for the file.  Otherwise repos_name is set to NULL.
  */
 FILE * repos = NULL;
 char * repos_name = NULL;
@@ -563,9 +563,10 @@ const char * read_header ( void )
 	next->filename = NULL;
 	next->time = (time_t) t;
 	if ( last_revision != NULL )
-	    last_revision = next;
+	    last_revision->next = next;
 	if ( first_revision == NULL )
 	    first_revision = next;
+	last_revision = next;
     }
     if ( first_revision == NULL )
         return "the repository header is empty";
@@ -764,29 +765,35 @@ int main ( int argc, char ** argv )
 	if ( s != NULL ) error ( s );
 	fclose ( src );
 
-	sprintf ( context,
-	          "copying old revision 1 to"
-		  " temporary file" );
-	s = step_revision ( filename, 0 );
-	if ( s != NULL ) error ( s );
-	sprintf ( context,
-	          "diffing old and new revision 1" );
+	if ( repos_name != NULL )
+	{
+	    sprintf ( context,
+		      "copying old revision 1 to"
+		      " temporary file" );
+	    s = step_revision ( filename, 0 );
+	    if ( s != NULL ) error ( s );
+	    sprintf ( context,
+		      "diffing old and new"
+		      " revision 1" );
 
-	command = (char *) malloc 
-	    ( 2 * strlen ( filename ) + 100 );
-	sprintf ( command, "diff -n %s %s",
-	          filename,
-		  current_revision->filename );
-	diff = popen ( command, "r" );
-	if ( diff == NULL )
-	    error ( "cannot execute diff -n command" );
-	s = copy_to_string  ( diff, new_repos );
-	if ( s != NULL ) error ( s );
-	pclose ( diff );
+	    command = (char *) malloc 
+		( 2 * strlen ( filename ) + 100 );
+	    sprintf ( command, "diff -n %s %s",
+		      filename,
+		      current_revision->filename );
+	    diff = popen ( command, "r" );
+	    if ( diff == NULL )
+		error ( "cannot execute"
+		        " diff -n command" );
+	    s = copy_to_string  ( diff, new_repos );
+	    if ( s != NULL ) error ( s );
+	    pclose ( diff );
 
-	s = copy ( repos, new_repos );
-	if ( s != NULL ) error ( s );
-	fclose ( repos );
+	    s = copy ( repos, new_repos );
+	    if ( s != NULL ) error ( s );
+	    fclose ( repos );
+	}
+
 	fclose ( new_repos );
 
 	final_repos_name = strdup ( new_repos_name );
@@ -798,13 +805,18 @@ int main ( int argc, char ** argv )
 	            new_repos_name, final_repos_name );
 	new_repos_name = NULL;
 
-	V = repos_name[strlen(repos_name)-1];
-	if ( V == 'V'
-	     &&
-	        strcmp ( repos_name, final_repos_name )
-	     != 0
-	     &&
-	     unlink ( repos_name ) < 0 )
-	    error ( "cannot remove %s", repos_name );
+	if ( repos_name != NULL )
+	{
+	    V = repos_name[strlen(repos_name)-1];
+	    if ( V == 'V'
+		 &&
+		    strcmp ( repos_name,
+		             final_repos_name )
+		 != 0
+		 &&
+		 unlink ( repos_name ) < 0 )
+		error ( "cannot remove %s",
+		        repos_name );
+	}
     }
 }
