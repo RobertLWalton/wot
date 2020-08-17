@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Sun Aug 16 21:35:38 EDT 2020
+** Date:	Mon Aug 17 04:40:41 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -62,7 +62,7 @@ const char * documentation[] = {
 "has no branches.",
 "",
 "This program makes temporary files for file f under",
-"names such as f,Vn and f,V+.  It deletes these when",
+"names such as f,Vn+ and f,V+.  It deletes these when",
 "the program terminates, even if it terminates with",
 "an error.",
 "",
@@ -616,11 +616,11 @@ const char * step_revision
     next_revision->filename = malloc
         ( strlen ( filename ) + 10 );
     sprintf ( next_revision->filename,
-              "%s,V%d", filename, current_index );
+              "%s,V%d+", filename, current_index );
     des = fopen ( next_revision->filename, "w" );
     if ( des == NULL )
-        error ( "could not open revision %d file for"
-	        " writing", current_index );
+        error ( "could not open %s for writing",
+	        next_revision->filename );
     if ( current_index == 1 )
         copy_from_string ( repos, des );
     else
@@ -628,23 +628,44 @@ const char * step_revision
         src = fopen
 	    ( current_revision->filename, "r" );
 	if ( src == NULL )
-	    error ( "could not open revision %d file"
-	            " for reading", current_index - 1 );
+	    error ( "could not open %s for reading",
+	             current_revision->filename );
 	s = edit ( repos, src, des );
 	if ( s != NULL ) error ( s );
 	fclose ( src );
     }
     fclose ( des );
+
     if ( delete_previous
          &&
-	 current_revision != NULL
-	 &&
-	 unlink ( current_revision->filename ) < 0 )
-        error ( "cannot delete revision %d file",
-	        current_index - 1 );
+	 current_revision != NULL )
+    {
+	if ( unlink ( current_revision->filename ) < 0 )
+	    error ( "cannot delete %s",
+		    current_revision->filename );
+	else
+	    current_revision->filename = NULL;
+    }
 
     current_revision = next_revision;
     return NULL;
+}
+
+/* Function executed on exit to remove temporary files.
+ */
+void cleanup ( void )
+{
+    revision * r;
+
+    if ( new_repos_name != NULL )
+        unlink ( new_repos_name );
+    r = first_revision;
+    while ( r )
+    {
+	if ( r->filename != NULL )
+	    unlink ( r->filename );
+	r = r->next;
+    }
 }
 
 int main ( int argc, char ** argv )
@@ -663,6 +684,8 @@ int main ( int argc, char ** argv )
 	exit ( 0 );
     }
 
+    atexit ( cleanup );
+
     op = argv[1];
     filename = argv[2];
     context = (char *) malloc
@@ -674,7 +697,8 @@ int main ( int argc, char ** argv )
 	int i = 0;
 	if ( argc > 3 ) error ( "too many arguments" );
         if ( repos == NULL )
-	    error ( "there is no repository for file" );
+	    error ( "there is no repository for %s",
+	            filename );
 	s = read_header();
 	if ( s != NULL ) error ( s );
 	printf ( "%s:\n", repos_name );
@@ -697,6 +721,8 @@ int main ( int argc, char ** argv )
 	FILE * src, * diff;
 	struct stat status;
 	char * command;
+	char * final_repos_name;
+	char V;
 
 	if ( argc > 3 ) error ( "too many arguments" );
         if ( repos != NULL )
@@ -704,13 +730,16 @@ int main ( int argc, char ** argv )
 	    s = read_header();
 	    if ( s != NULL ) error ( s );
 	}
-	sprintf ( context, "reading file" );
+	sprintf ( context,
+	          "reading file %s", filename );
 	src = fopen ( filename, "r" );
 	if ( src == NULL )
-	    error ( "cannot open file" );
+	    error ( "cannot open file %s for reading",
+	            filename );
 
 	if ( fstat ( fileno ( src ), & status ) < 0 )
-	    error ( "cannot stat file" );
+	    error ( "cannot stat file %s",
+	            filename );
 
 	sprintf ( context,
 	          "writing new repository header" );
@@ -736,7 +765,8 @@ int main ( int argc, char ** argv )
 	fclose ( src );
 
 	sprintf ( context,
-	          "copying old revision 1 to file" );
+	          "copying old revision 1 to"
+		  " temporary file" );
 	s = step_revision ( filename, 0 );
 	if ( s != NULL ) error ( s );
 	sprintf ( context,
@@ -759,5 +789,22 @@ int main ( int argc, char ** argv )
 	fclose ( repos );
 	fclose ( new_repos );
 
+	final_repos_name = strdup ( new_repos_name );
+	final_repos_name[strlen(new_repos_name)-1] = 0;
+	
+	if ( rename ( new_repos_name, final_repos_name )
+	     < 0 )
+	    error ( "cannot rename %s to %s",
+	            new_repos_name, final_repos_name );
+	new_repos_name = NULL;
+
+	V = repos_name[strlen(repos_name)-1];
+	if ( V == 'V'
+	     &&
+	        strcmp ( repos_name, final_repos_name )
+	     != 0
+	     &&
+	     unlink ( repos_name ) < 0 )
+	    error ( "cannot remove %s", repos_name );
     }
 }
