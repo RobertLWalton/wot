@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Mon Aug 17 09:57:09 EDT 2020
+** Date:	Mon Aug 17 13:51:59 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -23,6 +23,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <errno.h>
+#include <assert.h>
 
 const char * documentation[] = {
 "lrcs -doc",
@@ -95,15 +96,10 @@ NULL
 int trace = 0;   /* Set true by -t */
 #define tprintf if ( trace ) printf
 
-/* Revisions are store in temporary files.
- */
-typedef struct revision
-{
-    time_t time;
-    char * filename;
-    struct revision * next;
-} revision;
-revision * first_revision;
+typedef unsigned long nat;
+    /* Natural number.  Longest that can be read
+     * in C90.
+     */
 
 int repos_line = 0;
     /* Current line number in repository being read.
@@ -112,19 +108,76 @@ int repos_line = 0;
      */
 
 /* A legacy RCS repository is viewed as a sequence of
- * entries, each of the form `id ...;' or `id string'.
- * Some entries contain revision numbers (rnum's) and
- * some contain dates.  Rnums with a single . are
- * on the trunk, and we are only interested in trunk
- * entries.
+ * entries, each of the form `num', `id ...;', or
+ * `id string'.
  *
- * The lower level routines parse entries.  The next
- * level parses deltas, which are sequences of entries
- * beginning with an rnum entry.
+ * The header consists of all entries before the
+ * `desc string' entry.  The body consists of all
+ * entries after.
+ *
+ * The following apply during header scan.
+ *
+ * A `head num' entry creates a first revision with the
+ * given num as its rnum and sets scan_revision = NULL.
+ *
+ * A `num' entry that matches last_revision->rnum sets
+ * scan_revision to last_revision.  If it does not
+ * match it sets scan_revision to NULL.
+ *
+ * A `date num' entry with scan_revision non-NULL sets
+ * scan_revision->date.
+ *
+ * A `next num' entry with scan_revision non-NULL
+ * creates a new revision with num as its rnum.
+ *
+ * Revision times are set from revision dates at the
+ * end of header scan.
+ *
+ * The following apply during body scan.  scan_
+ * revision is initialized to first_revision.
+ *
+ * A `num' entry that does not match scan_revision->rnum
+ * skips to the next `num' entry.
+ *
+ * A `num' entry that matches scan_revision->rnum sets
+ * scan_revision = scan_revision->next and skips to
+ * the string part of the next `text string' entry.
  */
-char id[100];   	/* entry id */
-int x, y;		/* rnum of form x.y */
-unsigned long date;	/* time read from date */
+typedef nat num[100];
+    /* Encodes num[0].num[1].num[2]. ..., which ends
+     * with first element that is 0.
+     */
+char id[100];  	/* entry id */
+
+/* Return -1 if n1 < n2, 0 if n1 == n2, +1 if n1 > n2.
+ */
+int numcmp ( num n1, num n2 )
+{
+    int i;
+    while ( 1 )
+    {
+        if ( n1[i] < n2[i] ) return -1;
+	else if ( n1[i] > n2[i] ) return +1;
+	else if ( n1[i] == 0 ) return 0;
+	++ i;
+	assert ( i < 100 );
+    }
+}
+
+/* Revisions are store in temporary files.
+ */
+typedef struct revision
+{
+    time_t time;
+    char * filename;
+    struct revision * next;
+
+    /* Legacy info */
+
+    num rnum;
+    num date;
+} revision;
+revision * first_revision = NULL;
 
 char * context = "";
 void error ( const char * fmt, ... )
@@ -142,31 +195,32 @@ void error ( const char * fmt, ... )
     exit ( 1 );
 }
 
-/* Skip whitespace in repository.  Return NULL on
- * success or error message on failure.  Next
- * character is non-whitespace or EOF.
+/* Skip whitespace in repository.  Return the next
+ * character AFTER the current position (may be EOF).
  */
-const char * skip ( FILE * repos )
+char skip ( FILE * repos )
 {
     int c;
 
-    while ( ( c = fgetc ( repos ) ) != EOF )
+    while ( 1 )
     {
-        if ( c == '\n' ) ++ repos_line;
-	if ( isspace ( c ) ) continue;
-	ungetc ( c, repos );
-	return NULL;
+	c = fgetc ( repos );
+	if ( ! isspace ( c ) )
+	{
+	    ungetc ( c, repos );
+	    return c;
+	}
     }
-    if ( ferror ( repos ) )
-        return strerror ( errno );
-    else
-        return NULL;
 }
 
-/* Read an id into the global id buffer.  Its an error
- * if the id is too long.  If the next thing is a digit,
- * do not skip over it and record the id as "rnum".
- * We assume id must be all letters.
+/* Read an id into the global id buffer.  Whitespace
+ * before id is ignored.  Return NULL on success
+ * or error message on failure.
+ *
+ * If the next non-whitespace character is a digit,
+ * do not skip over it and record the id as "num".
+ * We assume id must be all letters.  Its an error
+ * if the id is too long to fit into buffer.
  */
 const char * read_id ( FILE * repos )
 {
@@ -174,8 +228,7 @@ const char * read_id ( FILE * repos )
     int c;
     char * p, * endp;
 
-    s = skip ( repos );
-    if ( s != NULL ) return s;
+    skip ( repos );
 
     p = id;
     endp = id + sizeof ( id ) - 2;
@@ -193,8 +246,8 @@ const char * read_id ( FILE * repos )
 	if ( p == id && isdigit ( c ) )
 	{
 	    ungetc ( c, repos );
-	    strcpy ( id, "rnum" );
-	    tprintf ( "* read id rnum\n" );
+	    strcpy ( id, "num" );
+	    tprintf ( "* read id num\n" );
 	    return NULL;
 	}
 	if ( ! isalpha ( c ) )
@@ -216,19 +269,18 @@ const char * read_id ( FILE * repos )
     }
 }
 
-/* Read a natural number from repos to num.  Whilespace
+/* Read a natural number from repos to num.  Whitespace
  * before number is ignored.  Return NULL on success
  * (must have at least one digit), or error message
  * on failure.
  */
 const char * read_natural
-	( unsigned long * natural, FILE * repos )
+	( nat * natural, FILE * repos )
 {
     int c;
     const char * s;
 
-    s = skip ( repos );
-    if ( s != NULL ) return s;
+    skip ( repos );
 
     c = fgetc ( repos );
     if ( ferror ( repos ) )
@@ -241,7 +293,7 @@ const char * read_natural
     * natural = c - '0';
     while ( ( c = fgetc ( repos ) ) != EOF )
     {
-	unsigned long old_natural = * natural;
+	nat old_natural = * natural;
 	if ( ! isdigit ( c ) ) break;
 	* natural *= 10;
 	* natural += c - '0';
@@ -254,6 +306,118 @@ const char * read_natural
     return NULL;
 }
 
+
+/* Read a num from repos.  Whitespace before num is
+ * ignored.  Return NULL on success, or error message
+ * on failure.  Must have one element and not more
+ * than fit in a num type.
+ */
+const char * read_num ( num n, FILE * repos )
+{
+    int c;
+    const char * s;
+    int i, length;
+
+    length = sizeof ( num ) / sizeof ( int );
+
+    skip ( repos );
+
+    i = 0;
+    while ( 1 )
+    {
+        if ( i >= length - 2 )
+	    return "too many elements in num";
+        c = fgetc ( repos );
+	if ( ! isdigit ( c ) )
+	    return "expected num element not found";
+	ungetc ( c, repos );
+	s = read_natural ( & n[i], repos );
+	if ( s != NULL ) return s;
+	if ( n[i] == 0 )
+	    return "0 num element found";
+	++i;
+
+        c = fgetc ( repos );
+	if ( c != '.' )
+	{
+	    ungetc ( c, repos );
+	    break;
+	}
+    }
+    n[i] = 0;
+    if ( trace )
+    {
+        printf ( "* read num %d", n[0] );
+	i = 1;
+	while ( n[i] != 0 )
+	    printf ( ".%d", n[i++] );
+	printf ( "\n" );
+    }
+    return NULL;
+}
+
+/* Skip one string in repos.  Whitespace before string
+ * is ignored.  Return NULL on success, or error message
+ * on failure.
+ */
+const char * skip_string ( FILE * repos )
+{
+    int c;
+    const char * s;
+
+    skip ( repos );
+
+    c = fgetc ( repos );
+    if ( c != '@' )
+        return "expected string not found";
+    while ( 1 )
+    {
+        c = fgetc ( repos );
+	if ( c == EOF )
+	{
+	    if ( ferror ( repos ) )
+		return strerror ( errno );
+	    if ( feof ( repos ) )
+	        return "unexpected end of file"
+		       " in repository";
+	}
+	if ( c != '@' ) continue;
+	c = fgetc ( repos );
+	if ( c == '@' ) continue;
+	ungetc ( c, repos );
+	return NULL;
+    }
+}
+
+/* Skip entry.  Specifically, skip to after next `;',
+ * using skip_string to skip strings.  Return NULL on
+ * success, or error message on failure.
+ */
+const char * skip_entry ( FILE * repos )
+{
+    int c;
+    const char * s;
+
+    while ( 1 )
+    {
+        c = fgetc ( repos );
+	if ( c == EOF )
+	{
+	    if ( ferror ( repos ) )
+		return strerror ( errno );
+	    if ( feof ( repos ) )
+	        return "unexpected end of file"
+		       " in repository";
+	}
+	else if ( c == '@' )
+	{
+	    ungetc ( c, repos );
+	    s = skip_string ( repos );
+	    if ( s != NULL ) return s;
+	}
+	else if ( c == ';' ) return NULL;
+    }
+}
 
 /* Copy a file from src to des, and stop on an EOF.
  * Returns NULL on success and error message on
@@ -286,8 +450,7 @@ const char * copy_from_string
 
     /* Skip initial whitespace and @.
      */
-    s = skip ( repos );
-    if ( s != NULL ) return s;
+    skip ( repos );
 
     c = fgetc ( repos );
     if ( ferror ( repos ) )
@@ -378,14 +541,13 @@ const char * edit
 	 * and indication that ending '@' was
 	 * found in an inner loop.
 	 */
-    unsigned long location, count;
+    nat location, count;
         /* Command is `op location count'
 	 */
 
     /* Skip initial whitespace and @.
      */
-    s = skip ( repos );
-    if ( s != NULL ) return s;
+    skip ( repos );
 
     c = fgetc ( repos );
     if ( ferror ( src ) )
@@ -539,6 +701,7 @@ const char * edit
  */
 FILE * repos = NULL;
 char * repos_name = NULL;
+int repos_is_legacy = 0;
 const char * repos_input_variants[4] = {
     "%s/%s,V", "%s/LRCS/%s,V",
     "%s/%s,v", "%s/LRCS/%s,v" };
@@ -562,6 +725,7 @@ void find_repos ( const char * filename )
 	repos = fopen ( repos_name, "r" );
 	if ( repos != NULL )
 	{
+	    repos_is_legacy = ( i >= 2 );
 	    tprintf ( "* found repository %s\n",
 	              repos_name );
 	    return;
@@ -615,12 +779,16 @@ void find_new_repos ( const char * filename )
  * data base, but without any files.  Returns NULL on
  * success and error message on failure.
  */
+const char * read_legacy_header ( void );
 const char * read_header ( void )
 {
     revision * last_revision = NULL;
     int c;
     const char * s;
 
+    if ( repos_is_legacy )
+        return read_legacy_header();
+    
     repos_line = 1;
     sprintf ( context, "while reading %s", repos_name );
     tprintf ( "* reading header from %s\n",
@@ -629,10 +797,10 @@ const char * read_header ( void )
     first_revision = NULL;
     while ( 1 )
     {
-	unsigned long t;
+	nat t;
 	revision * next;
 
-        s = skip ( repos );
+        skip ( repos );
 	c = fgetc ( repos );
 	if ( c == EOF )
 	{
@@ -665,6 +833,125 @@ const char * read_header ( void )
         return "the repository header is empty";
     return NULL;
 }
+
+/* Ditto for legacy repository
+ */
+const char * read_legacy_header ( void )
+{
+    revision * last_revision = NULL,
+             * scan_revision = NULL;
+    const char * s;
+
+    repos_line = 1;
+    sprintf ( context, "while reading %s", repos_name );
+    tprintf ( "* reading header from %s\n",
+              repos_name );
+
+    first_revision = NULL;
+
+    while ( 1 )
+    {
+        revision * next;
+
+        s = read_id ( repos );
+	if ( s != NULL ) return s;
+
+	if ( ( strcmp ( id, "head" ) == 0
+	       &&
+	       first_revision == NULL )
+	     ||
+	     ( strcmp ( id, "next" ) == 0
+	       &&
+	       scan_revision != NULL ) )
+	{
+	    if ( isdigit ( skip ( repos ) ) )
+	    {
+		next = (revision *) malloc
+		    ( sizeof ( revision ) );
+		next->next = NULL;
+		next->filename = NULL;
+		next->time = 0;
+		if ( last_revision != NULL )
+		    last_revision->next = next;
+		if ( first_revision == NULL )
+		    first_revision = next;
+		last_revision = next;
+		s = read_num ( next->rnum, repos );
+		if ( s != NULL ) return s;
+		tprintf ( "* made new revision\n" );
+	    }
+	}
+	else if ( strcmp ( id, "num" ) == 0 )
+	{
+	    num n;
+	    s = read_num ( n, repos );
+	    if ( s != NULL ) return s;
+
+	    if ( last_revision != NULL
+	         &&
+		    numcmp ( n, last_revision->rnum )
+		 == 0 )
+	        scan_revision = last_revision;
+	    else
+	        scan_revision = NULL;
+
+	    continue;
+	}
+	else if ( strcmp ( id, "date" ) == 0
+	          &&
+		  scan_revision != NULL )
+	{
+	    s = read_num ( next->date, repos );
+	    if ( s != NULL ) return s;
+	    tprintf ( "* read date\n" );
+	}
+	else if ( strcmp ( id, "desc" ) == 0 )
+	{
+	    s = skip_string ( repos );
+	    if ( s != NULL ) return s;
+	    break;
+	}
+
+	s = skip_entry ( repos );
+	if ( s != NULL ) return s;
+    }
+    tprintf ( "* done reading header\n" );
+    if ( first_revision == NULL )
+        return "the repository header is empty";
+
+    /* Convert dates to times. */
+
+    {
+        char * tz;
+	revision * r;
+	struct tm time;
+
+        tz = getenv ( "TZ" );
+	setenv ( "TZ", "UTC+0", 1 );
+	tzset();
+
+	r = first_revision;
+	time.tm_isdst  = 0;
+	while ( r != NULL )
+	{
+	    time.tm_year = (int) r->date[0] - 1900;
+	    time.tm_mon  = (int) r->date[1];
+	    time.tm_mday = (int) r->date[2];
+	    time.tm_hour = (int) r->date[3];
+	    time.tm_min  = (int) r->date[4];
+	    time.tm_sec  = (int) r->date[5];
+	    r->time = mktime ( & time );
+	    r = r->next;
+	}
+
+	if ( tz != NULL ) setenv ( "TZ", tz, 1 );
+	else unsetenv ( "TZ" );
+	tzset();
+    }
+
+    return NULL;
+}
+
 
 /* Move the current_revision pointer foward one revision
  * and creat the file of the new current_revision.
