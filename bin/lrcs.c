@@ -707,7 +707,7 @@ int main ( int argc, char ** argv )
 	while ( r )
 	{
 	    ++ i;
-	    printf ( "%10d: %s\n", i,
+	    printf ( "%4d: %s", i,
 	             ctime ( &r->time ) );
 	    r = r->next;
 
