@@ -767,6 +767,7 @@ int main ( int argc, char ** argv )
 
 	if ( repos_name != NULL )
 	{
+	    int c;
 	    sprintf ( context,
 		      "copying old revision 1 to"
 		      " temporary file" );
@@ -785,6 +786,17 @@ int main ( int argc, char ** argv )
 	    if ( diff == NULL )
 		error ( "cannot execute"
 		        " diff -n command" );
+
+	    c = fgetc ( diff );
+	    if ( c == EOF )
+	    {
+		printf ( "lrcs: repository is"
+			 " already up-to-date\n" );
+		exit ( 0 );
+	    }
+
+	    ungetc ( c, diff );
+
 	    s = copy_to_string  ( diff, new_repos );
 	    if ( s != NULL ) error ( s );
 	    pclose ( diff );
