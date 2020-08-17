@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Mon Aug 17 06:35:53 EDT 2020
+** Date:	Mon Aug 17 09:57:09 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -26,11 +26,12 @@
 
 const char * documentation[] = {
 "lrcs -doc",
-"lrcs in file",
-"lrcs out file [revision]",
-"lrcs diff file [revision] [diff-option...]",
-"lrcs diff file revision:revision [diff-option...]",
-"lrcs list file",
+"lrcs [-t] in file",
+"lrcs [-t] out file [revision]",
+"lrcs [-t] diff file [revision] [diff-option...]",
+"lrcs [-t] diff file revision:revision"
+				" [diff-option...]",
+"lrcs [-t] list file",
 "",
 "A file f has revisions stored in f,V, which is",
 "placed in the directory LRCS if that exists, or in",
@@ -61,6 +62,9 @@ const char * documentation[] = {
 "if it exists, converts it to a f,V file, provided it",
 "has no branches.",
 "",
+"The -t option causes execution to be traced.  It",
+"can be used to elicidate error messages.",
+"",
 "This program makes temporary files for file f under",
 "names such as f,Vn+ and f,V+.  It deletes these when",
 "the program terminates, even if it terminates with",
@@ -87,6 +91,9 @@ const char * documentation[] = {
 "to the BEGINNING of the revision list.",
 NULL
 };
+
+int trace = 0;   /* Set true by -t */
+#define tprintf if ( trace ) printf
 
 /* Revisions are store in temporary files.
  */
@@ -187,6 +194,7 @@ const char * read_id ( FILE * repos )
 	{
 	    ungetc ( c, repos );
 	    strcpy ( id, "rnum" );
+	    tprintf ( "* read id rnum\n" );
 	    return NULL;
 	}
 	if ( ! isalpha ( c ) )
@@ -195,10 +203,15 @@ const char * read_id ( FILE * repos )
 	        return "bad id";
 	    ungetc ( c, repos );
 	    * p = 0;
+	    tprintf ( "* read id %s\n", id );
 	    return NULL;
 	}
 	if ( p >= endp )
+	{
+	    * p = 0;
+	    tprintf ( "* read id %s\n", id );
 	    return "id too long";
+	}
 	* p ++ = c;
     }
 }
@@ -547,8 +560,14 @@ void find_repos ( const char * filename )
 	sprintf ( repos_name, repos_input_variants[i],
 	                      dir, base );
 	repos = fopen ( repos_name, "r" );
-	if ( repos != NULL ) return;
+	if ( repos != NULL )
+	{
+	    tprintf ( "* found repository %s\n",
+	              repos_name );
+	    return;
+	}
     }
+    tprintf ( "* could not find repository\n" );
     repos_name = NULL;
 }
 
@@ -581,8 +600,14 @@ void find_new_repos ( const char * filename )
 	sprintf ( new_repos_name,
 	          repos_output_variants[i], dir, base );
 	new_repos = fopen ( new_repos_name, "w" );
-	if ( new_repos != NULL ) return;
+	if ( new_repos != NULL )
+	{
+	    tprintf ( "* opened new repository %s\n",
+	              new_repos_name );
+	    return;
+	}
     }
+    tprintf ( "* could not open new repository\n" );
     new_repos_name = NULL;
 }
 
@@ -598,6 +623,8 @@ const char * read_header ( void )
 
     repos_line = 1;
     sprintf ( context, "while reading %s", repos_name );
+    tprintf ( "* reading header from %s\n",
+              repos_name );
 
     first_revision = NULL;
     while ( 1 )
@@ -620,6 +647,8 @@ const char * read_header ( void )
 
 	s = read_natural ( & t, repos );
 	if ( s != NULL ) return s;
+	tprintf ( "* read %d in header\n", t );
+
 	next = (revision *) malloc
 	    ( sizeof ( revision ) );
 	next->next = NULL;
@@ -631,6 +660,7 @@ const char * read_header ( void )
 	    first_revision = next;
 	last_revision = next;
     }
+    tprintf ( "* done reading header\n" );
     if ( first_revision == NULL )
         return "the repository header is empty";
     return NULL;
@@ -694,11 +724,14 @@ const char * step_revision
 	if ( src == NULL )
 	    error ( "could not open %s for reading",
 	             current_revision->filename );
+	tprintf ( "* editing %s\n",
+	           current_revision->filename );
 	s = edit ( repos, src, des );
 	if ( s != NULL ) error ( s );
 	fclose ( src );
     }
     fclose ( des );
+    tprintf ( "* wrote %s\n", next_revision->filename );
 
     if ( delete_previous
          &&
@@ -707,8 +740,9 @@ const char * step_revision
 	if ( unlink ( current_revision->filename ) < 0 )
 	    error ( "cannot delete %s",
 		    current_revision->filename );
-	else
-	    current_revision->filename = NULL;
+	tprintf ( "* deleted %s\n",
+	          current_revision->filename );
+	current_revision->filename = NULL;
     }
 
     current_revision = next_revision;
@@ -722,12 +756,19 @@ void cleanup ( void )
     revision * r;
 
     if ( new_repos_name != NULL )
+    {
         unlink ( new_repos_name );
+	tprintf ( "* deleted %s\n", new_repos_name);
+    }
     r = first_revision;
     while ( r )
     {
 	if ( r->filename != NULL )
+	{
 	    unlink ( r->filename );
+	    tprintf ( "* deleted %s\n",
+		      r->filename );
+	}
 	r = r->next;
     }
 }
@@ -736,6 +777,13 @@ int main ( int argc, char ** argv )
 {
     const char * op, * filename, * s;
     revision * r;
+
+    if ( argc >= 2 && strcmp ( argv[1], "-t" ) == 0 )
+    {
+        trace = 1;
+	-- argc, ++ argv;
+    }
+
     if ( argc < 3
          ||
 	 strncmp ( argv[1], "-doc", 4 ) == 0 )
@@ -812,6 +860,8 @@ int main ( int argc, char ** argv )
 	    error ( "cannot open new repository" );
 
 	fprintf ( new_repos, "%d\n", status.st_mtime );
+	tprintf ( "* mod time of %s is %d\n",
+	          filename, status.st_mtime );
 
 	r = first_revision;
 	    /* Header may be empty */
@@ -821,11 +871,16 @@ int main ( int argc, char ** argv )
 	    r = r->next;
 
 	}
+	tprintf ( "* wrote header of"
+	          " new repository\n" );
 
 	sprintf ( context,
 	          "copying file to new repository" );
 	s = copy_to_string ( src, new_repos );
 	if ( s != NULL ) error ( s );
+	tprintf ( "* copied %s to new repository\n",
+	          filename );
+	           
 	fclose ( src );
 
 	if ( repos_name != NULL )
@@ -863,6 +918,10 @@ int main ( int argc, char ** argv )
 	    s = copy_to_string  ( diff, new_repos );
 	    if ( s != NULL ) error ( s );
 	    pclose ( diff );
+	    tprintf ( "* copied diff -n %s %s to"
+	              " new repository\n",
+		      filename,
+		      current_revision->filename );
 
 	    s = copy ( repos, new_repos );
 	    if ( s != NULL ) error ( s );
@@ -878,6 +937,8 @@ int main ( int argc, char ** argv )
 	     < 0 )
 	    error ( "cannot rename %s to %s",
 	            new_repos_name, final_repos_name );
+	tprintf ( "* renamed %s to %s\n",
+	          new_repos_name, final_repos_name );
 	new_repos_name = NULL;
 
 	if ( repos_name != NULL )
@@ -887,11 +948,14 @@ int main ( int argc, char ** argv )
 		 &&
 		    strcmp ( repos_name,
 		             final_repos_name )
-		 != 0
-		 &&
-		 unlink ( repos_name ) < 0 )
-		error ( "cannot remove %s",
-		        repos_name );
+		 != 0 )
+	    {
+	        if ( unlink ( repos_name ) < 0 )
+		    error ( "cannot remove %s",
+			    repos_name );
+		tprintf ( "* removed %s\n",
+		          repos_name );
+	    }
 	}
     }
 }
