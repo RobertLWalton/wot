@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Mon Aug 17 20:55:35 EDT 2020
+** Date:	Mon Aug 17 21:51:25 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -531,6 +531,52 @@ const char * copy_to_string ( FILE * src, FILE * repos )
     return NULL;
 }
 
+/* Copy a string from repos to des.  String may be
+ * preceded by whitespace.  A line feed will be
+ * output before and after copied string.  Returns
+ * NULL on success and error message on failure.
+ */
+const char * copy_string ( FILE * repos, FILE * des )
+{
+    int c, last_c;
+
+    skip ( repos );
+
+    c = fgetc ( repos );
+    if ( c != '@' )
+	return "expected string not found in"
+	       " repository";
+    if ( fputc ( '\n', des ) == EOF )
+	return strerror ( errno );
+    if ( fputc ( '@', des ) == EOF )
+	return strerror ( errno );
+    last_c = 0;
+    while ( 1 )
+    {
+        c = fgetc ( repos );
+	if ( last_c == '@' && c != '@' )
+	    break;
+	else if ( last_c == '@' && c == '@' )
+	    last_c = 0;
+	else
+	    last_c = c;
+
+	if ( c == EOF )
+	{
+	    if ( ferror ( repos ) )
+		return strerror ( errno );
+	    if ( feof ( repos ) )
+	        return "unexpected end of file"
+		       " in repository";
+	}
+        if ( fputc ( c, des ) == EOF )
+	    return strerror ( errno );
+    }
+    if ( fputc ( '\n', des ) == EOF )
+	return strerror ( errno );
+    return NULL;
+}
+
 
 /* Copy from file src to file des editing it on the fly
  * using a diff -n listing in a string in repos.
@@ -974,21 +1020,33 @@ const char * num_skip ( num n )
 {
     const char * s;
     int found = 0;
+    num m;
     while ( 1 )
     {
 	s = read_id ( repos );
 	if ( s != NULL ) return s;
 	if ( strcmp ( id, "num" ) == 0 )
 	{
-	    num m;
 	    s = read_num ( m, repos );
 	    if ( s != NULL ) return s;
 	    found = ( numcmp ( m, n ) == 0 );
 	}
-	else if ( strcmp ( id, "text" ) == 0
-		  &&
-		  found )
-	    return NULL;
+	else if ( strcmp ( id, "text" ) == 0 )
+	{
+	    if ( found )
+	    {
+	        tprintf ( "* reading text %s\n",
+		          num2str ( m ) );
+		return NULL;
+	    }
+	    else
+	    {
+	        tprintf ( "* skipping text %s\n",
+		          num2str ( m ) );
+		s = skip_string ( repos );
+		if ( s != NULL ) return s;
+	    }
+	}
 	else 
 	{
 	    s = skip_string ( repos );
@@ -1266,8 +1324,27 @@ int main ( int argc, char ** argv )
 		      filename,
 		      current_revision->filename );
 
-	    s = copy ( repos, new_repos );
-	    if ( s != NULL ) error ( s );
+	    if ( repos_is_legacy )
+	    {
+	        r = current_revision->next;
+		while ( r )
+		{
+		    s = num_skip ( r->rnum );
+		    if ( s != NULL ) error ( s );
+		    s = copy_string
+		        ( repos, new_repos );
+		    if ( s != NULL ) error ( s );
+		    tprintf ( "* copied %s to new"
+		              " repository\n",
+		              num2str ( r->rnum ) );
+		    r = r->next;
+		}
+	    }
+	    else
+	    {
+		s = copy ( repos, new_repos );
+		if ( s != NULL ) error ( s );
+	    }
 	    fclose ( repos );
 	}
 
