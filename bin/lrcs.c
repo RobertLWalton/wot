@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Mon Aug 17 18:28:39 EDT 2020
+** Date:	Mon Aug 17 20:55:35 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -164,6 +164,26 @@ int numcmp ( num n1, num n2 )
     }
 }
 
+/* Put a printable representation of n in num_buffer and
+ * return a pointer to it.
+ */
+char num_buffer[10000];
+const char * num2str ( num n )
+{
+    int i;
+    char * p = num_buffer;
+    if ( n[0] == 0 )
+        sprintf ( p, "missing-num" );
+    else
+    {
+	p += sprintf ( p, "%lu", n[0] );
+	i = 1;
+	while ( n[i] != 0 )
+	    p += sprintf ( p, ".%lu", n[i++] );
+    }
+    return num_buffer;
+}
+
 /* Revisions are store in temporary files.
  */
 typedef struct revision
@@ -248,7 +268,6 @@ const char * read_id ( FILE * repos )
 	{
 	    ungetc ( c, repos );
 	    strcpy ( id, "num" );
-	    tprintf ( "* read id num\n" );
 	    return NULL;
 	}
 	if ( ! isalpha ( c ) )
@@ -257,7 +276,6 @@ const char * read_id ( FILE * repos )
 	        return "bad id";
 	    ungetc ( c, repos );
 	    * p = 0;
-	    tprintf ( "* read id %s\n", id );
 	    return NULL;
 	}
 	if ( p >= endp )
@@ -346,14 +364,6 @@ const char * read_num ( num n, FILE * repos )
 	}
     }
     n[i] = 0;
-    if ( trace )
-    {
-        printf ( "* read num %d", n[0] );
-	i = 1;
-	while ( n[i] != 0 )
-	    printf ( ".%d", n[i++] );
-	printf ( "\n" );
-    }
     return NULL;
 }
 
@@ -879,7 +889,8 @@ const char * read_legacy_header ( void )
 		last_revision = next;
 		s = read_num ( next->rnum, repos );
 		if ( s != NULL ) return s;
-		tprintf ( "* made new revision\n" );
+		tprintf ( "* read %s %s\n", id,
+		          num2str ( next->rnum ) );
 	    }
 	}
 	else if ( strcmp ( id, "num" ) == 0 )
@@ -887,6 +898,8 @@ const char * read_legacy_header ( void )
 	    num n;
 	    s = read_num ( n, repos );
 	    if ( s != NULL ) return s;
+	    tprintf ( "* read num %s\n",
+	              num2str ( n ) );
 
 	    if ( last_revision != NULL
 	         &&
@@ -904,7 +917,8 @@ const char * read_legacy_header ( void )
 	{
 	    s = read_num ( next->date, repos );
 	    if ( s != NULL ) return s;
-	    tprintf ( "* read date\n" );
+	    tprintf ( "* read date %s\n",
+	              num2str ( next->date ) );
 	}
 	else if ( strcmp ( id, "desc" ) == 0 )
 	{
@@ -953,6 +967,35 @@ const char * read_legacy_header ( void )
     return NULL;
 }
 
+/* Skip position in legacy repository to the text string
+ * for the entry with num n.
+ */
+const char * num_skip ( num n )
+{
+    const char * s;
+    int found = 0;
+    while ( 1 )
+    {
+	s = read_id ( repos );
+	if ( s != NULL ) return s;
+	if ( strcmp ( id, "num" ) == 0 )
+	{
+	    num m;
+	    s = read_num ( m, repos );
+	    if ( s != NULL ) return s;
+	    found = ( numcmp ( m, n ) == 0 );
+	}
+	else if ( strcmp ( id, "text" ) == 0
+		  &&
+		  found )
+	    return NULL;
+	else 
+	{
+	    s = skip_string ( repos );
+	    if ( s != NULL ) return s;
+	}
+    }
+}
 
 /* Move the current_revision pointer foward one revision
  * and creat the file of the new current_revision.
@@ -1008,35 +1051,8 @@ void step_revision
 
     if ( repos_is_legacy )
     {
-        /* We must position repository in front of
-	 * string for next_revision->rnum.
-	 */
-
-	const char * s;
-	int found = 0;
-	while ( 1 )
-	{
-	    s = read_id ( repos );
-	    if ( s != NULL ) error ( s );
-	    if ( strcmp ( id, "num" ) == 0 )
-	    {
-	        num n;
-		s = read_num ( n, repos );
-		if ( s != NULL ) error ( s );
-		found =
-		    ( numcmp ( n, next_revision
-		                    ->rnum ) == 0 );
-	    }
-	    else if ( strcmp ( id, "text" ) == 0
-	              &&
-		      found )
-		break;
-	    else 
-	    {
-	        s = skip_string ( repos );
-		if ( s != NULL ) error ( s );
-	    }
-	}
+        s = num_skip ( next_revision->rnum );
+	if ( s != NULL ) error ( s );
     }
 
     if ( current_index == 1 )
@@ -1141,8 +1157,13 @@ int main ( int argc, char ** argv )
 	while ( r )
 	{
 	    ++ i;
-	    printf ( "%4d: %s", i,
-	             ctime ( &r->time ) );
+	    if ( repos_is_legacy )
+		printf ( "%4d: %10s:   %s", i,
+		         num2str ( r->rnum ),
+			 ctime ( &r->time ) );
+	    else
+		printf ( "%4d: %s", i,
+			 ctime ( &r->time ) );
 	    r = r->next;
 
 	}
