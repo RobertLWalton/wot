@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Mon Aug 17 23:37:02 EDT 2020
+** Date:	Tue Aug 18 00:01:43 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -68,8 +68,9 @@ const char * documentation[] = {
 "",
 "For a file f, if f,V or LRCS/f,V does not exist,",
 "this program looks for a f,v or RCS/f,v file, and",
-"if it exists, converts it to a f,V file, provided it",
-"has no branches.",
+"uses it if it exists.  In the case of an `in'",
+"command, the ,v repository will be input but a",
+"separate ,V repository will be output.",
 "",
 "The -t option causes execution to be traced.  It",
 "can be used to elicidate error messages.",
@@ -83,7 +84,7 @@ const char * documentation[] = {
 "",
 "    time+ string+",
 "",
-"where are time is an integer number of seconds since",
+"where a time is an integer number of seconds since",
 "the UNIX epoch followed by a line feed, and a",
 "string is a line feed followed by an `@' followed",
 "by a string of 8-bit bytes with `@'s doubled",
@@ -1426,6 +1427,36 @@ int main ( int argc, char ** argv )
 	          name, final_name );
 	current_revision->filename = NULL;
 
+	exit ( 0 );
+    }
+    else if ( strcmp ( op, "diff" ) == 0 )
+    {
+	long rev[2];
+
+	if ( argc == 3 || ! isdigit ( argv[3][0] ) )
+	    rev[0] = 1, rev[1] = 0;
+	else
+	{
+	    char * endp;
+	    rev[0] = strtol ( argv[3], & endp, 10 );
+	    if ( * endp == 0 )
+	        rev[1] = 0;
+	    else if ( * endp != ':' )
+	        error ( "bad argument %s", argv[3] );
+	    else
+	    {
+	        rev[1] = strtol ( endp + 1, & endp, 10 );
+		if ( * endp != 0 )
+		    error ( "bad argument %s", argv[3] );
+	    }
+	    if ( rev[0] < 0 || rev[1] < 0 )
+		error ( "bad argument %s", argv[3] );
+	    if ( rev[0] == rev[1] )
+	        error ( "comparing a file to itself" );
+
+	    /* TBD */
+
+	}
 	exit ( 0 );
     }
 }
