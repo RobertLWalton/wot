@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Tue Aug 18 00:32:53 EDT 2020
+** Date:	Tue Aug 18 04:48:45 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -42,9 +42,9 @@ const char * documentation[] = {
 "LRCS is strictly linear with no branching, locking,",
 "or meta-data other than revision modification times.",
 "",
-"A file f has revisions stored in f,V, which is",
-"placed in the directory LRCS if that exists, or in",
-"the current directory otherwise.",
+"A file f has revisions stored in repository f,V,",
+"which is placed in the directory LRCS if that",
+"exists, or in the current directory otherwise.",
 "",
 "There are no branches, only a linear sequence of",
 "revisions.  Nothing is remembered about a revision",
@@ -53,22 +53,29 @@ const char * documentation[] = {
 "Revisions are numbered 1, 2, ..., with 1 being the",
 "MOST-RECENT revision.",
 "",
-"If the out command for file f has a revision number n",
-"the file produced has the name f,Vn.",
-"",
-"The diff(1) program is used to produce diff",
-"listings.",
-"",
-"The diff command can compare the current file with",
-"the latest revision, or with a specified revision,",
-"or can compare two revisions.",
-"",
-"The list command lists the revisions and their",
+"The `list' command lists the revisions and their",
 "times.",
 "",
+"The `in' command pushes file f to the beginning of",
+"the revision list in the repository, making it",
+"revision 1.",
+"",
+"The `out' command for file f and revision number n",
+"produces revision n of file f in a file named f,Vn.",
+"",
+"The `diff' command can compare the current file with",
+"the latest revision, or with a specified revision,",
+"or can compare two revisions.  When comparing two",
+"revisions, 0 can be used to denote the current file,",
+"as in 0:5.",
+"",
+"The diff(1) program is used to produce diff listings.",
+"The `diff' command diff-options are passed to",
+"diff(1).",
+"",
 "For a file f, if f,V or LRCS/f,V does not exist,",
-"this program looks for a f,v or RCS/f,v file, and",
-"uses it if it exists.  In the case of an `in'",
+"this program looks for a legacy f,v or RCS/f,v file,",
+"and uses it if it exists.  In the case of an `in'",
 "command, the ,v repository will be input but a",
 "separate ,V repository will be output.",
 "",
@@ -101,9 +108,13 @@ const char * documentation[] = {
 "to the BEGINNING of the revision list.",
 "",
 "The header of a legacy repository can be examined",
-"with an editor and edited.  It must have accurate",
-"head, next, and date entries for the revisions used.",
-"Date entry values are GMT.",
+"with an editor and edited.  The legacy repository",
+"must have accurate head and next entries and well-",
+"formatted date entries for the revisions used.",
+"Legacy date entry values are GMT.  The head and",
+"next entries are used to determine the revisions",
+"seen by lrcs.  If the repository has branches, head",
+"may be edited to get different revision lists.",
 NULL
 };
 
@@ -1434,12 +1445,17 @@ int main ( int argc, char ** argv )
 	long rev[2];
 	const char * file[2];
 	int i, j, del;
+	char ** diff_argv;
+	int diff_argc;
+	pid_t child;
+	int status;
 
 	if ( argc == 3 || ! isdigit ( argv[3][0] ) )
-	    rev[0] = 1, rev[1] = 0;
+	    rev[0] = 1, rev[1] = 0, diff_argc = 3;
 	else
 	{
 	    char * endp;
+	    diff_argc = 4;
 	    rev[0] = strtol ( argv[3], & endp, 10 );
 	    if ( * endp == 0 )
 	        rev[1] = 0;
@@ -1447,9 +1463,11 @@ int main ( int argc, char ** argv )
 	        error ( "bad argument %s", argv[3] );
 	    else
 	    {
-	        rev[1] = strtol ( endp + 1, & endp, 10 );
+	        rev[1] = strtol
+		    ( endp + 1, & endp, 10 );
 		if ( * endp != 0 )
-		    error ( "bad argument %s", argv[3] );
+		    error ( "bad argument %s",
+		            argv[3] );
 	    }
 	    if ( rev[0] < 0 || rev[1] < 0 )
 		error ( "bad argument %s", argv[3] );
@@ -1483,13 +1501,38 @@ int main ( int argc, char ** argv )
 	    {
 	        if ( j == rev[i] )
 		{
-		    file[i] = current_revision->filename;
+		    file[i] =
+		         current_revision->filename;
 		    del = 0;
 		}
 	    }
 	}
 
-	/* TBD */
+	diff_argv = (char **) malloc
+	    ( ( argc + 1 ) * sizeof ( const char * ) );
+
+	j = 0;
+	diff_argv[j++] = strdup ( "diff" );
+	for ( i = diff_argc; i < argc; ++ i )
+	    diff_argv[j++] = argv[i];
+	diff_argv[j++] = (char *) file[0];
+	diff_argv[j++] = (char *) file[1];
+	diff_argv[j++] = NULL;
+
+	printf ( "%s", diff_argv[0] );
+	for ( i = 1; i < j-1; ++ i )
+	    printf ( " %s", diff_argv[i] );
+	printf ( "\n" );
+
+	child = fork();
+	if ( child < 0 ) error ( strerror ( errno ) );
+	if ( child == 0 )
+	{
+	    execvp ( "diff", diff_argv );
+	    error ( strerror ( errno ) );
+	}
+	if ( wait ( & status ) < 0 )
+	    error ( strerror ( errno ) );
 
 	exit ( 0 );
     }
