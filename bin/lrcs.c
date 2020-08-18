@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Tue Aug 18 06:06:05 EDT 2020
+** Date:	Tue Aug 18 06:14:14 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -788,7 +788,7 @@ char * repos_name = NULL;
 int repos_is_legacy = 0;
 const char * repos_input_variants[4] = {
     "%s/%s,V", "%s/LRCS/%s,V",
-    "%s/%s,v", "%s/LRCS/%s,v" };
+    "%s/%s,v", "%s/RCS/%s,v" };
 void find_repos ( const char * filename )
 {
     size_t len;
