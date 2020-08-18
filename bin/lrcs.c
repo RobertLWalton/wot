@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Tue Aug 18 04:48:45 EDT 2020
+** Date:	Tue Aug 18 06:06:05 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -21,6 +21,7 @@
 #include <libgen.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <utime.h>
 #include <errno.h>
