@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Tue Aug 18 00:01:43 EDT 2020
+** Date:	Tue Aug 18 00:32:53 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -1432,6 +1432,8 @@ int main ( int argc, char ** argv )
     else if ( strcmp ( op, "diff" ) == 0 )
     {
 	long rev[2];
+	const char * file[2];
+	int i, j, del;
 
 	if ( argc == 3 || ! isdigit ( argv[3][0] ) )
 	    rev[0] = 1, rev[1] = 0;
@@ -1453,10 +1455,42 @@ int main ( int argc, char ** argv )
 		error ( "bad argument %s", argv[3] );
 	    if ( rev[0] == rev[1] )
 	        error ( "comparing a file to itself" );
-
-	    /* TBD */
-
 	}
+
+        if ( repos == NULL )
+	    error ( "there is no repository for %s",
+	            filename );
+	s = read_header();
+	if ( s != NULL ) error ( s );
+
+	for ( i = 0; i < 2; ++ i )
+	{
+	    if ( rev[i] == 0 ) file[i] = filename;
+	    else file[i] = NULL;
+	}
+
+	j = 0;
+	del = 1;
+	while ( file[0] == NULL || file[1] == NULL )
+	{
+	    ++ j;
+	    step_revision ( filename, del );
+	    if ( current_revision == NULL )
+	        error ( "a revision number is too"
+		        " large" );
+	    del = 1;
+	    for ( i = 0; i < 2; ++ i )
+	    {
+	        if ( j == rev[i] )
+		{
+		    file[i] = current_revision->filename;
+		    del = 0;
+		}
+	    }
+	}
+
+	/* TBD */
+
 	exit ( 0 );
     }
 }
