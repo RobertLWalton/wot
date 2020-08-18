@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Mon Aug 17 22:53:31 EDT 2020
+** Date:	Mon Aug 17 23:37:02 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -22,17 +22,25 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <utime.h>
 #include <errno.h>
 #include <assert.h>
 
 const char * documentation[] = {
 "lrcs -doc",
+"lrcs [-t] list file",
 "lrcs [-t] in file",
 "lrcs [-t] out file [revision]",
 "lrcs [-t] diff file [revision] [diff-option...]",
 "lrcs [-t] diff file revision:revision"
 				" [diff-option...]",
-"lrcs [-t] list file",
+"",
+"The Light Revision Control System (LRCS) is for use",
+"with files that make no reference to other files and",
+"are not referenced by other files.  LRCS is a",
+"successor to RCS and can accept RCS ,v repositories.",
+"LRCS is strictly linear with no branching, locking,",
+"or meta-data other than revision modification times.",
 "",
 "A file f has revisions stored in f,V, which is",
 "placed in the directory LRCS if that exists, or in",
@@ -1004,7 +1012,7 @@ const char * read_legacy_header ( void )
 	        error ( "no date for %s",
 		         num2str ( r->rnum ) );
 	    time.tm_year = (int) r->date[0] - 1900;
-	    time.tm_mon  = (int) r->date[1];
+	    time.tm_mon  = (int) r->date[1] - 1;
 	    time.tm_mday = (int) r->date[2];
 	    time.tm_hour = (int) r->date[3];
 	    time.tm_min  = (int) r->date[4];
@@ -1375,6 +1383,7 @@ int main ( int argc, char ** argv )
 	int i;
 	char * final_name;
 	char * name;
+	struct utimbuf ut;
 
 	if ( argc > 4 ) error ( "too many arguments" );
         if ( repos == NULL )
@@ -1401,6 +1410,13 @@ int main ( int argc, char ** argv )
 	name = current_revision->filename;
 	final_name = strdup ( name );
 	final_name[strlen(name)-1] = 0;
+
+	ut.actime = time ( NULL );
+	ut.modtime = current_revision->time;
+	if ( utime ( name, & ut ) < 0 )
+	    printf ( "WARNING: failed to set"
+	             " modification time of %s\n",
+	             name );
 	
 	if ( rename ( name, final_name )
 	     < 0 )
