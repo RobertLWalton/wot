@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Mon Aug 17 21:51:25 EDT 2020
+** Date:	Mon Aug 17 22:53:31 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -90,6 +90,11 @@ const char * documentation[] = {
 "On checking the file in, the file contents become",
 "the new first revision, i.e., the file is pushed",
 "to the BEGINNING of the revision list.",
+"",
+"The header of a legacy repository can be examined",
+"with an editor and edited.  It must have accurate",
+"head, next, and date entries for the revisions used.",
+"Date entry values are GMT.",
 NULL
 };
 
@@ -153,7 +158,7 @@ char id[100];  	/* entry id */
  */
 int numcmp ( num n1, num n2 )
 {
-    int i;
+    int i = 0;
     while ( 1 )
     {
         if ( n1[i] < n2[i] ) return -1;
@@ -199,19 +204,20 @@ typedef struct revision
 } revision;
 revision * first_revision = NULL;
 
-char * context = "";
 void error ( const char * fmt, ... )
 {
     va_list ap;
     va_start ( ap, fmt );
 
-    fprintf ( stderr, "lrcs: error %s\n", context );
-    fprintf ( stderr, "      " );
+    fprintf ( stderr, "lrcs: error: " );
     vfprintf ( stderr, fmt, ap );
     fprintf ( stderr, "\n" );
     if ( repos_line > 0 )
 	fprintf ( stderr, "      repository is at line"
 	                  " %d\n", repos_line );
+    if ( ! trace )
+	fprintf ( stderr, "      rerun with -t option"
+	                  " for more details\n" );
     exit ( 1 );
 }
 
@@ -847,7 +853,6 @@ const char * read_header ( void )
         return read_legacy_header();
     
     repos_line = 1;
-    sprintf ( context, "while reading %s", repos_name );
     tprintf ( "* reading header from %s\n",
               repos_name );
 
@@ -900,7 +905,6 @@ const char * read_legacy_header ( void )
     const char * s;
 
     repos_line = 1;
-    sprintf ( context, "while reading %s", repos_name );
     tprintf ( "* reading header from %s\n",
               repos_name );
 
@@ -928,6 +932,7 @@ const char * read_legacy_header ( void )
 		next->next = NULL;
 		next->filename = NULL;
 		next->time = 0;
+		next->date[0] = 0;
 		if ( last_revision != NULL )
 		    last_revision->next = next;
 		if ( first_revision == NULL )
@@ -995,6 +1000,9 @@ const char * read_legacy_header ( void )
 	time.tm_isdst  = 0;
 	while ( r != NULL )
 	{
+	    if ( r->date[0] == 0 )
+	        error ( "no date for %s",
+		         num2str ( r->rnum ) );
 	    time.tm_year = (int) r->date[0] - 1900;
 	    time.tm_mon  = (int) r->date[1];
 	    time.tm_mday = (int) r->date[2];
@@ -1093,10 +1101,6 @@ void step_revision
         current_revision = NULL;
 	return;
     }
-
-    sprintf ( context,
-	      "copying revision %d to file",
-	      current_index );
 
     next_revision->filename = malloc
         ( strlen ( filename ) + 10 );
@@ -1197,8 +1201,6 @@ int main ( int argc, char ** argv )
 
     op = argv[1];
     filename = argv[2];
-    context = (char *) malloc
-        ( strlen ( filename ) + 100 );
     find_repos ( filename );
 
     if ( strcmp ( op, "list" ) == 0 )
@@ -1244,8 +1246,6 @@ int main ( int argc, char ** argv )
 	    s = read_header();
 	    if ( s != NULL ) error ( s );
 	}
-	sprintf ( context,
-	          "reading file %s", filename );
 	src = fopen ( filename, "r" );
 	if ( src == NULL )
 	    error ( "cannot open file %s for reading",
@@ -1255,8 +1255,6 @@ int main ( int argc, char ** argv )
 	    error ( "cannot stat file %s",
 	            filename );
 
-	sprintf ( context,
-	          "writing new repository header" );
 	find_new_repos ( filename );
 	if ( new_repos == NULL )
 	    error ( "cannot open new repository" );
@@ -1276,8 +1274,6 @@ int main ( int argc, char ** argv )
 	tprintf ( "* wrote header of"
 	          " new repository\n" );
 
-	sprintf ( context,
-	          "copying file to new repository" );
 	s = copy_to_string ( src, new_repos );
 	if ( s != NULL ) error ( s );
 	tprintf ( "* copied %s to new repository\n",
@@ -1288,13 +1284,7 @@ int main ( int argc, char ** argv )
 	if ( repos_name != NULL )
 	{
 	    int c;
-	    sprintf ( context,
-		      "copying old revision 1 to"
-		      " temporary file" );
 	    step_revision ( filename, 0 );
-	    sprintf ( context,
-		      "diffing old and new"
-		      " revision 1" );
 
 	    command = (char *) malloc 
 		( 2 * strlen ( filename ) + 100 );
