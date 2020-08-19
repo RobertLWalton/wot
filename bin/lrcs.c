@@ -530,6 +530,12 @@ void copy_from_string
 	else if ( last_c == '@' && c == '@' )
 	{
 	    last_c = 0;
+	    /* Fall through to copy '@' */
+	}
+	else if ( c == '@' )
+	{
+	    /* last_c != '@' */
+	    last_c = c;
 	    continue;
 	}
 	else
@@ -793,6 +799,12 @@ void edit ( FILE * repos,
 		else if ( last_c == '@' && c == '@' )
 		{
 		    last_c = 0;
+		    /* Fall though to copy '@'. */
+		}
+		else if ( c == '@' )
+		{
+		    /* last_c != '@' */
+		    last_c = c;
 		    continue;
 		}
 		else
