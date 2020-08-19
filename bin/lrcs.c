@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Tue Aug 18 06:14:14 EDT 2020
+** Date:	Wed Aug 19 04:09:28 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -123,14 +123,14 @@ int trace = 0;   /* Set true by -t */
 #define tprintf if ( trace ) printf
 
 typedef unsigned long nat;
-    /* Natural number.  Longest that can be read
+    /* Natural number.  Longest that can be declared
      * in C90.
      */
 
 int repos_line = 0;
     /* Current line number in repository being read.
-     * Output in error messages that complain about
-     * repository being mis-formatted.
+     * Output in error messages some of which complain
+     * about repository being mis-formatted.
      */
 
 /* A legacy RCS repository is viewed as a sequence of
@@ -144,7 +144,8 @@ int repos_line = 0;
  * The following apply during header scan.
  *
  * A `head num' entry creates a first revision with the
- * given num as its rnum and sets scan_revision = NULL.
+ * given num as its rnum (revision number) and sets
+ * scan_revision = NULL.
  *
  * A `num' entry that matches last_revision->rnum sets
  * scan_revision to last_revision.  If it does not
@@ -159,19 +160,15 @@ int repos_line = 0;
  * Revision times are set from revision dates at the
  * end of header scan.
  *
- * The following apply during body scan.  scan_
- * revision is initialized to first_revision.
- *
- * A `num' entry that does not match scan_revision->rnum
- * skips to the next `num' entry.
- *
- * A `num' entry that matches scan_revision->rnum sets
- * scan_revision = scan_revision->next and skips to
- * the string part of the next `text string' entry.
+ * During the body scan rnums are read from the database
+ * created by the header and for each rnum the reposi-
+ * tory is skipped forward to the text string of that
+ * rnum's deltatext.
  */
 typedef nat num[100];
     /* Encodes num[0].num[1].num[2]. ..., which ends
-     * with first element that is 0.
+     * with first element that is 0.  Num components
+     * must not be zero.
      */
 char id[100];  	/* entry id */
 
@@ -225,14 +222,15 @@ typedef struct revision
 } revision;
 revision * first_revision = NULL;
 
-void error ( const char * fmt, ... )
+const char * vprefix = "";
+void verror ( const char * fmt, va_list ap )
 {
-    va_list ap;
-    va_start ( ap, fmt );
-
-    fprintf ( stderr, "lrcs: error: " );
+    fprintf ( stderr, "lrcs: error: %s", vprefix );
     vfprintf ( stderr, fmt, ap );
     fprintf ( stderr, "\n" );
+    if ( errno != 0 )
+	fprintf ( stderr, "      %s\n",
+	          strerror ( errno ) );
     if ( repos_line > 0 )
 	fprintf ( stderr, "      repository is at line"
 	                  " %d\n", repos_line );
@@ -240,6 +238,33 @@ void error ( const char * fmt, ... )
 	fprintf ( stderr, "      rerun with -t option"
 	                  " for more details\n" );
     exit ( 1 );
+}
+void error ( const char * fmt, ... )
+{
+    va_list ap;
+    va_start ( ap, fmt );
+    errno = 0;
+    verror ( fmt, ap );
+}
+void errorno ( const char * fmt, ... )
+{
+    va_list ap;
+    va_start ( ap, fmt );
+    /* leave errno untouched */
+    verror ( fmt, ap );
+}
+void erroreof ( const char * fmt, ... )
+{
+    va_list ap;
+    va_start ( ap, fmt );
+    errno = 0;
+    vprefix = "unexpected end of file while ";
+    verror ( fmt, ap );
+}
+void errornf ( const char * kind )
+{
+    error ( "expected %s not found in repository",
+            kind );
 }
 
 /* Skip whitespace in repository.  Return the next
@@ -262,17 +287,15 @@ char skip ( FILE * repos )
 }
 
 /* Read an id into the global id buffer.  Whitespace
- * before id is ignored.  Return NULL on success
- * or error message on failure.
+ * before id is ignored.  Id must exist.
  *
  * If the next non-whitespace character is a digit,
  * do not skip over it and record the id as "num".
  * We assume id must be all letters.  Its an error
  * if the id is too long to fit into buffer.
  */
-const char * read_id ( FILE * repos )
+void read_id ( FILE * repos )
 {
-    const char * s;
     int c;
     char * p, * endp;
 
@@ -283,85 +306,73 @@ const char * read_id ( FILE * repos )
     while ( 1 )
     {
         c = fgetc ( repos );
-	if ( c == EOF )
-	{
-	    if ( ferror ( repos ) )
-		return strerror ( errno );
-	    if ( feof ( repos ) )
-	        return "unexpected end of file"
-		       " in repository";
-	}
+	if ( ferror ( repos ) )
+	    errorno ( "reading id from repository" );
+
 	if ( p == id && isdigit ( c ) )
 	{
 	    ungetc ( c, repos );
 	    strcpy ( id, "num" );
-	    return NULL;
+	    return;
 	}
 	if ( ! isalpha ( c ) )
 	{
-	    if ( p == id )
-	        return "bad id";
+	    if ( p == id ) errornf ( "id" );
 	    ungetc ( c, repos );
 	    * p = 0;
-	    return NULL;
+	    return;
 	}
 	if ( p >= endp )
 	{
 	    * p = 0;
-	    tprintf ( "* read id %s\n", id );
-	    return "id too long";
+	    tprintf ( "* read id %s...\n", id );
+	    error ( "id in repository too long" );
 	}
 	* p ++ = c;
     }
 }
 
 /* Read a natural number from repos to num.  Whitespace
- * before number is ignored.  Return NULL on success
- * (must have at least one digit), or error message
- * on failure.
+ * before number is ignored.  Number must have at least
+ * one digit.
  */
-const char * read_natural
-	( nat * natural, FILE * repos )
+void read_natural ( nat * natural, FILE * repos )
 {
     int c;
-    const char * s;
 
     skip ( repos );
 
     c = fgetc ( repos );
     if ( ferror ( repos ) )
-        return strerror ( errno );
+        errorno ( "reading number in repository" );
 
     if ( ! isdigit ( c ) )
-	return "expected number not found in"
-	       " repository";
+	errornf ( "number" );
 
     * natural = c - '0';
-    while ( ( c = fgetc ( repos ) ) != EOF )
+    while ( 1 )
     {
 	nat old_natural = * natural;
+	c = fgetc ( repos );
 	if ( ! isdigit ( c ) ) break;
 	* natural *= 10;
 	* natural += c - '0';
 	if ( old_natural > * natural )
-	    return "number too large in repository";
+	    error ( "number in repository too large" );
     }
     if ( ferror ( repos ) )
-        return strerror ( errno );
+        errorno ( "reading number in repository" );
     ungetc ( c, repos );
-    return NULL;
 }
 
 
 /* Read a num from repos.  Whitespace before num is
- * ignored.  Return NULL on success, or error message
- * on failure.  Must have one element and not more
- * than fit in a num type.
+ * ignored.  Must have one component and not more than
+ * fit in a num type.
  */
-const char * read_num ( num n, FILE * repos )
+void read_num ( num n, FILE * repos )
 {
     int c;
-    const char * s;
     int i, length;
 
     length = sizeof ( num ) / sizeof ( int );
@@ -372,15 +383,18 @@ const char * read_num ( num n, FILE * repos )
     while ( 1 )
     {
         if ( i >= length - 2 )
-	    return "too many elements in num";
+	    error ( "num in repository has too many"
+	            " components" );
         c = fgetc ( repos );
+	if ( ferror ( repos ) )
+	    errorno ( "reading repository" );
 	if ( ! isdigit ( c ) )
-	    return "expected num element not found";
+	    errornf ( "num" );
 	ungetc ( c, repos );
-	s = read_natural ( & n[i], repos );
-	if ( s != NULL ) return s;
+	read_natural ( & n[i], repos );
 	if ( n[i] == 0 )
-	    return "0 num element found";
+	    error ( "num in repository has 0"
+	            " component" );
 	++i;
 
         c = fgetc ( repos );
@@ -391,198 +405,31 @@ const char * read_num ( num n, FILE * repos )
 	}
     }
     n[i] = 0;
-    return NULL;
 }
 
 /* Skip one string in repos.  Whitespace before string
- * is ignored.  Return NULL on success, or error message
- * on failure.
+ * is ignored.  String must exist.
  */
-const char * skip_string ( FILE * repos )
+void skip_string ( FILE * repos )
 {
     int c;
-    const char * s;
+    int last_c = 0;
 
-    skip ( repos );
-
-    c = fgetc ( repos );
-    if ( c != '@' )
-        return "expected string not found";
-    while ( 1 )
-    {
-        c = fgetc ( repos );
-	if ( c == EOF )
-	{
-	    if ( ferror ( repos ) )
-		return strerror ( errno );
-	    if ( feof ( repos ) )
-	        return "unexpected end of file"
-		       " in repository";
-	}
-	if ( c != '@' ) continue;
-	c = fgetc ( repos );
-	if ( c == '@' ) continue;
-	ungetc ( c, repos );
-	return NULL;
-    }
-}
-
-/* Skip entry.  Specifically, skip to after next `;',
- * using skip_string to skip strings.  Return NULL on
- * success, or error message on failure.
- */
-const char * skip_entry ( FILE * repos )
-{
-    int c;
-    const char * s;
-
-    while ( 1 )
-    {
-        c = fgetc ( repos );
-	if ( c == EOF )
-	{
-	    if ( ferror ( repos ) )
-		return strerror ( errno );
-	    if ( feof ( repos ) )
-	        return "unexpected end of file"
-		       " in repository";
-	}
-	else if ( c == '@' )
-	{
-	    ungetc ( c, repos );
-	    s = skip_string ( repos );
-	    if ( s != NULL ) return s;
-	}
-	else if ( c == ';' ) return NULL;
-    }
-}
-
-/* Copy a file from src to des, and stop on an EOF.
- * Returns NULL on success and error message on
- * failure.
- */
-const char * copy ( FILE * src, FILE * des )
-{
-    int c;
-    while ( ( c = fgetc ( src ) ) != EOF )
-    {
-        if ( fputc ( c, des ) == EOF )
-	    return strerror ( errno );
-    }
-    if ( ferror ( src ) )
-        return strerror ( errno );
-    else
-        return NULL;
-}
-
-/* Copy a string from repos to des, and stop after
- * trailing @.  Skip whitespace before beginning @.
- * Returns NULL on success and error message on
- * failure.
- */
-const char * copy_from_string
-	( FILE * repos, FILE * des )
-{
-    int c;
-    const char * s;
-
-    /* Skip initial whitespace and @.
-     */
     skip ( repos );
 
     c = fgetc ( repos );
     if ( ferror ( repos ) )
-        return strerror ( errno );
+        errorno ( "reading repository" );
     if ( c != '@' )
-	return "expected string not found in"
-	       " repository";
-
-    /* Read and copy till after final @.
-     */
-    while ( ( c = fgetc ( repos ) ) != EOF )
-    {
-        if ( c == '@' )
-	{
-	    c = fgetc ( repos );
-	    if ( c != '@' )
-	    {
-		if ( c != EOF )
-		    ungetc ( c, repos );
-		break;
-	    }
-	}
-	if ( c == '\n' ) ++ repos_line;
-        if ( fputc ( c, des ) == EOF )
-	    return strerror ( errno );
-    }
-    if ( ferror ( repos ) )
-        return strerror ( errno );
-    else
-        return NULL;
-}
-
-/* Copy a file from src to a string in repos.  Begin the
- * string with "\n@" and end with "@\n".  Double @'s
- * in the file.  Returns NULL on success and error
- * message on failure.
- */
-const char * copy_to_string ( FILE * src, FILE * repos )
-{
-    int c;
-
-    if ( fputc ( '\n', repos ) == EOF )
-        return strerror ( errno );
-    if ( fputc ( '@', repos ) == EOF )
-        return strerror ( errno );
-
-    /* Read and copy till at EOF.
-     */
-    while ( ( c = fgetc ( src ) ) != EOF )
-    {
-        if ( fputc ( c, repos ) == EOF )
-	    return strerror ( errno );
-        if ( c == '@' )
-	{
-	    if ( fputc ( c, repos ) == EOF )
-		return strerror ( errno );
-	}
-    }
-    if ( ferror ( src ) )
-        return strerror ( errno );
-
-    if ( fputc ( '@', repos ) == EOF )
-        return strerror ( errno );
-    if ( fputc ( '\n', repos ) == EOF )
-        return strerror ( errno );
-
-    return NULL;
-}
-
-/* Copy a string from repos to des.  String may be
- * preceded by whitespace.  A line feed will be
- * output before and after copied string.  Returns
- * NULL on success and error message on failure.
- */
-const char * copy_string ( FILE * repos, FILE * des )
-{
-    int c, last_c;
-
-    skip ( repos );
-
-    c = fgetc ( repos );
-    if ( c != '@' )
-	return "expected string not found in"
-	       " repository";
-    if ( fputc ( '\n', des ) == EOF )
-	return strerror ( errno );
-    if ( fputc ( '@', des ) == EOF )
-	return strerror ( errno );
-    last_c = 0;
+	errornf ( "string" );
     while ( 1 )
     {
         c = fgetc ( repos );
 	if ( last_c == '@' && c != '@' )
+	{
+	    ungetc ( c, repos );
 	    break;
+	}
 	else if ( last_c == '@' && c == '@' )
 	    last_c = 0;
 	else
@@ -591,29 +438,212 @@ const char * copy_string ( FILE * repos, FILE * des )
 	if ( c == EOF )
 	{
 	    if ( ferror ( repos ) )
-		return strerror ( errno );
-	    if ( feof ( repos ) )
-	        return "unexpected end of file"
-		       " in repository";
+		errorno ( "reading repository string" );
+	    else
+		erroreof
+		    ( "reading repository string" );
+	}
+
+	if ( c == '\n' ) ++ repos_line;
+    }
+}
+
+/* Skip entry.  Specifically, skip to after next `;',
+ * using skip_string to skip strings.  `;' must exist.
+ */
+void skip_entry ( FILE * repos )
+{
+    int c;
+
+    while ( 1 )
+    {
+        c = fgetc ( repos );
+	if ( c == EOF )
+	{
+	    if ( ferror ( repos ) )
+		errorno ( "reading repository entry" );
+	    else
+		erroreof ( "reading repository entry" );
+	}
+	else if ( c == '@' )
+	{
+	    ungetc ( c, repos );
+	    skip_string ( repos );
+	}
+	else if ( c == ';' )
+	    break;
+
+	if ( c == '\n' ) ++ repos_line;
+    }
+}
+
+/* Copy a file from src to des, and stop on an EOF.
+ * File names are used in error messages.
+ */
+void copy ( FILE * src, const char * srcname,
+            FILE * des, const char * desname )
+{
+    int c;
+    while ( ( c = fgetc ( src ) ) != EOF )
+    {
+        if ( fputc ( c, des ) == EOF )
+	    errorno ( "writing to %s", desname );
+    }
+    if ( ferror ( src ) )
+	errorno ( "reading from %s", srcname );
+}
+
+/* Copy a string from repos to des, and stop after
+ * trailing @.  Skip whitespace before beginning @.
+ * String must exist. File name is used in error
+ * messages.
+ */
+void copy_from_string
+	( FILE * repos,
+	  FILE * des, const char * desname )
+{
+    int c;
+    int last_c = 0;
+
+    /* Skip initial whitespace and @.
+     */
+    skip ( repos );
+
+    c = fgetc ( repos );
+    if ( ferror ( repos ) )
+        errorno ( "reading from repository" );
+    if ( c != '@' )
+	errornf ( "string" );
+
+    /* Read and copy till after final @.
+     */
+    while ( 1 )
+    {
+        c = fgetc ( repos );
+	if ( last_c == '@' && c != '@' )
+	{
+	    ungetc ( c, repos );
+	    break;
+	}
+	else if ( last_c == '@' && c == '@' )
+	{
+	    last_c = 0;
+	    continue;
+	}
+	else
+	    last_c = c;
+
+	if ( c == EOF )
+	{
+	    if ( ferror ( repos ) )
+		errorno ( "reading repository string" );
+	    else
+		erroreof
+		    ( "reading repository string" );
+	}
+
+        if ( fputc ( c, des ) == EOF )
+	    errorno ( "writing %s", desname );
+
+	if ( c == '\n' ) ++ repos_line;
+    }
+}
+
+/* Copy a file from src to a string in repos.  Begin the
+ * string with "\n@" and end with "@\n".  Double @'s
+ * in the file.  Filename is used for error messages.
+ */
+void copy_to_string ( FILE * src, const char * srcname,
+                      FILE * repos )
+{
+    int c;
+
+    if ( fputc ( '\n', repos ) == EOF )
+        errorno ( "writing repository" );
+    if ( fputc ( '@', repos ) == EOF )
+        errorno ( "writing repository" );
+
+    /* Read and copy till at EOF.
+     */
+    while ( ( c = fgetc ( src ) ) != EOF )
+    {
+        if ( fputc ( c, repos ) == EOF )
+	    errorno ( "writing repository" );
+        if ( c == '@' )
+	{
+	    if ( fputc ( c, repos ) == EOF )
+		errorno ( "writing repository" );
+	}
+    }
+    if ( ferror ( src ) )
+	errorno ( "reading %s", srcname );
+
+    if ( fputc ( '@', repos ) == EOF )
+        errorno ( "writing repository" );
+    if ( fputc ( '\n', repos ) == EOF )
+        errorno ( "writing repository" );
+}
+
+/* Copy a string from repos to des.  String may be
+ * preceded by whitespace.  A line feed will be
+ * output before and after copied string.  Filename
+ * is for error messages.
+ */
+void copy_string ( FILE * repos,
+                   FILE * des, const char * desname )
+{
+    int c, last_c;
+
+    skip ( repos );
+
+    c = fgetc ( repos );
+    if ( ferror ( repos ) )
+        errorno ( "reading repository" );
+    if ( c != '@' )
+	errornf ( "string" );
+    if ( fputc ( '\n', des ) == EOF )
+	errorno ( "writing %s", desname );
+    if ( fputc ( '@', des ) == EOF )
+	errorno ( "writing %s", desname );
+    last_c = 0;
+    while ( 1 )
+    {
+        c = fgetc ( repos );
+	if ( last_c == '@' && c != '@' )
+	{
+	    ungetc ( c, repos );
+	    break;
+	}
+	else if ( last_c == '@' && c == '@' )
+	    last_c = 0;
+	else
+	    last_c = c;
+
+	if ( c == EOF )
+	{
+	    if ( ferror ( repos ) )
+		errorno ( "reading repository" );
+	    else
+		erroreof
+		    ( "reading repository string" );
 	}
         if ( fputc ( c, des ) == EOF )
-	    return strerror ( errno );
+	    errorno ( "writing %s", desname );
     }
     if ( fputc ( '\n', des ) == EOF )
-	return strerror ( errno );
-    return NULL;
+	errorno ( "writing %s", desname );
 }
 
 
 /* Copy from file src to file des editing it on the fly
  * using a diff -n listing in a string in repos.
- * Returns NULL on success and error message on failure.
+ * File names are for error messages.
  */
-const char * edit
-	( FILE * repos, FILE * src, FILE * des )
+void edit ( FILE * repos,
+	    FILE * src, const char * srcname,
+	    FILE * des, const char * desname )
 {
     int c;
-    const char * s;
 
     int feeds = 0;
         /* Number of line feeds seen so far in src.
@@ -634,11 +664,10 @@ const char * edit
     skip ( repos );
 
     c = fgetc ( repos );
-    if ( ferror ( src ) )
-        return strerror ( errno );
+    if ( ferror ( repos ) )
+        errorno ( "reading repository" );
     if ( c != '@' )
-	return "expected string not found in"
-	       " repository";
+	errornf ( "string" );
 
     /* Read and execute repository commands.
      */
@@ -648,48 +677,45 @@ const char * edit
 	if ( op == EOF )
 	{
 	    if ( ferror ( repos ) )
-		return strerror ( errno );
-	    if ( feof ( repos ) )
-	        return "unexpected end of file"
-		       " in repository";
+		errorno ( "reading repository" );
+	    else
+		erroreof
+		    ( "reading repository string" );
 	}
 	if ( op == '\n' ) ++ repos_line;
 	if ( isspace ( op ) ) continue;
 
         if ( op == '@' ) break;
         if ( op != 'a' && op != 'd' )
-	    return "expected edit command not found in"
-		   " repository";
+	    errornf ( "edit command" );
 
-	s = read_natural ( & location, repos );
-	if ( s != NULL ) return s;
-	s = read_natural ( & count, repos );
-	if ( s != NULL ) return s;
+	read_natural ( & location, repos );
+	read_natural ( & count, repos );
 
 	if ( count == 0 )
-	    return "second command parameter == 0 in"
-	           " repository";
+	    error ( "second command parameter == 0 in"
+	            " repository" );
 
 	/* Skip to after end of line in repos
 	 */
 	while ( ( c = fgetc ( repos ) ) != '\n' )
 	{
 	    if ( ferror ( repos ) )
-		return strerror ( errno );
+		errorno ( "reading repository" );
 	    if ( feof ( repos ) )
-	        return "unexpected end of file"
-		       " in repository";
+		erroreof
+		    ( "reading repository string" );
 	    if ( isspace ( c ) ) continue;
-	    return "extra stuff after command"
-	           " in repository string";
+	    error ( "extra stuff after command"
+	            " in repository string" );
 	}
 	++ repos_line;
 
 	if ( op == 'd' ) -- location;
 
 	if ( location < feeds )
-	    return "commands out of order in"
-	           " repository";
+	    error ( "commands out of order in"
+	            " repository" );
 
 	/* Skip src to beginning of line indicated
 	 * by command.
@@ -700,12 +726,12 @@ const char * edit
 	    if ( c == EOF )
 	    {
 		if ( ferror ( src ) )
-		    return strerror ( errno );
-		if ( feof ( src ) )
-		    return "unexpected input EOF";
+		    errorno ( "reading %s", srcname );
+		else
+		    erroreof ( "reading %s", srcname );
 	    }
 	    if ( fputc ( c, des ) == EOF )
-		return strerror ( errno );
+		errorno ( "writing %s", desname );
 	    if ( c == '\n' ) ++ feeds;
 	}
 
@@ -723,11 +749,13 @@ const char * edit
 		if ( c == EOF )
 		{
 		    if ( ferror ( src ) )
-			return strerror ( errno );
+			errorno
+			    ( "reading %s", srcname );
 		    if ( at_line_beginning
 		         ||
 			 feeds + 1 < location )
-			return "unexpected input EOF";
+			erroreof
+			    ( "reading %s", srcname );
 		    else break;
 		}
 		if ( c == '\n' ) ++ feeds;
@@ -741,33 +769,34 @@ const char * edit
 	     * repository string, so @@ copies to one @
 	     * and a single @ ends command string.
 	     */
+	    int last_c = 0;
 	    while ( count > 0 ) 
 	    {
 	        c = fgetc ( repos );
+		if ( last_c == '@' && c != '@' )
+		{
+		    ungetc ( c, repos );
+		    commands_done = 1;
+		    break;
+		}
+		else if ( last_c == '@' && c == '@' )
+		{
+		    last_c = 0;
+		    continue;
+		}
+		else
+		    last_c = c;
+
 		if ( c == EOF )
 		{
 		    if ( ferror ( repos ) )
-			return strerror ( errno );
-		    if ( feof ( repos ) )
-			return "unexpected end of file"
-			       " in repository";
-		    break;
-		}
-		if ( c == '@' )
-		{
-		    c = fgetc ( repos );
-		    if ( c != '@' )
-		    {
-			if ( ferror ( repos ) )
-			    return strerror ( errno );
-			if ( c != EOF )
-			    ungetc ( c, repos );
-			commands_done = 1;
-			break;
-		    }
+		        errorno ( "reading repository" );
+		    else
+		        erroreof ( "reading repository"
+			           " string" );
 		}
 		if ( fputc ( c, des ) == EOF )
-		    return strerror ( errno );
+		    errorno ( "writing %s", desname );
 		if ( c == '\n' )
 		    -- count, ++ repos_line;
 	    }
@@ -776,8 +805,9 @@ const char * edit
     
     /* Copy rest of src.
      */
-    return copy ( src, des );
+    copy ( src, srcname, des, desname );
 }
+
 
 /* Find and open the input repository file for a given
  * file.  If found repos is set to a read-only stream
@@ -787,20 +817,18 @@ FILE * repos = NULL;
 char * repos_name = NULL;
 int repos_is_legacy = 0;
 const char * repos_input_variants[4] = {
-    "%s/%s,V", "%s/LRCS/%s,V",
-    "%s/%s,v", "%s/RCS/%s,v" };
+    "%s/LRCS/%s,V",   "%s/%s,V",
+    "%s/RCS/%s,v",    "%s/%s,v" };
 void find_repos ( const char * filename )
 {
-    size_t len;
     char * dir, * base;
     int i;
-    len = strlen ( filename );
     dir = strdup ( filename );
     base = strdup ( filename );
     dir = dirname ( dir );
     base = basename ( base );
     repos_name = (char *) malloc
-        ( strlen ( filename ) + 20 );
+        ( strlen ( filename ) + 40 );
 
     for ( i = 0; i < 4; ++ i )
     {
@@ -820,9 +848,10 @@ void find_repos ( const char * filename )
 }
 
 /* Find and open the ouput repository file for a given
- * file.  If found new_repos is set to a write-only
- * stream for the file.  Otherwise new_repos is set to
- * NULL.  When complete, the new repository is renamed
+ * file.  When found new_repos is set to a write-only
+ * stream for the file.  It is an error if not found.
+ *
+ * When complete, the new repository is renamed
  * by just deleting the + from the end of its name.
  * This may or may not delete the input repository.
  */
@@ -832,10 +861,8 @@ const char * repos_output_variants[2] = {
     "%s/LRCS/%s,V+", "%s/%s,V+" };
 void find_new_repos ( const char * filename )
 {
-    size_t len;
     char * dir, * base;
     int i;
-    len = strlen ( filename );
     dir = strdup ( filename );
     base = strdup ( filename );
     dir = dirname ( dir );
@@ -855,23 +882,25 @@ void find_new_repos ( const char * filename )
 	    return;
 	}
     }
-    tprintf ( "* could not open new repository\n" );
-    new_repos_name = NULL;
+    error ( "could not open new repository" );
 }
 
 /* Read times from the ,V file and build the revision
- * data base, but without any files.  Returns NULL on
- * success and error message on failure.
+ * data base, but without any files.  It is an error
+ * if repository header is empty.  Calls read_legacy_
+ * header if repos_is_legacy.
  */
-const char * read_legacy_header ( void );
-const char * read_header ( void )
+void read_legacy_header ( void );
+void read_header ( void )
 {
     revision * last_revision = NULL;
     int c;
-    const char * s;
 
     if ( repos_is_legacy )
-        return read_legacy_header();
+    {
+        read_legacy_header();
+	return;
+    }
     
     repos_line = 1;
     tprintf ( "* reading header from %s\n",
@@ -885,19 +914,13 @@ const char * read_header ( void )
 
         skip ( repos );
 	c = fgetc ( repos );
-	if ( c == EOF )
-	{
-	    if ( ferror ( repos ) )
-	        return strerror ( errno );
-	    else
-	        return "unexpected EOF in repository";
-	}
+	if ( ferror ( repos ) )
+	    errorno ( "reading repository" );
 	ungetc ( c, repos );
 
 	if ( ! isdigit ( c ) ) break;
 
-	s = read_natural ( & t, repos );
-	if ( s != NULL ) return s;
+	read_natural ( & t, repos );
 	tprintf ( "* read %d in header\n", t );
 
 	next = (revision *) malloc
@@ -913,17 +936,18 @@ const char * read_header ( void )
     }
     tprintf ( "* done reading header\n" );
     if ( first_revision == NULL )
-        return "the repository header is empty";
-    return NULL;
+        error ( "the repository header is empty" );
 }
 
 /* Ditto for legacy repository
  */
-const char * read_legacy_header ( void )
+void read_legacy_header ( void )
 {
     revision * last_revision = NULL,
              * scan_revision = NULL;
-    const char * s;
+    int head_count = 0;
+    int next_count = 0;
+    int date_count = 0;
 
     repos_line = 1;
     tprintf ( "* reading header from %s\n",
@@ -935,8 +959,31 @@ const char * read_legacy_header ( void )
     {
         revision * next;
 
-        s = read_id ( repos );
-	if ( s != NULL ) return s;
+        read_id ( repos );
+
+	if ( strcmp ( id, "head" ) == 0 )
+	{
+	    if ( head_count > 0 )
+	        error ( "too many head entries in"
+		        " repository" );
+	    ++ head_count;
+	}
+
+	if ( strcmp ( id, "next" ) == 0 )
+	{
+	    if ( next_count > 0 )
+	        error ( "too many next entries in"
+		        " repository delta" );
+	    ++ next_count;
+	}
+
+	if ( strcmp ( id, "date" ) == 0 )
+	{
+	    if ( date_count > 0 )
+	        error ( "too many date entries in"
+		        " repository delta" );
+	    ++ date_count;
+	}
 
 	if ( ( strcmp ( id, "head" ) == 0
 	       &&
@@ -953,14 +1000,13 @@ const char * read_legacy_header ( void )
 		next->next = NULL;
 		next->filename = NULL;
 		next->time = 0;
-		next->date[0] = 0;
+		next->date[5] = 0;
 		if ( last_revision != NULL )
 		    last_revision->next = next;
 		if ( first_revision == NULL )
 		    first_revision = next;
 		last_revision = next;
-		s = read_num ( next->rnum, repos );
-		if ( s != NULL ) return s;
+		read_num ( next->rnum, repos );
 		tprintf ( "* read %s %s\n", id,
 		          num2str ( next->rnum ) );
 	    }
@@ -968,10 +1014,12 @@ const char * read_legacy_header ( void )
 	else if ( strcmp ( id, "num" ) == 0 )
 	{
 	    num n;
-	    s = read_num ( n, repos );
-	    if ( s != NULL ) return s;
+	    read_num ( n, repos );
 	    tprintf ( "* read num %s\n",
 	              num2str ( n ) );
+
+	    next_count = 0;
+	    date_count = 0;
 
 	    if ( last_revision != NULL
 	         &&
@@ -987,24 +1035,25 @@ const char * read_legacy_header ( void )
 	          &&
 		  scan_revision != NULL )
 	{
-	    s = read_num ( next->date, repos );
-	    if ( s != NULL ) return s;
+	    read_num ( next->date, repos );
 	    tprintf ( "* read date %s\n",
 	              num2str ( next->date ) );
+	    if (    next->date[5] == 5
+	         || next->date[6] != 0 )
+	        error ( "date with other than"
+		        " 6 components" );
 	}
 	else if ( strcmp ( id, "desc" ) == 0 )
 	{
-	    s = skip_string ( repos );
-	    if ( s != NULL ) return s;
+	    skip_string ( repos );
 	    break;
 	}
 
-	s = skip_entry ( repos );
-	if ( s != NULL ) return s;
+	skip_entry ( repos );
     }
     tprintf ( "* done reading header\n" );
     if ( first_revision == NULL )
-        return "the repository header is empty";
+        error ( "the repository header is empty" );
 
     /* Convert dates to times. */
 
@@ -1021,7 +1070,7 @@ const char * read_legacy_header ( void )
 	time.tm_isdst  = 0;
 	while ( r != NULL )
 	{
-	    if ( r->date[0] == 0 )
+	    if ( r->date[5] == 0 )
 	        error ( "no date for %s",
 		         num2str ( r->rnum ) );
 	    time.tm_year = (int) r->date[0] - 1900;
@@ -1038,26 +1087,21 @@ const char * read_legacy_header ( void )
 	else unsetenv ( "TZ" );
 	tzset();
     }
-
-    return NULL;
 }
 
 /* Skip position in legacy repository to the text string
- * for the entry with num n.
+ * for the entry with num n.  The entry must exist.
  */
-const char * num_skip ( num n )
+void num_skip ( num n )
 {
-    const char * s;
     int found = 0;
     num m;
     while ( 1 )
     {
-	s = read_id ( repos );
-	if ( s != NULL ) return s;
+	read_id ( repos );
 	if ( strcmp ( id, "num" ) == 0 )
 	{
-	    s = read_num ( m, repos );
-	    if ( s != NULL ) return s;
+	    read_num ( m, repos );
 	    found = ( numcmp ( m, n ) == 0 );
 	}
 	else if ( strcmp ( id, "text" ) == 0 )
@@ -1066,40 +1110,40 @@ const char * num_skip ( num n )
 	    {
 	        tprintf ( "* reading text %s\n",
 		          num2str ( m ) );
-		return NULL;
+		return;
 	    }
 	    else
 	    {
 	        tprintf ( "* skipping text %s\n",
 		          num2str ( m ) );
-		s = skip_string ( repos );
-		if ( s != NULL ) return s;
+		skip_string ( repos );
 	    }
 	}
 	else 
-	{
-	    s = skip_string ( repos );
-	    if ( s != NULL ) return s;
-	}
+	    skip_string ( repos );
     }
 }
 
 /* Move the current_revision pointer foward one revision
  * and creat the file of the new current_revision.
- * The file is named f,Vn where n is 1, 2, 3, ... for
+ * The file is named f,Vn+ where n is 1, 2, 3, ... for
  * the revisions in order.  If delete_previous is true,
  * the file of the previous revision is deleted and
  * its name is set to NULL.
  *
- * repos must be positioned so the next thing to be
- * read from it is the string of the next revision,
- * and the previous revision, if it exists, must
- * have its filename set.
+ * For a non-legacy repository, repos must be positioned
+ * so the next thing to be read from it is the string
+ * of the next revision.
+ *
+ * For a legacy repository, repos must be positioned so
+ * that num_skip for the next revision's rnum will
+ * place repos before the next revision's string.
+ *
+ * The previous revision, if it exists, must have its
+ * filename set.
  *
  * If there is no next revision, this function sets
- * current_revision to NULL.
- *
- * Errors call the error function.
+ * current_revision to NULL and does nothing else.
  */
 revision * current_revision;
 int current_index = 0;
@@ -1108,13 +1152,16 @@ void step_revision
         ( const char * filename, int delete_previous )
 {
     revision * next_revision;
-    const char * s;
     FILE * des, * src;
+    const char * desname, * srcname;
 
     if ( current_index == 0 )
         next_revision = first_revision;
     else
+    {
         next_revision = current_revision->next;
+        srcname = current_revision->filename;
+    }
 
     ++ current_index;
     if ( next_revision == NULL )
@@ -1124,47 +1171,40 @@ void step_revision
     }
 
     next_revision->filename = malloc
-        ( strlen ( filename ) + 10 );
+        ( strlen ( filename ) + 20 );
     sprintf ( next_revision->filename,
               "%s,V%d+", filename, current_index );
-    des = fopen ( next_revision->filename, "w" );
+    desname = next_revision->filename;
+    des = fopen ( desname, "w" );
     if ( des == NULL )
-        error ( "could not open %s for writing",
-	        next_revision->filename );
+        errorno ( "could not open %s for writing",
+	          desname );
 
     if ( repos_is_legacy )
-    {
-        s = num_skip ( next_revision->rnum );
-	if ( s != NULL ) error ( s );
-    }
+        num_skip ( next_revision->rnum );
 
     if ( current_index == 1 )
-        copy_from_string ( repos, des );
+        copy_from_string ( repos, des, desname );
     else
     {
-        src = fopen
-	    ( current_revision->filename, "r" );
+        src = fopen ( srcname, "r" );
 	if ( src == NULL )
-	    error ( "could not open %s for reading",
-	             current_revision->filename );
-	tprintf ( "* editing %s\n",
-	           current_revision->filename );
-	s = edit ( repos, src, des );
-	if ( s != NULL ) error ( s );
+	    errorno ( "could not open %s for reading",
+	              srcname );
+	tprintf ( "* editing %s\n", srcname );
+	edit ( repos, src, srcname, des, desname );
 	fclose ( src );
     }
     fclose ( des );
-    tprintf ( "* wrote %s\n", next_revision->filename );
+    tprintf ( "* wrote %s\n", desname );
 
     if ( delete_previous
          &&
 	 current_revision != NULL )
     {
-	if ( unlink ( current_revision->filename ) < 0 )
-	    error ( "cannot delete %s",
-		    current_revision->filename );
-	tprintf ( "* deleted %s\n",
-	          current_revision->filename );
+	if ( unlink ( srcname ) < 0 )
+	    error ( "cannot delete %s", srcname );
+	tprintf ( "* deleted %s\n", srcname );
 	current_revision->filename = NULL;
     }
 
@@ -1231,8 +1271,7 @@ int main ( int argc, char ** argv )
         if ( repos == NULL )
 	    error ( "there is no repository for %s",
 	            filename );
-	s = read_header();
-	if ( s != NULL ) error ( s );
+	read_header();
 	printf ( "%s:\n", repos_name );
 	r = first_revision;
 	while ( r )
@@ -1263,10 +1302,8 @@ int main ( int argc, char ** argv )
 
 	if ( argc > 3 ) error ( "too many arguments" );
         if ( repos != NULL )
-	{
-	    s = read_header();
-	    if ( s != NULL ) error ( s );
-	}
+	    read_header();
+
 	src = fopen ( filename, "r" );
 	if ( src == NULL )
 	    error ( "cannot open file %s for reading",
@@ -1277,8 +1314,6 @@ int main ( int argc, char ** argv )
 	            filename );
 
 	find_new_repos ( filename );
-	if ( new_repos == NULL )
-	    error ( "cannot open new repository" );
 
 	fprintf ( new_repos, "%d\n", status.st_mtime );
 	tprintf ( "* mod time of %s is %d\n",
@@ -1295,8 +1330,7 @@ int main ( int argc, char ** argv )
 	tprintf ( "* wrote header of"
 	          " new repository\n" );
 
-	s = copy_to_string ( src, new_repos );
-	if ( s != NULL ) error ( s );
+	copy_to_string ( src, filename, new_repos );
 	tprintf ( "* copied %s to new repository\n",
 	          filename );
 	           
@@ -1312,10 +1346,14 @@ int main ( int argc, char ** argv )
 	    sprintf ( command, "diff -n %s %s",
 		      filename,
 		      current_revision->filename );
+	    tprintf ( "* copying diff -n %s %s to"
+	              " new repository\n",
+		      filename,
+		      current_revision->filename );
 	    diff = popen ( command, "r" );
 	    if ( diff == NULL )
-		error ( "cannot execute"
-		        " diff -n command" );
+		errorno ( "cannot execute"
+		          " diff -n command" );
 
 	    c = fgetc ( diff );
 	    if ( c == EOF )
@@ -1324,27 +1362,21 @@ int main ( int argc, char ** argv )
 			 " already up-to-date\n" );
 		exit ( 0 );
 	    }
-
 	    ungetc ( c, diff );
 
-	    s = copy_to_string  ( diff, new_repos );
-	    if ( s != NULL ) error ( s );
+	    copy_to_string
+	        ( diff, "diff -n output", new_repos );
 	    pclose ( diff );
-	    tprintf ( "* copied diff -n %s %s to"
-	              " new repository\n",
-		      filename,
-		      current_revision->filename );
 
 	    if ( repos_is_legacy )
 	    {
 	        r = current_revision->next;
 		while ( r )
 		{
-		    s = num_skip ( r->rnum );
-		    if ( s != NULL ) error ( s );
-		    s = copy_string
-		        ( repos, new_repos );
-		    if ( s != NULL ) error ( s );
+		    num_skip ( r->rnum );
+		    copy_string
+		        ( repos,
+			  new_repos, new_repos_name );
 		    tprintf ( "* copied %s to new"
 		              " repository\n",
 		              num2str ( r->rnum ) );
@@ -1352,10 +1384,8 @@ int main ( int argc, char ** argv )
 		}
 	    }
 	    else
-	    {
-		s = copy ( repos, new_repos );
-		if ( s != NULL ) error ( s );
-	    }
+		copy ( repos, repos_name,
+		       new_repos, new_repos_name );
 	    fclose ( repos );
 	}
 
@@ -1366,8 +1396,9 @@ int main ( int argc, char ** argv )
 	
 	if ( rename ( new_repos_name, final_repos_name )
 	     < 0 )
-	    error ( "cannot rename %s to %s",
-	            new_repos_name, final_repos_name );
+	    errorno ( "cannot rename %s to %s",
+	              new_repos_name,
+		      final_repos_name );
 	tprintf ( "* renamed %s to %s\n",
 	          new_repos_name, final_repos_name );
 	new_repos_name = NULL;
@@ -1382,8 +1413,8 @@ int main ( int argc, char ** argv )
 		 != 0 )
 	    {
 	        if ( unlink ( repos_name ) < 0 )
-		    error ( "cannot remove %s",
-			    repos_name );
+		    errorno ( "cannot remove %s",
+			      repos_name );
 		tprintf ( "* removed %s\n",
 		          repos_name );
 	    }
@@ -1393,7 +1424,6 @@ int main ( int argc, char ** argv )
     else if ( strcmp ( op, "out" ) == 0 )
     {
 	long rev;
-	int i;
 	char * final_name;
 	char * name;
 	struct utimbuf ut;
@@ -1402,8 +1432,7 @@ int main ( int argc, char ** argv )
         if ( repos == NULL )
 	    error ( "there is no repository for %s",
 	            filename );
-	s = read_header();
-	if ( s != NULL ) error ( s );
+	read_header();
 
 	if ( argc == 3 ) rev = 1;
 	else
@@ -1419,6 +1448,8 @@ int main ( int argc, char ** argv )
 
 	while ( rev -- )
 	    step_revision ( filename, 1 );
+	if ( current_revision == NULL )
+	    error ( "revision argument too large" );
 
 	name = current_revision->filename;
 	final_name = strdup ( name );
@@ -1433,8 +1464,8 @@ int main ( int argc, char ** argv )
 	
 	if ( rename ( name, final_name )
 	     < 0 )
-	    error ( "cannot rename %s to %s",
-	            name, final_name );
+	    errorno ( "cannot rename %s to %s",
+	              name, final_name );
 	tprintf ( "* renamed %s to %s\n",
 	          name, final_name );
 	current_revision->filename = NULL;
@@ -1479,8 +1510,7 @@ int main ( int argc, char ** argv )
         if ( repos == NULL )
 	    error ( "there is no repository for %s",
 	            filename );
-	s = read_header();
-	if ( s != NULL ) error ( s );
+	read_header();
 
 	for ( i = 0; i < 2; ++ i )
 	{
@@ -1525,15 +1555,18 @@ int main ( int argc, char ** argv )
 	    printf ( " %s", diff_argv[i] );
 	printf ( "\n" );
 
+	tprintf ( "forking child to execute diff(1)" );
 	child = fork();
-	if ( child < 0 ) error ( strerror ( errno ) );
+	if ( child < 0 )
+	    errorno ( "forking child to execute"
+	              " diff(1)" );
 	if ( child == 0 )
 	{
 	    execvp ( "diff", diff_argv );
-	    error ( strerror ( errno ) );
+	    errorno ( "executing diff(1)" );
 	}
 	if ( wait ( & status ) < 0 )
-	    error ( strerror ( errno ) );
+	    errorno ( "waiting for child to finish" );
 
 	exit ( 0 );
     }
