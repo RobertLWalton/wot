@@ -1,7 +1,7 @@
 /* Light Revision Control System (Light-RCS)
 **
 ** Author:	Bob Walton (walton@acm.org)
-** File:	lrcs.c
+** File:	Wed Aug 19 17:14:12 EDT 2020
 ** Date:	Wed Aug 19 14:26:28 EDT 2020
 **
 ** The authors have placed this program in the public
@@ -52,7 +52,9 @@ const char * documentation[] = {
 "except its contents and its modification time.",
 "",
 "Revisions are numbered 1, 2, ..., with 1 being the",
-"MOST-RECENT revision.",
+"MOST-RECENT revision.  Revision number 0 can be used",
+"to refer to the file itself, as opposed revision 1",
+"as it is stored in the repository.",
 "",
 "The `list' command lists the revisions and their",
 "times.",
@@ -63,6 +65,8 @@ const char * documentation[] = {
 "",
 "The `out' command for file f and revision number n",
 "produces revision n of file f in a file named f,Vn.",
+"But `lrcs out f' and `lrcs out f 0' produce revision",
+"1 in the file named f, not f.V1.",
 "",
 "The `diff' command can compare the current file with",
 "the latest revision, or with a specified revision,",
@@ -1464,10 +1468,11 @@ int main ( int argc, char ** argv )
     }
     else if ( strcmp ( op, "out" ) == 0 )
     {
-	long rev;
+	long rev, i;
 	char * final_name;
 	char * name;
 	struct utimbuf ut;
+	struct stat status;
 
 	if ( argc > 4 ) error ( "too many arguments" );
         if ( repos == NULL )
@@ -1475,7 +1480,7 @@ int main ( int argc, char ** argv )
 	            filename );
 	read_header();
 
-	if ( argc == 3 ) rev = 1;
+	if ( argc == 3 ) rev = 0;
 	else
 	{
 	    char * endptr;
@@ -1483,18 +1488,31 @@ int main ( int argc, char ** argv )
 	    if ( * endptr != 0 )
 	        error ( "revision argument is not"
 		        " integer" );
-	    if ( rev <= 0 )
-	        error ( "revision argument is <= 0" );
+	    if ( rev < 0 )
+	        error ( "revision argument is < 0" );
 	}
 
-	while ( rev -- )
-	    step_revision ( filename, 1 );
+	if ( rev == 0
+	     &&
+	     stat ( filename, & status ) >= 0 )
+	    error ( "%s already exists", filename );
+
+	i = 0;
+	do step_revision ( filename, 1 );
+	while ( ++ i < rev );
+	    /* If rev == 0 or 1 this takes 1 step. */
+
 	if ( current_revision == NULL )
 	    error ( "revision argument too large" );
 
 	name = current_revision->filename;
-	final_name = strdup ( name );
-	final_name[strlen(name)-1] = 0;
+	if ( rev == 0 )
+	    final_name = strdup ( filename );
+	else
+	{
+	    final_name = strdup ( name );
+	    final_name[strlen(name)-1] = 0;
+	}
 
 	ut.actime = time ( NULL );
 	ut.modtime = current_revision->time;
