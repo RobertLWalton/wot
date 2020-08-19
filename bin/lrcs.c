@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Wed Aug 19 04:09:28 EDT 2020
+** Date:	Wed Aug 19 14:26:28 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -237,6 +237,8 @@ void verror ( const char * fmt, va_list ap )
     if ( ! trace )
 	fprintf ( stderr, "      rerun with -t option"
 	                  " for more details\n" );
+    fprintf ( stderr, "      run with -doc option for"
+                      " documentation\n" );
     exit ( 1 );
 }
 void error ( const char * fmt, ... )
@@ -493,10 +495,10 @@ void copy ( FILE * src, const char * srcname,
 	errorno ( "reading from %s", srcname );
 }
 
-/* Copy a string from repos to des, and stop after
- * trailing @.  Skip whitespace before beginning @.
- * String must exist. File name is used in error
- * messages.
+/* Copy the contents of a string from repos to des, and
+ * stop after trailing @.  Skip whitespace before
+ * beginning @.  String must exist.  Extra `@'s are not
+ * copied.  File name is used in error messages.
  */
 void copy_from_string
 	( FILE * repos,
@@ -695,6 +697,9 @@ void edit ( FILE * repos,
 	if ( count == 0 )
 	    error ( "second command parameter == 0 in"
 	            " repository" );
+	if ( op == 'd' && location == 0 )
+	    error ( "first delete parameter == 0 in"
+	            " repository" );
 
 	/* Skip to after end of line in repos
 	 */
@@ -767,7 +772,8 @@ void edit ( FILE * repos,
 	     * line feeds have been copied or repository
 	     * string ends.  Copying is from inside a
 	     * repository string, so @@ copies to one @
-	     * and a single @ ends command string.
+	     * and a single @ ends repository command
+	     * string.
 	     */
 	    int last_c = 0;
 	    while ( count > 0 ) 
@@ -775,6 +781,11 @@ void edit ( FILE * repos,
 	        c = fgetc ( repos );
 		if ( last_c == '@' && c != '@' )
 		{
+		    if ( count != 1 || c != EOF )
+		        error ( "append command"
+			        " prematurely"
+				" terminated in"
+				" repository" );
 		    ungetc ( c, repos );
 		    commands_done = 1;
 		    break;
@@ -790,7 +801,8 @@ void edit ( FILE * repos,
 		if ( c == EOF )
 		{
 		    if ( ferror ( repos ) )
-		        errorno ( "reading repository" );
+		        errorno
+			    ( "reading repository" );
 		    else
 		        erroreof ( "reading repository"
 			           " string" );
@@ -838,7 +850,7 @@ void find_repos ( const char * filename )
 	if ( repos != NULL )
 	{
 	    repos_is_legacy = ( i >= 2 );
-	    tprintf ( "* found repository %s\n",
+	    tprintf ( "* opened input repository %s\n",
 	              repos_name );
 	    return;
 	}
@@ -851,7 +863,7 @@ void find_repos ( const char * filename )
  * file.  When found new_repos is set to a write-only
  * stream for the file.  It is an error if not found.
  *
- * When complete, the new repository is renamed
+ * When complete, the new repository should be renamed
  * by just deleting the + from the end of its name.
  * This may or may not delete the input repository.
  */
@@ -877,12 +889,13 @@ void find_new_repos ( const char * filename )
 	new_repos = fopen ( new_repos_name, "w" );
 	if ( new_repos != NULL )
 	{
-	    tprintf ( "* opened new repository %s\n",
+	    tprintf ( "* opened new output"
+	              " repository %s\n",
 	              new_repos_name );
 	    return;
 	}
     }
-    error ( "could not open new repository" );
+    error ( "could not open new output repository" );
 }
 
 /* Read times from the ,V file and build the revision
@@ -921,7 +934,7 @@ void read_header ( void )
 	if ( ! isdigit ( c ) ) break;
 
 	read_natural ( & t, repos );
-	tprintf ( "* read %d in header\n", t );
+	tprintf ( "* read %ld in header\n", t );
 
 	next = (revision *) malloc
 	    ( sizeof ( revision ) );
@@ -1035,11 +1048,11 @@ void read_legacy_header ( void )
 	          &&
 		  scan_revision != NULL )
 	{
-	    read_num ( next->date, repos );
+	    read_num ( scan_revision->date, repos );
 	    tprintf ( "* read date %s\n",
-	              num2str ( next->date ) );
-	    if (    next->date[5] == 5
-	         || next->date[6] != 0 )
+	              num2str ( scan_revision->date ) );
+	    if (    scan_revision->date[5] == 0
+	         || scan_revision->date[6] != 0 )
 	        error ( "date with other than"
 		        " 6 components" );
 	}
@@ -1157,6 +1170,8 @@ void step_revision
 
     if ( current_index == 0 )
         next_revision = first_revision;
+    else if ( current_revision == NULL )
+        return;
     else
     {
         next_revision = current_revision->next;
@@ -1191,7 +1206,8 @@ void step_revision
 	if ( src == NULL )
 	    errorno ( "could not open %s for reading",
 	              srcname );
-	tprintf ( "* editing %s\n", srcname );
+	tprintf ( "* editing %s to make %s\n",
+	          srcname, desname );
 	edit ( repos, src, srcname, des, desname );
 	fclose ( src );
     }
@@ -1200,10 +1216,10 @@ void step_revision
 
     if ( delete_previous
          &&
-	 current_revision != NULL )
+	 current_index != 1 )
     {
 	if ( unlink ( srcname ) < 0 )
-	    error ( "cannot delete %s", srcname );
+	    errorno ( "cannot delete %s", srcname );
 	tprintf ( "* deleted %s\n", srcname );
 	current_revision->filename = NULL;
     }
@@ -1219,7 +1235,9 @@ void cleanup ( void )
 
     if ( new_repos_name != NULL )
     {
-        unlink ( new_repos_name );
+        if ( unlink ( new_repos_name ) < 0 )
+	    errorno ( "cannot delete %s",
+	              new_repos_name );
 	tprintf ( "* deleted %s\n", new_repos_name);
     }
     r = first_revision;
@@ -1227,9 +1245,10 @@ void cleanup ( void )
     {
 	if ( r->filename != NULL )
 	{
-	    unlink ( r->filename );
-	    tprintf ( "* deleted %s\n",
-		      r->filename );
+	    if ( unlink ( r->filename ) < 0 )
+		errorno ( "cannot delete %s",
+			  r->filename );
+	    tprintf ( "* deleted %s\n", r->filename );
 	}
 	r = r->next;
     }
@@ -1239,6 +1258,16 @@ int main ( int argc, char ** argv )
 {
     const char * op, * filename, * s;
     revision * r;
+
+    /* We assume time_t and nat have same length, and
+     * if one is signed (time_t) and the other unsigned
+     * (nat), only non-negative values will be used.
+     * We printf these values with %ld.
+     *
+     * Typically time_t is defined as `signed long'
+     * and we define nat as `unsigned long'.
+     */
+    assert ( sizeof ( time_t ) == sizeof ( nat ) );
 
     if ( argc >= 2 && strcmp ( argv[1], "-t" ) == 0 )
     {
@@ -1306,24 +1335,24 @@ int main ( int argc, char ** argv )
 
 	src = fopen ( filename, "r" );
 	if ( src == NULL )
-	    error ( "cannot open file %s for reading",
-	            filename );
+	    errorno ( "cannot open file %s for reading",
+	              filename );
 
 	if ( fstat ( fileno ( src ), & status ) < 0 )
-	    error ( "cannot stat file %s",
-	            filename );
+	    errorno ( "cannot stat file %s",
+	              filename );
 
 	find_new_repos ( filename );
 
-	fprintf ( new_repos, "%d\n", status.st_mtime );
-	tprintf ( "* mod time of %s is %d\n",
+	fprintf ( new_repos, "%ld\n", status.st_mtime );
+	tprintf ( "* mod time of %s is %ld\n",
 	          filename, status.st_mtime );
 
 	r = first_revision;
 	    /* Header may be empty */
 	while ( r )
 	{
-	    fprintf ( new_repos, "%d\n", r->time );
+	    fprintf ( new_repos, "%ld\n", r->time );
 	    r = r->next;
 
 	}
@@ -1555,7 +1584,8 @@ int main ( int argc, char ** argv )
 	    printf ( " %s", diff_argv[i] );
 	printf ( "\n" );
 
-	tprintf ( "forking child to execute diff(1)" );
+	tprintf
+	    ( "* forking child to execute diff(1)" );
 	child = fork();
 	if ( child < 0 )
 	    errorno ( "forking child to execute"
@@ -1570,4 +1600,6 @@ int main ( int argc, char ** argv )
 
 	exit ( 0 );
     }
+    else
+        error ( "bad operation `%s'", op );
 }
