@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	Wed Aug 19 17:14:12 EDT 2020
-** Date:	Wed Aug 19 14:26:28 EDT 2020
+** Date:	Wed Aug 19 17:37:56 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -72,13 +72,13 @@ const char * documentation[] = {
 "the latest revision, or with a specified revision,",
 "or can compare two revisions.  When comparing two",
 "revisions, 0 can be used to denote the current file,",
-"as in 0:5.",
+"as in using 0:5 to find `diff f f.V5'.",
 "",
 "The diff(1) program is used to produce diff listings.",
 "The `diff' command diff-options are passed to",
 "diff(1).",
 "",
-"For a file f, if f,V or LRCS/f,V does not exist,",
+"For a file f, if f,V and LRCS/f,V do not exist,",
 "this program looks for a legacy f,v or RCS/f,v file,",
 "and uses it if it exists.  In the case of an `in'",
 "command, the ,v repository will be input but a",
@@ -112,7 +112,7 @@ const char * documentation[] = {
 "the new first revision, i.e., the file is pushed",
 "to the BEGINNING of the revision list.",
 "",
-"The header of a legacy repository can be examined",
+"The header of a ,v legacy repository can be examined",
 "with an editor and edited.  The legacy repository",
 "must have accurate head and next entries and well-",
 "formatted date entries for the revisions used.",

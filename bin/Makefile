@@ -1,5 +1,5 @@
 all:	chkpage efm conf_helper remrestore \
-        unicode2latin1 help
+        unicode2latin1 lrcs help
 
 help:	../help/git.help ../help/wot.help
 
