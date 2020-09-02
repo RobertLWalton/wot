@@ -4,7 +4,7 @@
 #
 # File:		sloc_counts
 # Author:	Bob Walton (walton@deas.harvard.edu)
-# Date:		Mon May 10 06:22:37 EDT 2010
+# Date:		Wed Sep  2 02:19:15 EDT 2020
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -39,12 +39,12 @@ sloc_counts \[-debug\] \[-s\] filename ...
     A SLOC, or `Source Line of Code', is defined as
     follows.
 
-    Files with the extensions .h, .c, .cc, .lsp, and
-    .java are treated specially.  Other files are
+    Files with the extensions .h, .c, .cc, .lsp, .java,
+    and .php are treated specially.  Other files are
     treated as `shell files'.
 
-    For a .h, .c, .cc, and .java file, a SLOC is a line
-    containing a semi-colon (`;').
+    For a .h, .c, .cc, .java, and .php file, a SLOC is
+    a line containing a semi-colon (`;').
 
     For a .lsp file a SLOC is a line containing a
     closing parenthesis (`)').
@@ -109,7 +109,8 @@ foreach file $files {
 	.h	-
 	.c	-
 	.cc	-
-	.java	{
+	.java	-
+	.php	{
 
 	    while { "yes" } {
 		set line [gets $in]
