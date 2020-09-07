@@ -5,7 +5,7 @@
 #
 # File:		remsave
 # Author:	walton@acm.org
-# Date:		Wed Aug 10 15:50:06 EDT 2016
+# Date:		Mon Sep  7 02:36:09 EDT 2020
 
 flags='-av --delete'
 ask=yes
@@ -46,6 +46,11 @@ then
     echo ""
     echo "where DIR is one of:$list"
     exit 1
+fi
+
+if [ -r "$local/.BACKUP-INCLUDE" ]
+then
+    flags="$flags --include-from=$local/.BACKUP-INCLUDE"
 fi
 
 if [ -r "$local/.BACKUP-IGNORE" ]
