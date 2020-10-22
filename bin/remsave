@@ -5,7 +5,7 @@
 #
 # File:		remsave
 # Author:	walton@acm.org
-# Date:		Mon Sep  7 02:36:09 EDT 2020
+# Date:		Tue Oct  6 11:56:19 EDT 2020
 
 flags='-av --delete'
 ask=yes
@@ -53,9 +53,9 @@ then
     flags="$flags --include-from=$local/.BACKUP-INCLUDE"
 fi
 
-if [ -r "$local/.BACKUP-IGNORE" ]
+if [ -r "$local/.BACKUP-EXCLUDE" ]
 then
-    flags="$flags --exclude-from=$local/.BACKUP-IGNORE"
+    flags="$flags --exclude-from=$local/.BACKUP-EXCLUDE"
 fi
 
 case "$0" in
