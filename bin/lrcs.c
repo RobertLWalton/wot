@@ -1,8 +1,8 @@
 /* Light Revision Control System (Light-RCS)
 **
 ** Author:	Bob Walton (walton@acm.org)
-** File:	Wed Aug 19 17:14:12 EDT 2020
-** Date:	Wed Aug 19 17:37:56 EDT 2020
+** File:	lrcs.c
+** Date:	Thu Oct 22 15:47:01 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -171,9 +171,9 @@ int repos_line = 0;
  */
 typedef nat num[100];
     /* Encodes num[0].num[1].num[2]. ..., which ends
-     * with first element that is 0.  Num components
-     * must not be zero.
+     * with first element that is NUMEND.
      */
+const nat NUMEND = (nat) -1;
 char id[100];  	/* entry id */
 
 /* Return -1 if n1 < n2, 0 if n1 == n2, +1 if n1 > n2.
@@ -183,9 +183,11 @@ int numcmp ( num n1, num n2 )
     int i = 0;
     while ( 1 )
     {
-        if ( n1[i] < n2[i] ) return -1;
+	if ( n1[i] == n2[i] ) return 0;
+	else if ( n1[i] == NUMEND ) return -1;
+	else if ( n2[i] == NUMEND ) return +1;
+        else if ( n1[i] < n2[i] ) return -1;
 	else if ( n1[i] > n2[i] ) return +1;
-	else if ( n1[i] == 0 ) return 0;
 	++ i;
 	assert ( i < 100 );
     }
@@ -199,13 +201,13 @@ const char * num2str ( num n )
 {
     int i;
     char * p = num_buffer;
-    if ( n[0] == 0 )
+    if ( n[0] == NUMEND )
         sprintf ( p, "missing-num" );
     else
     {
 	p += sprintf ( p, "%lu", n[0] );
 	i = 1;
-	while ( n[i] != 0 )
+	while ( n[i] != NUMEND )
 	    p += sprintf ( p, ".%lu", n[i++] );
     }
     return num_buffer;
@@ -340,7 +342,7 @@ void read_id ( FILE * repos )
 
 /* Read a natural number from repos to num.  Whitespace
  * before number is ignored.  Number must have at least
- * one digit.
+ * one digit and != NUMEND.
  */
 void read_natural ( nat * natural, FILE * repos )
 {
@@ -363,7 +365,9 @@ void read_natural ( nat * natural, FILE * repos )
 	if ( ! isdigit ( c ) ) break;
 	* natural *= 10;
 	* natural += c - '0';
-	if ( old_natural > * natural )
+	if ( old_natural > * natural
+	     ||
+	     * natural == NUMEND )
 	    error ( "number in repository too large" );
     }
     if ( ferror ( repos ) )
@@ -374,14 +378,17 @@ void read_natural ( nat * natural, FILE * repos )
 
 /* Read a num from repos.  Whitespace before num is
  * ignored.  Must have one component and not more than
- * fit in a num type.
+ * fit in a num type.  All num elements are zeroed
+ * before read, so after read at most one has the
+ * value NUMEND.
  */
 void read_num ( num n, FILE * repos )
 {
     int c;
     int i, length;
 
-    length = sizeof ( num ) / sizeof ( int );
+    length = sizeof ( num ) / sizeof ( nat );
+    for ( i = 0; i < length; ++ i ) n[i] = 0;
 
     skip ( repos );
 
@@ -398,9 +405,6 @@ void read_num ( num n, FILE * repos )
 	    errornf ( "num" );
 	ungetc ( c, repos );
 	read_natural ( & n[i], repos );
-	if ( n[i] == 0 )
-	    error ( "num in repository has 0"
-	            " component" );
 	++i;
 
         c = fgetc ( repos );
@@ -410,7 +414,7 @@ void read_num ( num n, FILE * repos )
 	    break;
 	}
     }
-    n[i] = 0;
+    n[i] = NUMEND;
 }
 
 /* Skip one string in repos.  Whitespace before string
@@ -1029,7 +1033,7 @@ void read_legacy_header ( void )
 		next->next = NULL;
 		next->filename = NULL;
 		next->time = 0;
-		next->date[5] = 0;
+		next->date[0] = NUMEND;
 		if ( last_revision != NULL )
 		    last_revision->next = next;
 		if ( first_revision == NULL )
@@ -1067,8 +1071,7 @@ void read_legacy_header ( void )
 	    read_num ( scan_revision->date, repos );
 	    tprintf ( "* read date %s\n",
 	              num2str ( scan_revision->date ) );
-	    if (    scan_revision->date[5] == 0
-	         || scan_revision->date[6] != 0 )
+	    if ( scan_revision->date[6] != NUMEND )
 	        error ( "date with other than"
 		        " 6 components" );
 	}
@@ -1099,7 +1102,7 @@ void read_legacy_header ( void )
 	time.tm_isdst  = 0;
 	while ( r != NULL )
 	{
-	    if ( r->date[5] == 0 )
+	    if ( r->date[0] == NUMEND )
 	        error ( "no date for %s",
 		         num2str ( r->rnum ) );
 	    time.tm_year = (int) r->date[0] - 1900;
