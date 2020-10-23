@@ -219,6 +219,7 @@ typedef struct revision
 {
     time_t time;
     char * filename;
+    struct revision * previous;
     struct revision * next;
 
     /* Legacy info */
@@ -227,6 +228,7 @@ typedef struct revision
     num date;
 } revision;
 revision * first_revision = NULL;
+revision * last_revision = NULL;
 
 const char * vprefix = "";
 void verror ( const char * fmt, va_list ap )
@@ -926,7 +928,6 @@ void find_new_repos ( const char * filename )
 void read_legacy_header ( void );
 void read_header ( void )
 {
-    revision * last_revision = NULL;
     int c;
 
     if ( repos_is_legacy )
@@ -940,6 +941,7 @@ void read_header ( void )
               repos_name );
 
     first_revision = NULL;
+    last_revision = NULL;
     while ( 1 )
     {
 	nat t;
@@ -958,6 +960,7 @@ void read_header ( void )
 
 	next = (revision *) malloc
 	    ( sizeof ( revision ) );
+	next->previous = last_revision;
 	next->next = NULL;
 	next->filename = NULL;
 	next->time = (time_t) t;
@@ -976,8 +979,7 @@ void read_header ( void )
  */
 void read_legacy_header ( void )
 {
-    revision * last_revision = NULL,
-             * scan_revision = NULL;
+    revision * scan_revision = NULL;
     int head_count = 0;
     int next_count = 0;
     int date_count = 0;
@@ -987,6 +989,7 @@ void read_legacy_header ( void )
               repos_name );
 
     first_revision = NULL;
+    last_revision = NULL;
 
     while ( 1 )
     {
@@ -1030,6 +1033,7 @@ void read_legacy_header ( void )
 	    {
 		next = (revision *) malloc
 		    ( sizeof ( revision ) );
+		next->previous = last_revision;
 		next->next = NULL;
 		next->filename = NULL;
 		next->time = 0;
