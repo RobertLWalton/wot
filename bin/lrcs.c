@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Thu Oct 22 22:12:24 EDT 2020
+** Date:	Thu Oct 22 23:36:53 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -956,7 +956,7 @@ void read_header ( void )
 	if ( ! isdigit ( c ) ) break;
 
 	read_natural ( & t, repos );
-	tprintf ( "* read %ld in header\n", t );
+	tprintf ( "* read %lu in header\n", t );
 
 	next = (revision *) malloc
 	    ( sizeof ( revision ) );
@@ -1282,16 +1282,6 @@ int main ( int argc, char ** argv )
     const char * op, * filename, * s;
     revision * r;
 
-    /* We assume time_t and nat have same length, and
-     * if one is signed (time_t) and the other unsigned
-     * (nat), only non-negative values will be used.
-     * We printf these values with %ld.
-     *
-     * Typically time_t is defined as `signed long'
-     * and we define nat as `unsigned long'.
-     */
-    assert ( sizeof ( time_t ) == sizeof ( nat ) );
-
     if ( argc >= 2 && strcmp ( argv[1], "-t" ) == 0 )
     {
         trace = 1;
@@ -1367,15 +1357,17 @@ int main ( int argc, char ** argv )
 
 	find_new_repos ( filename );
 
-	fprintf ( new_repos, "%ld\n", status.st_mtime );
+	fprintf ( new_repos, "%ld\n",
+	          (long) status.st_mtime );
 	tprintf ( "* mod time of %s is %ld\n",
-	          filename, status.st_mtime );
+	          filename, (long) status.st_mtime );
 
 	r = first_revision;
 	    /* Header may be empty */
 	while ( r )
 	{
-	    fprintf ( new_repos, "%ld\n", r->time );
+	    fprintf ( new_repos, "%ld\n",
+	              (long) r->time );
 	    r = r->next;
 
 	}
@@ -1644,6 +1636,7 @@ int main ( int argc, char ** argv )
 	FILE * git, * src;
 	char * gitname;
 	struct stat status;
+	revision * r;
 
 	if ( argc < 4 ) error ( "too few arguments" );
 	pathname = argv[3];
@@ -1663,7 +1656,6 @@ int main ( int argc, char ** argv )
 	i = 0;
 	while ( 1 )
 	{
-	    ++ i;
 	    step_revision ( filename, 1 );
 	    if ( current_revision == NULL ) break;
 
@@ -1678,6 +1670,8 @@ int main ( int argc, char ** argv )
 	         < 0 )
 		errorno ( "cannot stat file %s",
 			  current_revision->filename );
+
+	    ++ i;
 	    fprintf ( git, "blob\n" );
 	    fprintf ( git, "mark :%d\n", i );
 	    fprintf ( git, "data %ld\n",
@@ -1688,6 +1682,23 @@ int main ( int argc, char ** argv )
 	    fprintf ( git, "\n" );
 	    fclose ( src );
 	}
+
+	r = last_revision;
+	while ( r != NULL )
+	{
+	    fprintf
+	        ( git, "commit refs/heads/lrcs\n" );
+	    fprintf ( git,
+	              "committer <unknown> %ld +0000\n",
+		      r->time );
+	    fprintf ( git, "data 0\n" );
+	    fprintf ( git, "M 100644 :%d %s\n",
+	              i, pathname );
+	    -- i;
+
+	    r = r->previous;
+	}
+
 	fprintf ( git, "done\n" );
 	fclose ( git );
     }
