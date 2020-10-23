@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Thu Oct 22 15:47:01 EDT 2020
+** Date:	Thu Oct 22 22:12:24 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -1632,6 +1632,60 @@ int main ( int argc, char ** argv )
 	    errorno ( "waiting for child to finish" );
 
 	exit ( 0 );
+    }
+    else if ( strcmp ( op, "git" ) == 0 )
+    {
+	const char * pathname;
+	int i;
+	FILE * git, * src;
+	char * gitname;
+	struct stat status;
+
+	if ( argc < 4 ) error ( "too few arguments" );
+	pathname = argv[3];
+        if ( repos == NULL )
+	    error ( "there is no repository for %s",
+	            filename );
+	read_header();
+
+	gitname = (char *) malloc 
+	    ( strlen ( filename ) + 100 );
+	sprintf ( gitname, "%s,GIT", filename );
+	git = fopen ( gitname, "w" );
+	if ( git == NULL )
+	    errorno ( "could not open %s for writing",
+		      gitname );
+
+	i = 0;
+	while ( 1 )
+	{
+	    ++ i;
+	    step_revision ( filename, 1 );
+	    if ( current_revision == NULL ) break;
+
+	    src = fopen
+	        ( current_revision->filename, "r" );
+	    if ( src == NULL )
+		errorno ( "cannot open file %s for"
+		          " reading",
+			  current_revision->filename );
+
+	    if (   fstat ( fileno ( src ), & status )
+	         < 0 )
+		errorno ( "cannot stat file %s",
+			  current_revision->filename );
+	    fprintf ( git, "blob\n" );
+	    fprintf ( git, "mark :%d\n", i );
+	    fprintf ( git, "data %ld\n",
+	              (long) status.st_size );
+		      /* off_t type is signed */
+	    copy ( src, current_revision->filename,
+	           git, gitname );
+	    fprintf ( git, "\n" );
+	    fclose ( src );
+	}
+	fprintf ( git, "done\n" );
+	fclose ( git );
     }
     else
         error ( "bad operation `%s'", op );
