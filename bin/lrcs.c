@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Sat Oct 24 04:44:54 EDT 2020
+** Date:	Sat Oct 24 10:53:34 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -1320,6 +1320,47 @@ int main ( int argc, char ** argv )
     atexit ( cleanup );
 
     op = argv[1];
+
+    if ( strcmp ( op, "git" ) == 0 )
+    {
+	struct stat status;
+	const char * committer;
+	const char * email;
+
+	if ( argc < 4 ) error ( "too few arguments" );
+	if ( argc > 4 ) error ( "too many arguments" );
+	committer = argv[2];
+	email     = argv[3];
+	if ( ! isalpha ( committer[0] ) )
+	    error ( "committer %s does not begin with"
+	            " a letter", committer );
+	if ( strchr ( email, '@' ) == NULL )
+	    error ( "email %s does not contain @",
+	            email );
+
+        if ( stat ( ".git", & status ) >= 0 )
+	    error ( ".git pre-exists;"
+	            " delete it first" );
+	if ( errno != ENOENT )
+	    errorno ( "stat'ing .git" );
+
+	tprintf ( "* deleting import,git and"
+	          " index,git\n" );
+	if ( unlink ( "import,git" ) < 0
+	     &&
+	     errno != ENOENT )
+	    errorno ( "removing import,git" );
+	if ( unlink ( "index,git" ) < 0
+	     &&
+	     errno != ENOENT )
+	    errorno ( "removing index,git" );
+
+        exit ( 0 );
+    }
+
+    /* All the operations but "git" take a filename
+     * argument.
+     */
     filename = argv[2];
     find_repos ( filename );
 
@@ -1703,8 +1744,8 @@ int main ( int argc, char ** argv )
 	    fclose ( src );
 
 	    fprintf ( index, "%ld :%ld %s\n",
-	              current_revision->time, mark,
-		      filename );
+	              (long) current_revision->time,
+		      mark, filename );
 	    tprintf ( "*     appended version with time"
 	              " $ld and mark $ld\n",
 		      current_revision->time, mark );
