@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Thu Oct 22 23:36:53 EDT 2020
+** Date:	Sat Oct 24 04:44:54 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -122,6 +122,17 @@ const char * documentation[] = {
 "may be edited to get different revision lists.",
 NULL
 };
+
+/* lrcs [-t] glob file mark
+ *
+ * is a suboperation of `lrcs git' that appends to
+ * import,git with the versions in the repos of file
+ * as globs with marks `mark+1', `mark+2', etc., and
+ * appends to index,git a line for each version
+ * of the form `time :mark file'.  In this case
+ * `file' often contains slashes.'  This operation
+ * returns the last mark used in its output.
+ */
 
 int trace = 0;   /* Set true by -t */
 #define tprintf if ( trace ) printf
@@ -1109,6 +1120,12 @@ void read_legacy_header ( void )
 	    if ( r->date[0] == NUMEND )
 	        error ( "no date for %s",
 		         num2str ( r->rnum ) );
+	    if ( r->date[0] < 70 )
+	        r->date[0] += 2000;
+	    else if ( r->date[0] < 100 )
+	        r->date[0] += 1900;
+	        /* Some older RCS files only record
+		 * the last two digits of the year. */
 	    time.tm_year = (int) r->date[0] - 1900;
 	    time.tm_mon  = (int) r->date[1] - 1;
 	    time.tm_mday = (int) r->date[2];
@@ -1614,7 +1631,7 @@ int main ( int argc, char ** argv )
 	printf ( "\n" );
 
 	tprintf
-	    ( "* forking child to execute diff(1)" );
+	    ( "* forking child to execute diff(1)\n" );
 	child = fork();
 	if ( child < 0 )
 	    errorno ( "forking child to execute"
@@ -1629,31 +1646,34 @@ int main ( int argc, char ** argv )
 
 	exit ( 0 );
     }
-    else if ( strcmp ( op, "git" ) == 0 )
+    else if ( strcmp ( op, "glob" ) == 0 )
     {
-	const char * pathname;
-	int i;
-	FILE * git, * src;
-	char * gitname;
+	long mark;
+	char * endp;
+	FILE * import, * index, * src;
 	struct stat status;
-	revision * r;
 
 	if ( argc < 4 ) error ( "too few arguments" );
-	pathname = argv[3];
-        if ( repos == NULL )
-	    error ( "there is no repository for %s",
-	            filename );
+	if ( argc > 4 ) error ( "too many arguments" );
+	mark = strtol ( argv[3], & endp, 10 );
+	if ( * endp || mark < 0 )
+	    error ( "%s is not a natural number"
+	            " argument", argv[3] );
 	read_header();
 
-	gitname = (char *) malloc 
-	    ( strlen ( filename ) + 100 );
-	sprintf ( gitname, "%s,GIT", filename );
-	git = fopen ( gitname, "w" );
-	if ( git == NULL )
-	    errorno ( "could not open %s for writing",
-		      gitname );
+	import = fopen ( "import,git", "a" );
+	if ( import == NULL )
+	    errorno ( "could not open import,git"
+	              " for appending" );
 
-	i = 0;
+	index = fopen ( "index,git", "a" );
+	if ( index == NULL )
+	    errorno ( "could not open index,git"
+	              " for appending" );
+
+	tprintf ( "* begin appends to import,git"
+	          " and index,git for %s\n",
+		  filename );
 	while ( 1 )
 	{
 	    step_revision ( filename, 1 );
@@ -1671,36 +1691,35 @@ int main ( int argc, char ** argv )
 		errorno ( "cannot stat file %s",
 			  current_revision->filename );
 
-	    ++ i;
-	    fprintf ( git, "blob\n" );
-	    fprintf ( git, "mark :%d\n", i );
-	    fprintf ( git, "data %ld\n",
+	    ++ mark;
+	    fprintf ( import, "blob\n" );
+	    fprintf ( import, "mark :%ld\n", mark );
+	    fprintf ( import, "data %ld\n",
 	              (long) status.st_size );
 		      /* off_t type is signed */
 	    copy ( src, current_revision->filename,
-	           git, gitname );
-	    fprintf ( git, "\n" );
+	           import, "import,git" );
+	    fprintf ( import, "\n" );
 	    fclose ( src );
+
+	    fprintf ( index, "%ld :%ld %s\n",
+	              current_revision->time, mark,
+		      filename );
+	    tprintf ( "*     appended version with time"
+	              " $ld and mark $ld\n",
+		      current_revision->time, mark );
 	}
-
-	r = last_revision;
-	while ( r != NULL )
-	{
-	    fprintf
-	        ( git, "commit refs/heads/lrcs\n" );
-	    fprintf ( git,
-	              "committer <unknown> %ld +0000\n",
-		      r->time );
-	    fprintf ( git, "data 0\n" );
-	    fprintf ( git, "M 100644 :%d %s\n",
-	              i, pathname );
-	    -- i;
-
-	    r = r->previous;
-	}
-
-	fprintf ( git, "done\n" );
-	fclose ( git );
+	tprintf ( "* end appends to import,git"
+	          " and index,git for %s\n",
+		  filename );
+	if ( ferror ( import ) )
+	    error ( "error writing import,git" );
+	if ( ferror ( index ) )
+	    error ( "error writing index,git" );
+	fclose ( import );
+	fclose ( index );
+	printf ( "%ld\n", mark );
+	exit ( 0 );
     }
     else
         error ( "bad operation `%s'", op );
