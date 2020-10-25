@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Sat Oct 24 10:53:34 EDT 2020
+** Date:	Sun Oct 25 02:59:00 EDT 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -24,6 +24,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <utime.h>
+#include <dirent.h>
 #include <errno.h>
 #include <assert.h>
 
@@ -1292,6 +1293,119 @@ void cleanup ( void )
 	}
 	r = r->next;
     }
+}
+
+/* Find all repositories in the directory tree
+ * rooted at '.' and perform the action: either
+ * execute 'lrcs glob ...' or 'rm' for each
+ * repository.
+ */  
+typedef enum { GLOB, REMOVE } action;
+long for_all_repos_in_directory
+        ( const char * directory,
+	  action act, long mark );
+void for_all_repos ( action act )
+{
+    for_all_repos_in_directory ( "", act, 0 );
+}
+long for_all_repos_in_directory
+        ( const char * directory,
+	  action act, long mark )
+{
+    DIR * dir;
+    struct dirent * ent;
+    size_t s;
+    char * name, * command;
+    struct stat status;
+
+    assert ( sizeof ( ent->d_name ) >= 256 );
+        /* Size should be 256; if its zero,
+	 * things have changed. */
+
+    dir = opendir ( directory );
+    if ( dir == NULL )
+        errorno ( "cannot open %s", directory );
+    s = strlen ( directory );
+    name = malloc ( s + 1 + sizeof(ent->d_name) );
+    strcpy ( name, directory );
+    name[s] = '/';
+    ++ s;
+    if ( strcmp ( directory, "." ) == 0 )
+        name[0] = 0, s = 0;
+	/* Names to lrcs glob must be clean because
+	 * they are passed to git.
+	 */
+    command = malloc ( 100 + s + sizeof(ent->d_name) );
+    while ( 1 )
+    {
+	size_t len;
+
+	errno = 0;
+        ent = readdir ( dir );
+	if ( ent == NULL )
+	{
+	    if ( errno == 0 ) break;
+	    else
+	        errorno ( "reading %s", directory );
+	}
+	strcpy ( name + s, ent->d_name );
+	if ( stat ( name, & status ) < 0 )
+	    errorno ( "getting status of %s", name );
+
+	if ( S_ISDIR ( status.st_mode ) )
+	{
+	    mark = for_all_repos_in_directory
+	        ( name, act, mark );
+	    continue;
+	}
+	else if ( ! S_ISREG ( status.st_mode ) )
+	    continue;
+
+	len = strlen ( name );
+	if ( strcmp ( name + len - 2, ",v" ) != 0
+	     ||
+	     strcmp ( name + len - 2, ",V" ) != 0 )
+	    continue;
+	if ( act == GLOB )
+	{
+	    FILE * glob;
+	    char result[100];
+	    char * endp;
+	    int exit_status;
+
+	    name[len-2] = 0;
+	    sprintf ( command, "lrcs %s glob '%s' %ld",
+	              trace ? "-t" : "",
+		      name, mark );
+	    glob = popen ( command, "r" );
+	    if ( glob == NULL )
+	        errorno ( "executing %s", command );
+	    if ( fgets ( result, sizeof ( result ),
+	                 glob ) == NULL )
+	        errorno ( "reading output of %s",
+		          command );
+	    mark = strtol ( result, & endp, 10 );
+	    if ( * endp != '\n' || mark == 0 )
+	        error ( "bad output '%s' from %s",
+		        result, command );
+	    exit_status = pclose ( glob );
+	    if ( exit_status < 0 )
+	        errorno ( "waiting for %s",
+		          command );
+	    else if ( exit_status != 0 )
+	        error ( "exit status %d returned by %s",
+		        exit_status, command );
+	}
+	else
+	{
+	    if ( unlink ( name ) < 0 )
+	        errorno ( "removing %s", name );
+	}
+    }
+    free ( name );
+    free ( command );
+
+    return mark;
 }
 
 int main ( int argc, char ** argv )
