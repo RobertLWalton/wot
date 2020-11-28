@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Sun Oct 25 02:59:00 EDT 2020
+** Date:	Sat Nov 28 05:50:30 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -36,6 +36,7 @@ const char * documentation[] = {
 "lrcs [-t] diff file [revision] [diff-option...]",
 "lrcs [-t] diff file revision:revision"
 				" [diff-option...]",
+"lrcs [-t] git [committer e-mail]",
 "",
 "The Light Revision Control System (LRCS) is for use",
 "with files that make no reference to other files and",
@@ -78,6 +79,14 @@ const char * documentation[] = {
 "The diff(1) program is used to produce diff listings.",
 "The `diff' command diff-options are passed to",
 "diff(1).",
+"",
+"The `git' command imports all the ,V and ,v files",
+"in the current directory and its subdirectory tree",
+"into the git repository of the current directory",
+"(which may be in a .git subdirectory of either the",
+"current directory or one of it ancestors).  If the",
+"committer and e-mail arguments are given, a new git",
+"repository in the current directory is created first.",
 "",
 "For a file f, if f,V and LRCS/f,V do not exist,",
 "this program looks for a legacy f,v or RCS/f,v file,",
@@ -1295,6 +1304,19 @@ void cleanup ( void )
     }
 }
 
+/* Pclose file descriptor and check for errors.
+ */
+void close_command ( const char * command, FILE * fd )
+{
+    int exit_status;
+    exit_status = pclose ( fd );
+    if ( exit_status < 0 )
+	errorno ( "waiting for `%s'", command );
+    else if ( exit_status != 0 )
+	error ( "exit status %d returned by `%s'",
+		exit_status, command );
+}
+
 /* Find all repositories in the directory tree
  * rooted at '.' and perform the action: either
  * execute 'lrcs glob ...' or 'rm' for each
@@ -1388,13 +1410,7 @@ long for_all_repos_in_directory
 	    if ( * endp != '\n' || mark == 0 )
 	        error ( "bad output '%s' from %s",
 		        result, command );
-	    exit_status = pclose ( glob );
-	    if ( exit_status < 0 )
-	        errorno ( "waiting for %s",
-		          command );
-	    else if ( exit_status != 0 )
-	        error ( "exit status %d returned by %s",
-		        exit_status, command );
+	    close_command ( command, glob );
 	}
 	else
 	{
@@ -1419,7 +1435,7 @@ int main ( int argc, char ** argv )
 	-- argc, ++ argv;
     }
 
-    if ( argc < 3
+    if ( argc < 2
          ||
 	 strncmp ( argv[1], "-doc", 4 ) == 0 )
     {
@@ -1437,37 +1453,78 @@ int main ( int argc, char ** argv )
 
     if ( strcmp ( op, "git" ) == 0 )
     {
-	struct stat status;
-	const char * committer;
-	const char * email;
+	FILE * git;
+	int exit_status;
 
-	if ( argc < 4 ) error ( "too few arguments" );
 	if ( argc > 4 ) error ( "too many arguments" );
-	committer = argv[2];
-	email     = argv[3];
-	if ( ! isalpha ( committer[0] ) )
-	    error ( "committer %s does not begin with"
-	            " a letter", committer );
-	if ( strchr ( email, '@' ) == NULL )
-	    error ( "email %s does not contain @",
-	            email );
+	if ( argc != 2 )
+	{
+	    static const char * param[2] =
+	        { "name", "email" };
+	    const char * config[2];
+	        /* config[i] is `user.<param[i]>'
+		 * git configuration parameter. */
+	    const char * committer, * email;
+	    struct stat status;
+	    char * command;
+	    int i;
+	    if ( argc < 4 )
+	        error ( "too few arguments" );
+	    config[0] = committer = argv[2];
+	    config[1] = email = argv[3];
+	    if ( ! isalpha ( committer[0] ) )
+		error ( "committer %s does not begin"
+			" with a letter", committer );
+	    if ( strchr ( committer, '"' ) != NULL )
+		error ( "committer %s contains quote",
+			committer );
+	    if ( strchr ( email, '@' ) == NULL )
+		error ( "email %s does not contain @",
+			email );
+	    if ( strchr ( email, '"' ) != NULL )
+		error ( "email %s contains quote",
+			email );
 
-        if ( stat ( ".git", & status ) >= 0 )
-	    error ( ".git pre-exists;"
-	            " delete it first" );
-	if ( errno != ENOENT )
-	    errorno ( "stat'ing .git" );
+	    if ( stat ( ".git", & status ) >= 0 )
+		error ( ".git pre-exists;"
+			" delete it first" );
+	    if ( errno != ENOENT )
+		errorno ( "stat'ing .git" );
+
+	    tprintf ( "* executing `git init'\n" );
+	    git = popen ( "git init", "w" );
+	    if ( git == NULL )
+		errorno ( "cannot execute"
+		          " `git init' command" );
+	    close_command ( "git init", git );
+
+	    for ( i = 0; i < 2; ++ i )
+	    {
+	        command = (char *) malloc
+		    ( strlen ( config[i] + 100 ) );
+		sprintf ( command,
+		          "git config user.%s \"%s\"",
+			  param[i], config[i] );
+		tprintf ( "* executing `%s'\n",
+		          command );
+		git = popen ( command, "w" );
+		if ( git == NULL )
+		    errorno ( "cannot execute `%s'"
+		              " command", command );
+		close_command ( command, git );
+	    }
+	}
 
 	tprintf ( "* deleting import,git and"
-	          " index,git\n" );
+		  " index,git if they exist\n" );
 	if ( unlink ( "import,git" ) < 0
 	     &&
 	     errno != ENOENT )
-	    errorno ( "removing import,git" );
+	    errorno ( "deleting import,git" );
 	if ( unlink ( "index,git" ) < 0
 	     &&
 	     errno != ENOENT )
-	    errorno ( "removing index,git" );
+	    errorno ( "deleting index,git" );
 
         exit ( 0 );
     }
@@ -1475,6 +1532,7 @@ int main ( int argc, char ** argv )
     /* All the operations but "git" take a filename
      * argument.
      */
+    if ( argc < 3 ) error ( "too few arguments" );
     filename = argv[2];
     find_repos ( filename );
 
