@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Sat Nov 28 05:50:30 EST 2020
+** Date:	Sun Nov 29 03:31:07 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -297,6 +297,117 @@ void errornf ( const char * kind )
     error ( "expected %s not found in repository",
             kind );
 }
+
+/* The following manage a command executed by popen.
+ */
+char * command = NULL, * command_next, * command_end;
+
+/* Initialize command.
+ */
+void init_command ( void )
+{
+    if ( command == NULL )
+    {
+        command = (char *) malloc ( 4096 );
+	if ( command == NULL )
+	    errorno ( "while allocating memory" );
+	command_end = command + 4096;
+    }
+    command_next = command;
+}
+
+void append_helper ( const char * argument, int quote );
+
+/* Append argument to command, separated from previous
+ * command part by a single space.
+ */
+void append ( const char * argument )
+{
+    append_helper ( argument, 0 );
+}
+
+/* Ditto but quote argument, and escape characters
+ * that are special inside quotes ($, `, \, !).
+ */
+void append_quoted ( const char * argument )
+{
+    append_helper ( argument, 1 );
+}
+
+/* Ditto but append long integer.
+ */
+void append_long ( long argument )
+{
+    char buffer[200];
+    sprintf ( buffer, "%ld", argument );
+    append_helper ( buffer, 0 );
+}
+
+void append_helper ( const char * argument, int quote )
+{
+    size_t len = strlen ( argument );
+    while ( command_next + 2*len + 4 > command_end )
+    {
+	int s = command_end - command + 4096;
+	int n = command_next - command;
+        command = (char *)
+	    realloc ( command, s );
+	if ( command == NULL )
+	    errorno ( "while allocating memory" );
+	command_end = command + s; 
+	command_next = command + n;
+    }
+
+    if ( command_next != command )
+	* command_next ++ = ' ';
+
+    if ( quote )
+    {
+	* command_next ++ = '"';
+	while ( * argument )
+	{
+	    char c = * argument;
+	    if ( c == '"' || c == '`' || c == '\\'
+	                  || c == '!' )
+		* command_next ++ = '\\';
+	    * command_next ++ = * argument ++;
+	}
+	* command_next ++ = '"';
+    }
+    else
+	while ( * argument )
+	    * command_next ++ = * argument ++;
+}
+
+/* Popen command with given mode, check for error,
+ * and return FILE *.
+ */
+FILE * open_command ( const char * mode )
+{
+    FILE * f;
+    * command_next = 0;
+    tprintf ( "* executing `%s'\n", command );
+    f = popen ( command, mode );
+    if ( f == NULL )
+	errorno ( "executing `%s'", command );
+    return f;
+}
+
+/* Pclose FILE * and check for errors.
+ */
+void close_command ( FILE * fd )
+{
+    int exit_status;
+    exit_status = pclose ( fd );
+    if ( exit_status < 0 )
+	errorno ( "waiting for `%s'", command );
+    exit_status &= 0xFF;
+        /* Apparently pclose sometimes returns 256 */
+    if ( exit_status != 0 )
+	error ( "exit status %d returned by `%s'",
+		exit_status, command );
+}
+
 
 /* Skip whitespace in repository.  Return the next
  * character AFTER the current position (may be EOF).
@@ -1304,19 +1415,6 @@ void cleanup ( void )
     }
 }
 
-/* Pclose file descriptor and check for errors.
- */
-void close_command ( const char * command, FILE * fd )
-{
-    int exit_status;
-    exit_status = pclose ( fd );
-    if ( exit_status < 0 )
-	errorno ( "waiting for `%s'", command );
-    else if ( exit_status != 0 )
-	error ( "exit status %d returned by `%s'",
-		exit_status, command );
-}
-
 /* Find all repositories in the directory tree
  * rooted at '.' and perform the action: either
  * execute 'lrcs glob ...' or 'rm' for each
@@ -1337,7 +1435,7 @@ long for_all_repos_in_directory
     DIR * dir;
     struct dirent * ent;
     size_t s;
-    char * name, * command;
+    char * name;
     struct stat status;
 
     assert ( sizeof ( ent->d_name ) >= 256 );
@@ -1357,7 +1455,6 @@ long for_all_repos_in_directory
 	/* Names to lrcs glob must be clean because
 	 * they are passed to git.
 	 */
-    command = malloc ( 100 + s + sizeof(ent->d_name) );
     while ( 1 )
     {
 	size_t len;
@@ -1396,12 +1493,13 @@ long for_all_repos_in_directory
 	    int exit_status;
 
 	    name[len-2] = 0;
-	    sprintf ( command, "lrcs %s glob '%s' %ld",
-	              trace ? "-t" : "",
-		      name, mark );
-	    glob = popen ( command, "r" );
-	    if ( glob == NULL )
-	        errorno ( "executing %s", command );
+	    init_command();
+	    append ( "lrcs" );
+	    if ( trace ) append ( "-t" );
+	    append ( "glob" );
+	    append_quoted ( name );
+	    append_long ( mark );
+	    glob = open_command ( "r" );
 	    if ( fgets ( result, sizeof ( result ),
 	                 glob ) == NULL )
 	        errorno ( "reading output of %s",
@@ -1410,7 +1508,7 @@ long for_all_repos_in_directory
 	    if ( * endp != '\n' || mark == 0 )
 	        error ( "bad output '%s' from %s",
 		        result, command );
-	    close_command ( command, glob );
+	    close_command ( glob );
 	}
 	else
 	{
@@ -1460,13 +1558,12 @@ int main ( int argc, char ** argv )
 	if ( argc != 2 )
 	{
 	    static const char * param[2] =
-	        { "name", "email" };
+	        { "user.name", "user.email" };
 	    const char * config[2];
 	        /* config[i] is `user.<param[i]>'
 		 * git configuration parameter. */
 	    const char * committer, * email;
 	    struct stat status;
-	    char * command;
 	    int i;
 	    if ( argc < 4 )
 	        error ( "too few arguments" );
@@ -1492,26 +1589,19 @@ int main ( int argc, char ** argv )
 		errorno ( "stat'ing .git" );
 
 	    tprintf ( "* executing `git init'\n" );
-	    git = popen ( "git init", "w" );
-	    if ( git == NULL )
-		errorno ( "cannot execute"
-		          " `git init' command" );
-	    close_command ( "git init", git );
+	    init_command();
+	    append ( "git init" );
+	    git = open_command ( "w" );
+	    close_command ( git );
 
 	    for ( i = 0; i < 2; ++ i )
 	    {
-	        command = (char *) malloc
-		    ( strlen ( config[i] + 100 ) );
-		sprintf ( command,
-		          "git config user.%s \"%s\"",
-			  param[i], config[i] );
-		tprintf ( "* executing `%s'\n",
-		          command );
-		git = popen ( command, "w" );
-		if ( git == NULL )
-		    errorno ( "cannot execute `%s'"
-		              " command", command );
-		close_command ( command, git );
+		init_command();
+		append ( "git config" );
+		append ( param[i] );
+		append_quoted ( config[i] );
+		git = open_command ( "w" );
+		close_command ( git );
 	    }
 	}
 
@@ -1568,7 +1658,6 @@ int main ( int argc, char ** argv )
 	revision * r;
 	FILE * src, * diff;
 	struct stat status;
-	char * command;
 	char * final_repos_name;
 	char V;
 
@@ -1615,19 +1704,13 @@ int main ( int argc, char ** argv )
 	    int c;
 	    step_revision ( filename, 0 );
 
-	    command = (char *) malloc 
-		( 2 * strlen ( filename ) + 100 );
-	    sprintf ( command, "diff -n %s %s",
-		      filename,
-		      current_revision->filename );
-	    tprintf ( "* copying diff -n %s %s to"
-	              " new repository\n",
-		      filename,
-		      current_revision->filename );
-	    diff = popen ( command, "r" );
-	    if ( diff == NULL )
-		errorno ( "cannot execute"
-		          " diff -n command" );
+	    init_command();
+	    append ( "diff -n" );
+	    append_quoted ( filename );
+	    append_quoted ( current_revision->filename );
+	    tprintf ( "* copying diff -n to"
+	              " new repository\n" );
+	    diff = open_command ( "r" );
 
 	    c = fgetc ( diff );
 	    if ( c == EOF )
@@ -1640,7 +1723,7 @@ int main ( int argc, char ** argv )
 
 	    copy_to_string
 	        ( diff, "diff -n output", new_repos );
-	    pclose ( diff );
+	    close_command ( diff );
 
 	    if ( repos_is_legacy )
 	    {
