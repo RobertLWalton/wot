@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Sun Nov 29 04:24:20 EST 2020
+** Date:	Sun Nov 29 14:19:54 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -145,7 +145,6 @@ NULL
  */
 
 int trace = 0;   /* Set true by -t */
-#define tprintf if ( trace ) printf
 
 typedef unsigned long nat;
     /* Natural number.  Longest that can be declared
@@ -296,6 +295,13 @@ void errornf ( const char * kind )
 {
     error ( "expected %s not found in repository",
             kind );
+}
+void tprintf ( const char * fmt, ... )
+{
+    va_list ap;
+    if ( ! trace ) return;
+    va_start ( ap, fmt );
+    vfprintf ( stderr, fmt, ap );
 }
 
 /* The following manage a command executed by popen.
@@ -1427,7 +1433,7 @@ long for_all_repos_in_directory
 	  action act, long mark );
 void for_all_repos ( action act )
 {
-    for_all_repos_in_directory ( "", act, 0 );
+    for_all_repos_in_directory ( ".", act, 0 );
 }
 long for_all_repos_in_directory
         ( const char * directory,
@@ -1442,6 +1448,9 @@ long for_all_repos_in_directory
     assert ( sizeof ( ent->d_name ) >= 256 );
         /* Size should be 256; if its zero,
 	 * things have changed. */
+
+    tprintf ( "* searching directory %s\n",
+              directory );
 
     dir = opendir ( directory );
     if ( dir == NULL )
@@ -1468,6 +1477,10 @@ long for_all_repos_in_directory
 	    else
 	        errorno ( "reading %s", directory );
 	}
+	if ( strcmp ( ent->d_name, "." ) == 0 )
+	    continue;
+	if ( strcmp ( ent->d_name, ".." ) == 0 )
+	    continue;
 	strcpy ( name + s, ent->d_name );
 	if ( stat ( name, & status ) < 0 )
 	    errorno ( "getting status of %s", name );
@@ -1483,7 +1496,7 @@ long for_all_repos_in_directory
 
 	len = strlen ( name );
 	if ( strcmp ( name + len - 2, ",v" ) != 0
-	     ||
+	     &&
 	     strcmp ( name + len - 2, ",V" ) != 0 )
 	    continue;
 	if ( act == GLOB )
@@ -1506,7 +1519,8 @@ long for_all_repos_in_directory
 	        errorno ( "reading output of %s",
 		          command );
 	    mark = strtol ( result, & endp, 10 );
-	    if ( * endp != '\n' || mark == 0 )
+	    if (    * endp != '\n'
+	         || ! isdigit ( result[0] ) )
 	        error ( "bad output '%s' from %s",
 		        result, command );
 	    close_command ( glob );
@@ -1518,7 +1532,10 @@ long for_all_repos_in_directory
 	}
     }
     free ( name );
-    free ( command );
+    closedir ( dir );
+
+    tprintf ( "* done searching directory %s\n",
+              directory );
 
     return mark;
 }
@@ -1611,6 +1628,8 @@ int main ( int argc, char ** argv )
 	     errno != ENOENT )
 	    errorno ( "deleting index,git" );
 
+	for_all_repos ( GLOB );
+
         exit ( 0 );
     }
 
@@ -1702,7 +1721,8 @@ int main ( int argc, char ** argv )
 	    init_command();
 	    append ( "diff -n" );
 	    append_quoted ( filename );
-	    append_quoted ( current_revision->filename );
+	    append_quoted
+	        ( current_revision->filename );
 	    tprintf ( "* copying diff -n to"
 	              " new repository\n" );
 	    diff = open_command ( "r" );
@@ -1978,7 +1998,7 @@ int main ( int argc, char ** argv )
 	              (long) current_revision->time,
 		      mark, filename );
 	    tprintf ( "*     appended version with time"
-	              " $ld and mark $ld\n",
+	              " %ld and mark %ld\n",
 		      current_revision->time, mark );
 	}
 	tprintf ( "* end appends to import,git"
