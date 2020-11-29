@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Sun Nov 29 03:31:07 EST 2020
+** Date:	Sun Nov 29 04:24:20 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -314,6 +314,7 @@ void init_command ( void )
 	command_end = command + 4096;
     }
     command_next = command;
+    * command_next = 0;
 }
 
 void append_helper ( const char * argument, int quote );
@@ -377,6 +378,7 @@ void append_helper ( const char * argument, int quote )
     else
 	while ( * argument )
 	    * command_next ++ = * argument ++;
+    * command_next = 0;
 }
 
 /* Popen command with given mode, check for error,
@@ -385,7 +387,6 @@ void append_helper ( const char * argument, int quote )
 FILE * open_command ( const char * mode )
 {
     FILE * f;
-    * command_next = 0;
     tprintf ( "* executing `%s'\n", command );
     f = popen ( command, mode );
     if ( f == NULL )
@@ -1572,14 +1573,8 @@ int main ( int argc, char ** argv )
 	    if ( ! isalpha ( committer[0] ) )
 		error ( "committer %s does not begin"
 			" with a letter", committer );
-	    if ( strchr ( committer, '"' ) != NULL )
-		error ( "committer %s contains quote",
-			committer );
 	    if ( strchr ( email, '@' ) == NULL )
 		error ( "email %s does not contain @",
-			email );
-	    if ( strchr ( email, '"' ) != NULL )
-		error ( "email %s contains quote",
 			email );
 
 	    if ( stat ( ".git", & status ) >= 0 )
@@ -1848,10 +1843,8 @@ int main ( int argc, char ** argv )
 	long rev[2];
 	const char * file[2];
 	int i, j, del;
-	char ** diff_argv;
 	int diff_argc;
-	pid_t child;
-	int status;
+	FILE * diff;
 
 	if ( argc == 3 || ! isdigit ( argv[3][0] ) )
 	    rev[0] = 1, rev[1] = 0, diff_argc = 3;
@@ -1910,35 +1903,18 @@ int main ( int argc, char ** argv )
 	    }
 	}
 
-	diff_argv = (char **) malloc
-	    ( ( argc + 1 ) * sizeof ( const char * ) );
-
-	j = 0;
-	diff_argv[j++] = strdup ( "diff" );
-	for ( i = diff_argc; i < argc; ++ i )
-	    diff_argv[j++] = argv[i];
-	diff_argv[j++] = (char *) file[0];
-	diff_argv[j++] = (char *) file[1];
-	diff_argv[j++] = NULL;
-
-	printf ( "%s", diff_argv[0] );
-	for ( i = 1; i < j-1; ++ i )
-	    printf ( " %s", diff_argv[i] );
-	printf ( "\n" );
-
-	tprintf
-	    ( "* forking child to execute diff(1)\n" );
-	child = fork();
-	if ( child < 0 )
-	    errorno ( "forking child to execute"
-	              " diff(1)" );
-	if ( child == 0 )
-	{
-	    execvp ( "diff", diff_argv );
-	    errorno ( "executing diff(1)" );
-	}
-	if ( wait ( & status ) < 0 )
-	    errorno ( "waiting for child to finish" );
+	init_command();
+	append ( "diff" );
+	if ( diff_argc >= argc )
+	    append ( "-u" );
+	else for ( i = diff_argc; i < argc; ++ i )
+	    append_quoted ( argv[i] );
+	append_quoted ( file[0] );
+	append_quoted ( file[1] );
+	append ( "| less -F" );
+	printf ( "%s\n", command );
+	diff = open_command ( "w" );
+	close_command ( diff );
 
 	exit ( 0 );
     }
