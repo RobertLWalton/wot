@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Mon Nov 30 00:47:12 EST 2020
+** Date:	Mon Nov 30 05:46:20 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -23,6 +23,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <utime.h>
 #include <dirent.h>
 #include <errno.h>
@@ -145,6 +146,18 @@ NULL
  */
 
 int trace = 0;   /* Set true by -t */
+
+char * line = NULL;
+ssize_t line_length = 0;
+size_t line_size = 0;
+    /* Data used by getline to read a line of unknown
+     * length.  Length is current line length including
+     * line feed (unless line ends with end of file),
+     * and size is size of line buffer.  Use with
+     *
+     *     line_length = getline
+     *         ( & line, & line_size, stream );
+     */
 
 typedef unsigned long nat;
     /* Natural number.  Longest that can be declared
@@ -400,6 +413,17 @@ FILE * open_command ( const char * mode )
 void close_command ( FILE * fd )
 {
     int exit_status;
+
+    if ( ferror ( fd ) )
+    {
+	int status = fcntl ( fileno ( fd ), F_GETFL );
+	if ( status & O_WRONLY )
+	    error ( "writing input to `%s'", command );
+	else
+	    error ( "reading output from `%s'",
+	            command );
+    }
+
     exit_status = pclose ( fd );
     if ( exit_status < 0 )
 	errorno ( "waiting for `%s'", command );
@@ -1565,9 +1589,6 @@ int time_compare ( const void * e1, const void * e2 )
  */
 void read_index ( FILE * in, const char * filename )
 {
-    char * line = NULL;
-    ssize_t line_length;
-    size_t line_size = 0;
     index_length = 0;
 
     tprintf ( "* reading %s\n", filename );
@@ -1647,18 +1668,19 @@ int main ( int argc, char ** argv )
 
     if ( strcmp ( op, "git" ) == 0 )
     {
-	FILE * git, * index, * import;
+	FILE * git, * index_fd, * import;
 	int exit_status;
+	int i;
+	long time_delta = -1;
+	const char * committer, * email;
+	static const char * param[2] =
+	    { "user.name", "user.email" };
+	const char * config[2];
+	    /* config[i] is param[i] git
+	     * configuration parameter. */
 
-	if ( argc > 4 ) error ( "too many arguments" );
-	if ( argc != 2 )
+	if ( argc > 3 )
 	{
-	    static const char * param[2] =
-	        { "user.name", "user.email" };
-	    const char * config[2];
-	        /* config[i] is `user.<param[i]>'
-		 * git configuration parameter. */
-	    const char * committer, * email;
 	    struct stat status;
 	    int i;
 	    if ( argc < 4 )
@@ -1692,6 +1714,8 @@ int main ( int argc, char ** argv )
 		git = open_command ( "w" );
 		close_command ( git );
 	    }
+	    argc -= 2;
+	    argv += 2;
 	}
 	else
 	{
@@ -1704,6 +1728,34 @@ int main ( int argc, char ** argv )
 		else
 		    error ( ".git does not exist" );
 	    }
+
+	    for ( i = 0; i < 2; ++ i )
+	    {
+		init_command();
+		append ( "git config" );
+		append ( param[i] );
+		git = open_command ( "r" );
+		line_length = getline
+		    ( & line, & line_size, git );
+		if ( line_length < 0 )
+		    error ( "git config %s not set",
+		            param[i] );
+		if ( line[line_length-1] == '\n' )
+		    line[line_length-1] = 0;
+		config[i] = strdup ( line );
+		close_command ( git );
+	    }
+	    committer = config[0];
+	    email = config[1];
+	}
+	if ( argc > 3 ) error ( "too many arguments" );
+	if ( argc == 3 )
+	{
+	    char * endp;
+	    time_delta = strtol ( argv[2], & endp, 10 );
+	    if ( * endp != 0 )
+	        error ( "badly formed time-delta: %s",
+		        argv[2] );
 	}
 
 	tprintf ( "* deleting import,git and"
@@ -1719,12 +1771,12 @@ int main ( int argc, char ** argv )
 
 	for_all_repos ( GLOB );
 
-	index = fopen ( "index,git", "r" );
-	if ( index == NULL )
+	index_fd = fopen ( "index,git", "r" );
+	if ( index_fd == NULL )
 	    errorno ( "cannot open file index,git"
 	              " for reading" );
-	read_index ( index, "index,git" );
-	fclose ( index );
+	read_index ( index_fd, "index,git" );
+	fclose ( index_fd );
 
 	qsort ( index, index_length, sizeof (element),
 	        time_compare );
@@ -1739,6 +1791,35 @@ int main ( int argc, char ** argv )
 
 	copy ( import, "import,git",
 	       git, "| git fast-import" );
+	fclose ( import );
+
+	for ( i = 0; i < index_length; ++ i )
+	{
+	    const char * op = "committing";
+	    element * e = index + i;
+	    fprintf ( git,
+	              "commit refs/heads/master\n" );
+	    fprintf ( git,
+	              "committer %s <%s> %ld +0000\n",
+		      committer, email,
+		      (long) e->time );
+	    fprintf ( git, "data 0\n" );
+	    while ( 1 )
+	    {
+		tprintf ( "* %s %ld %s\n", op,
+			  e->time, e->filename );
+		op = "adding";
+		fprintf ( git,
+			  "M 100644 :%ld %s\n",
+			  e->mark, e->filename );
+		if ( i + 1 == index_length )
+		    break;
+		if (   (e+1)->time - e->time
+		     > time_delta )
+		    break;
+		++i, ++ e;
+	    }
+	}
 
 	close_command ( git );
 
