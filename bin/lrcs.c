@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Sun Nov 29 18:24:29 EST 2020
+** Date:	Mon Nov 30 00:35:19 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -1570,6 +1570,8 @@ void read_index ( FILE * in, const char * filename )
     size_t line_size = 0;
     index_length = 0;
 
+    tprintf ( "* reading %s\n", filename );
+
     while ( 1 )
     {
 	char * p, * endp;
@@ -1676,7 +1678,6 @@ int main ( int argc, char ** argv )
 	    if ( errno != ENOENT )
 		errorno ( "stat'ing .git" );
 
-	    tprintf ( "* executing `git init'\n" );
 	    init_command();
 	    append ( "git init" );
 	    git = open_command ( "w" );
@@ -1690,6 +1691,18 @@ int main ( int argc, char ** argv )
 		append_quoted ( config[i] );
 		git = open_command ( "w" );
 		close_command ( git );
+	    }
+	}
+	else
+	{
+	    struct stat status;
+
+	    if ( stat ( ".git", & status ) < 0 )
+	    {
+		if ( errno != ENOENT )
+		    errorno ( "stat'ing .git" );
+		else
+		    error ( ".git does not exist" );
 	    }
 	}
 
