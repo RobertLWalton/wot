@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Mon Nov 30 00:35:19 EST 2020
+** Date:	Mon Nov 30 00:47:12 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -1647,7 +1647,7 @@ int main ( int argc, char ** argv )
 
     if ( strcmp ( op, "git" ) == 0 )
     {
-	FILE * git, * index;
+	FILE * git, * index, * import;
 	int exit_status;
 
 	if ( argc > 4 ) error ( "too many arguments" );
@@ -1728,6 +1728,20 @@ int main ( int argc, char ** argv )
 
 	qsort ( index, index_length, sizeof (element),
 	        time_compare );
+
+	init_command();
+	append ( "git fast-import" );
+	git = open_command ( "w" );
+	import = fopen ( "import,git", "r" );
+	if ( import == NULL )
+	    errorno ( "cannot open file import,git"
+	              " for reading" );
+
+	copy ( import, "import,git",
+	       git, "| git fast-import" );
+
+	close_command ( git );
+
 
         exit ( 0 );
     }
