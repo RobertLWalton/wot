@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Sun Nov 29 14:19:54 EST 2020
+** Date:	Sun Nov 29 18:24:29 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -138,10 +138,10 @@ NULL
  * is a suboperation of `lrcs git' that appends to
  * import,git with the versions in the repos of file
  * as globs with marks `mark+1', `mark+2', etc., and
- * appends to index,git a line for each version
- * of the form `time :mark file'.  In this case
- * `file' often contains slashes.'  This operation
- * returns the last mark used in its output.
+ * appends to index,git a line for each version of the
+ * form `time:mark:file'.  In this case `file' may
+ * contain any character except newline.'  This
+ * operation returns the last mark used in its output.
  */
 
 int trace = 0;   /* Set true by -t */
@@ -306,21 +306,16 @@ void tprintf ( const char * fmt, ... )
 
 /* The following manage a command executed by popen.
  */
-char * command = NULL, * command_next, * command_end;
+char * command = NULL;
+size_t command_length;
+size_t command_size = 0;
+    /* Size is allocated size, length is used length. */
 
 /* Initialize command.
  */
 void init_command ( void )
 {
-    if ( command == NULL )
-    {
-        command = (char *) malloc ( 4096 );
-	if ( command == NULL )
-	    errorno ( "while allocating memory" );
-	command_end = command + 4096;
-    }
-    command_next = command;
-    * command_next = 0;
+    command_length = 0;
 }
 
 void append_helper ( const char * argument, int quote );
@@ -353,38 +348,38 @@ void append_long ( long argument )
 void append_helper ( const char * argument, int quote )
 {
     size_t len = strlen ( argument );
-    while ( command_next + 2*len + 4 > command_end )
+    char * p;
+    while ( command_length + 2*len + 4 > command_size )
     {
-	int s = command_end - command + 4096;
-	int n = command_next - command;
-        command = (char *)
-	    realloc ( command, s );
+        command_size += 4096;
+	command = (char *) realloc
+	    ( command, command_size );
 	if ( command == NULL )
 	    errorno ( "while allocating memory" );
-	command_end = command + s; 
-	command_next = command + n;
     }
 
-    if ( command_next != command )
-	* command_next ++ = ' ';
+    p = command + command_length;
+
+    if ( p != command ) * p ++ = ' ';
 
     if ( quote )
     {
-	* command_next ++ = '"';
+	* p ++ = '"';
 	while ( * argument )
 	{
-	    char c = * argument;
+	    char c = * argument ++;
 	    if ( c == '"' || c == '`' || c == '\\'
 	                  || c == '!' )
-		* command_next ++ = '\\';
-	    * command_next ++ = * argument ++;
+		* p ++ = '\\';
+	    * p ++ = c;
 	}
-	* command_next ++ = '"';
+	* p ++ = '"';
     }
     else
-	while ( * argument )
-	    * command_next ++ = * argument ++;
-    * command_next = 0;
+	while ( * argument ) * p ++ = * argument ++;
+
+    command_length = p - command;
+    * p = 0;
 }
 
 /* Popen command with given mode, check for error,
@@ -1540,6 +1535,87 @@ long for_all_repos_in_directory
     return mark;
 }
 
+/* Index data base.
+ */
+typedef struct element {
+    time_t time;
+    long mark;
+    char * filename;
+} element;
+element * index = NULL;
+int index_length;
+int index_size = 0;
+    /* Size is allocated size, length is used length. */
+
+/* Compare two index elements by time for qsort so 
+ * index is sorted in ascending order by time.
+ */
+int time_compare ( const void * e1, const void * e2 )
+{
+    const element * E1 = (const element *) e1;
+    const element * E2 = (const element *) e2;
+    time_t diff = E1->time - E2->time;
+    if ( diff < 0 ) return -1;
+    else if ( diff > 0 ) return + 1;
+    else return 0;
+}
+
+/* Read in file into index database.  Filename is for
+ * error message.
+ */
+void read_index ( FILE * in, const char * filename )
+{
+    char * line = NULL;
+    ssize_t line_length;
+    size_t line_size = 0;
+    index_length = 0;
+
+    while ( 1 )
+    {
+	char * p, * endp;
+	element * e;
+
+        line_length = getline
+	    ( & line, & line_size, in );
+	if ( line_length < 0 )
+	{
+	    if ( ferror ( in ) )
+	        errorno ( "error reading %s",
+		          filename );
+	    else break;  /* EOF */
+	}
+
+	if ( index_length >= index_size )
+	{
+	    index_size += 4096;
+	    index = realloc
+	        ( index,
+		  index_size * sizeof ( element ) );
+	    if ( index == NULL )
+		errorno ( "while allocating memory" );
+	}
+
+	e = index + ( index_length ++ );
+	p = line;
+	e->time = (time_t) strtol ( p, & endp, 10 );
+	if ( endp[0] != ':' )
+	    error ( "badly formatted line in %s: %s",
+	            filename, line );
+	p = endp + 1;
+	e->mark = strtol ( p, & endp, 10 );
+	if ( endp[0] != ':' )
+	    error ( "badly formatted line in %s: %s",
+	            filename, line );
+	p = endp + 1;
+
+	if ( line[line_length-1] != '\n' )
+	    error ( "missing line feed for line in %s:"
+	            " %s", filename, line );
+	line[line_length-1] = 0;
+	e->filename = strdup ( p );
+    }
+}
+
 int main ( int argc, char ** argv )
 {
     const char * op, * filename, * s;
@@ -1569,7 +1645,7 @@ int main ( int argc, char ** argv )
 
     if ( strcmp ( op, "git" ) == 0 )
     {
-	FILE * git;
+	FILE * git, * index;
 	int exit_status;
 
 	if ( argc > 4 ) error ( "too many arguments" );
@@ -1629,6 +1705,16 @@ int main ( int argc, char ** argv )
 	    errorno ( "deleting index,git" );
 
 	for_all_repos ( GLOB );
+
+	index = fopen ( "index,git", "r" );
+	if ( index == NULL )
+	    errorno ( "cannot open file index,git"
+	              " for reading" );
+	read_index ( index, "index,git" );
+	fclose ( index );
+
+	qsort ( index, index_length, sizeof (element),
+	        time_compare );
 
         exit ( 0 );
     }
@@ -1994,7 +2080,7 @@ int main ( int argc, char ** argv )
 	    fprintf ( import, "\n" );
 	    fclose ( src );
 
-	    fprintf ( index, "%ld :%ld %s\n",
+	    fprintf ( index, "%ld:%ld:%s\n",
 	              (long) current_revision->time,
 		      mark, filename );
 	    tprintf ( "*     appended version with time"
