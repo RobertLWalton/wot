@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Mon Nov 30 05:46:20 EST 2020
+** Date:	Mon Nov 30 14:48:13 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -140,9 +140,11 @@ NULL
  * import,git with the versions in the repos of file
  * as globs with marks `mark+1', `mark+2', etc., and
  * appends to index,git a line for each version of the
- * form `time:mark:file'.  In this case `file' may
- * contain any character except newline.'  This
- * operation returns the last mark used in its output.
+ * form `time:mark:x:file'.  Here x is 0 for a
+ * non-executable file and 1 for an executable file.
+ * In this case `file' may contain any character except
+ * newline.'  This operation returns the last mark used
+ * in its output.
  */
 
 int trace = 0;   /* Set true by -t */
@@ -1564,6 +1566,7 @@ long for_all_repos_in_directory
 typedef struct element {
     time_t time;
     long mark;
+    int executable;
     char * filename;
 } element;
 element * index = NULL;
@@ -1630,6 +1633,15 @@ void read_index ( FILE * in, const char * filename )
 	    error ( "badly formatted line in %s: %s",
 	            filename, line );
 	p = endp + 1;
+	if ( * p == '0' ) e->executable = 0;
+	else if ( * p == '1' ) e->executable = 1;
+	else
+	    error ( "badly formatted line in %s: %s",
+	            filename, line );
+	++ p;
+	if ( * p ++ != ':' )
+	    error ( "badly formatted line in %s: %s",
+	            filename, line );
 
 	if ( line[line_length-1] != '\n' )
 	    error ( "missing line feed for line in %s:"
@@ -1810,7 +1822,9 @@ int main ( int argc, char ** argv )
 			  e->time, e->filename );
 		op = "adding";
 		fprintf ( git,
-			  "M 100644 :%ld %s\n",
+			  "M %s :%ld %s\n",
+			  e->executable ?
+			    "100755" : "100644",
 			  e->mark, e->filename );
 		if ( i + 1 == index_length )
 		    break;
@@ -2138,6 +2152,8 @@ int main ( int argc, char ** argv )
 	char * endp;
 	FILE * import, * index, * src;
 	struct stat status;
+	int executable;
+
 
 	if ( argc < 4 ) error ( "too few arguments" );
 	if ( argc > 4 ) error ( "too many arguments" );
@@ -2145,6 +2161,14 @@ int main ( int argc, char ** argv )
 	if ( * endp || mark < 0 )
 	    error ( "%s is not a natural number"
 	            " argument", argv[3] );
+        if ( repos == NULL )
+	    error ( "there is no repository for %s",
+	            filename );
+	if ( fstat ( fileno ( repos ), & status ) < 0 )
+	    errorno ( "cannot stat %s", repos_name );
+	executable =
+	    ( status.st_mode & S_IXUSR ? 1 : 0 );
+
 	read_header();
 
 	import = fopen ( "import,git", "a" );
@@ -2188,9 +2212,9 @@ int main ( int argc, char ** argv )
 	    fprintf ( import, "\n" );
 	    fclose ( src );
 
-	    fprintf ( index, "%ld:%ld:%s\n",
+	    fprintf ( index, "%ld:%ld:%d:%s\n",
 	              (long) current_revision->time,
-		      mark, filename );
+		      mark, executable, filename );
 	    tprintf ( "*     appended version with time"
 	              " %ld and mark %ld\n",
 		      current_revision->time, mark );
