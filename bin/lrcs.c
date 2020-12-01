@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Tue Dec  1 05:39:05 EST 2020
+** Date:	Tue Dec  1 12:28:25 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -92,13 +92,14 @@ const char * documentation[] = {
 "Otherwise the git repository must exist, the current",
 "directory must be one of its working directories,",
 "and the user name and email parameters must be set.",
-"Files and directories whose names begin with `.' are",
-"ignored.",
+"Directories whose names begin with `.' are ignored,",
+"but files are not.",
 "",
 "The `clean' command removes all the ,V and ,v files",
 "and all RCS and LRCS directories that become empty",
-"after the ,V and ,v files are deleted.  Files and",
-"directories whose names begin with `.' are ignored.",
+"after the ,V and ,v files are deleted.  Directories",
+"whose names begin with `.' are ignored, but files",
+"are not.",
 "",
 "For a file f, the program looks for LRCS/f,V, f,V,",
 "RCS/f,v, and f,v in this order, where the ,v files",
@@ -1477,6 +1478,7 @@ long for_all_repos_in_directory
     size_t ns, ps;
     char * name, * path;
     struct stat status;
+    int is_rcs_dir;
 
     assert ( sizeof ( ent->d_name ) >= 256 );
         /* Size should be 256; if its zero,
@@ -1506,6 +1508,7 @@ long for_all_repos_in_directory
     else
         strcpy ( path, name ), ps = ns;
 
+    is_rcs_dir = 1;
     if (    ps >= 5
          && strcmp ( path - 5, "/RCS/" ) == 0 )
     	ps -= 4;
@@ -1518,6 +1521,9 @@ long for_all_repos_in_directory
     else if (    ps == 5
               && strcmp ( path, "LRCS/" ) == 0 )
     	ps -= 5;
+    else
+	is_rcs_dir = 0;
+
     while ( 1 )
     {
 	size_t len;
@@ -1530,14 +1536,14 @@ long for_all_repos_in_directory
 	    else
 	        errorno ( "reading %s", directory );
 	}
-	if ( ent->d_name[0] == '.' )
-	    continue;
 	strcpy ( name + ns, ent->d_name );
 	if ( stat ( name, & status ) < 0 )
 	    errorno ( "getting status of %s", name );
 
 	if ( S_ISDIR ( status.st_mode ) )
 	{
+	    if ( ent->d_name[0] == '.' )
+		continue;
 	    mark = for_all_repos_in_directory
 	        ( name, act, mark );
 	    continue;
