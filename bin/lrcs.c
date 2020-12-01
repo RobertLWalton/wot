@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Mon Nov 30 14:48:13 EST 2020
+** Date:	Tue Dec  1 01:34:05 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -1462,8 +1462,8 @@ long for_all_repos_in_directory
 {
     DIR * dir;
     struct dirent * ent;
-    size_t s;
-    char * name;
+    size_t ns, ps;
+    char * name, * path;
     struct stat status;
 
     assert ( sizeof ( ent->d_name ) >= 256 );
@@ -1476,16 +1476,36 @@ long for_all_repos_in_directory
     dir = opendir ( directory );
     if ( dir == NULL )
         errorno ( "cannot open %s", directory );
-    s = strlen ( directory );
-    name = malloc ( s + 1 + sizeof(ent->d_name) );
+    ns = strlen ( directory );
+    name = malloc ( ns + 1 + sizeof(ent->d_name) );
     strcpy ( name, directory );
-    name[s] = '/';
-    ++ s;
-    if ( strcmp ( directory, "." ) == 0 )
-        name[0] = 0, s = 0;
-	/* Names to lrcs glob must be clean because
-	 * they are passed to git.
-	 */
+    name[ns] = '/';
+    ++ ns;
+    name[ns] = 0;
+
+    /* Path is file name with directory cleaned up
+     * by deleting initial ./ and final /RCS,
+     * /LRCS, entire directory name if it equals
+     * RCS or LRCS after deleting initial ./.
+     */
+    path = malloc ( ns + 1 + sizeof(ent->d_name) );
+    if ( strncmp ( name, "./", 2 ) == 0 )
+        strcpy ( path, name + 2 ), ps = ns - 2;
+    else
+        strcpy ( path, name ), ps = ns;
+
+    if (    ps >= 5
+         && strcmp ( path - 5, "/RCS/" ) == 0 )
+    	ps -= 4;
+    else if (    ps == 4
+              && strcmp ( path, "RCS/" ) == 0 )
+    	ps -= 4;
+    else if (    ps >= 6
+              && strcmp ( path - 6, "/LRCS/" ) == 0 )
+    	ps -= 5;
+    else if (    ps == 5
+              && strcmp ( path, "LRCS/" ) == 0 )
+    	ps -= 5;
     while ( 1 )
     {
 	size_t len;
@@ -1498,11 +1518,9 @@ long for_all_repos_in_directory
 	    else
 	        errorno ( "reading %s", directory );
 	}
-	if ( strcmp ( ent->d_name, "." ) == 0 )
+	if ( ent->d_name[0] == '.' )
 	    continue;
-	if ( strcmp ( ent->d_name, ".." ) == 0 )
-	    continue;
-	strcpy ( name + s, ent->d_name );
+	strcpy ( name + ns, ent->d_name );
 	if ( stat ( name, & status ) < 0 )
 	    errorno ( "getting status of %s", name );
 
@@ -1516,7 +1534,9 @@ long for_all_repos_in_directory
 	    continue;
 
 	len = strlen ( name );
-	if ( strcmp ( name + len - 2, ",v" ) != 0
+	if ( len >= 2
+	     &&
+	     strcmp ( name + len - 2, ",v" ) != 0
 	     &&
 	     strcmp ( name + len - 2, ",V" ) != 0 )
 	    continue;
@@ -1527,12 +1547,15 @@ long for_all_repos_in_directory
 	    char * endp;
 	    int exit_status;
 
-	    name[len-2] = 0;
+	    strcpy ( path + ps, ent->d_name );
+	    len = strlen ( path );
+	    path[len-2] = 0;
+
 	    init_command();
 	    append ( "lrcs" );
 	    if ( trace ) append ( "-t" );
 	    append ( "glob" );
-	    append_quoted ( name );
+	    append_quoted ( path );
 	    append_long ( mark );
 	    glob = open_command ( "r" );
 	    if ( fgets ( result, sizeof ( result ),
@@ -1553,6 +1576,7 @@ long for_all_repos_in_directory
 	}
     }
     free ( name );
+    free ( path );
     closedir ( dir );
 
     tprintf ( "* done searching directory %s\n",
