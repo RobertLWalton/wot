@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Tue Dec  1 02:57:03 EST 2020
+** Date:	Tue Dec  1 05:14:02 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -79,7 +79,8 @@ const char * documentation[] = {
 "",
 "The diff(1) program is used to produce diff listings.",
 "The `diff' command diff-options are passed to",
-"diff(1).",
+"diff(1).  If no diff-options are given, `-u' is",
+"assumed.",
 "",
 "The `git' command imports all the ,V and ,v files",
 "in the current directory and its subdirectory tree",
@@ -88,12 +89,20 @@ const char * documentation[] = {
 "current directory or one of it ancestors).  If the",
 "committer and e-mail arguments are given, a new git",
 "repository in the current directory is created first.",
+"Files and directories whose names begin with `.' are",
+"ignored.",
 "",
-"For a file f, if f,V and LRCS/f,V do not exist,",
-"this program looks for a legacy f,v or RCS/f,v file,",
-"and uses it if it exists.  In the case of an `in'",
-"command, the ,v repository will be input but a",
-"separate ,V repository will be output.",
+"The `clean' command removes all the ,V and ,v files",
+"and all RCS and LRCS directories that become empty",
+"after the ,V and ,v files are deleted.  Files and",
+"directories whose names begin with `.' are ignored.",
+"",
+"For a file f, the program looks for LRCS/f,V, f,V,",
+"RCS/f,v, and f,v in this order, where the ,v files",
+"are legacy RCS repositories.  The first of these",
+"repositories that is found is used for input.  For an",
+"`in' command, the output repository will be LRCS/f,V",
+"if the LRCS directory exists, and f,V otherwise.",
 "",
 "The -t option causes execution to be traced.  It",
 "can be used to elicidate error messages.",
