@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Tue Dec  1 05:14:02 EST 2020
+** Date:	Tue Dec  1 05:39:05 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -89,6 +89,9 @@ const char * documentation[] = {
 "current directory or one of it ancestors).  If the",
 "committer and e-mail arguments are given, a new git",
 "repository in the current directory is created first.",
+"Otherwise the git repository must exist, the current",
+"directory must be one of its working directories,",
+"and the user name and email parameters must be set.",
 "Files and directories whose names begin with `.' are",
 "ignored.",
 "",
@@ -1765,16 +1768,6 @@ int main ( int argc, char ** argv )
 	}
 	else
 	{
-	    struct stat status;
-
-	    if ( stat ( ".git", & status ) < 0 )
-	    {
-		if ( errno != ENOENT )
-		    errorno ( "stat'ing .git" );
-		else
-		    error ( ".git does not exist" );
-	    }
-
 	    for ( i = 0; i < 2; ++ i )
 	    {
 		init_command();
