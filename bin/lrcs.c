@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Tue Dec  1 01:34:05 EST 2020
+** Date:	Tue Dec  1 02:57:03 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -1599,16 +1599,17 @@ int index_size = 0;
     /* Size is allocated size, length is used length. */
 
 /* Compare two index elements by time for qsort so 
- * index is sorted in ascending order by time.
+ * index is sorted in ascending order by time and
+ * then by filename.
  */
-int time_compare ( const void * e1, const void * e2 )
+int index_compare ( const void * e1, const void * e2 )
 {
     const element * E1 = (const element *) e1;
     const element * E2 = (const element *) e2;
     time_t diff = E1->time - E2->time;
     if ( diff < 0 ) return -1;
     else if ( diff > 0 ) return + 1;
-    else return 0;
+    else return strcmp ( E1->filename, E2->filename );
 }
 
 /* Read in file into index database.  Filename is for
@@ -1815,7 +1816,7 @@ int main ( int argc, char ** argv )
 	fclose ( index_fd );
 
 	qsort ( index, index_length, sizeof (element),
-	        time_compare );
+	        index_compare );
 
 	init_command();
 	append ( "git fast-import" );
@@ -1833,6 +1834,18 @@ int main ( int argc, char ** argv )
 	{
 	    const char * op = "committing";
 	    element * e = index + i;
+
+	    /* Remove entries with duplicate time and
+	     * filename.
+	     */
+	    if ( i + 1 != index_length
+	         &&
+		 e->time == (e+1)->time
+		 &&
+		 strcmp ( e->filename,
+		          (e+1)->filename ) == 0 )
+	        continue;
+
 	    fprintf ( git,
 	              "commit refs/heads/master\n" );
 	    fprintf ( git,
