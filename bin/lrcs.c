@@ -37,7 +37,7 @@ const char * documentation[] = {
 "lrcs [-t] diff file [revision] [diff-option...]",
 "lrcs [-t] diff file revision:revision"
 				" [diff-option...]",
-"lrcs [-t] git [committer e-mail]",
+"lrcs [-t] git [committer e-mail] [delta]",
 "",
 "The Light Revision Control System (LRCS) is for use",
 "with files that make no reference to other files and",
@@ -93,7 +93,10 @@ const char * documentation[] = {
 "directory must be one of its working directories,",
 "and the user name and email parameters must be set.",
 "Directories whose names begin with `.' are ignored,",
-"but files are not.",
+"but files are not.  If delta is given, it is a time",
+"interval in seconds, and files with update times",
+"within delta seconds of each other will be grouped",
+"into the same commit.",
 "",
 "The `clean' command removes all the ,V and ,v files",
 "and all RCS and LRCS directories that become empty",
@@ -1726,7 +1729,7 @@ int main ( int argc, char ** argv )
 	FILE * git, * index_fd, * import;
 	int exit_status;
 	int i;
-	long time_delta = -1;
+	long delta = -1;
 	const char * committer, * email;
 	static const char * param[2] =
 	    { "user.name", "user.email" };
@@ -1797,11 +1800,14 @@ int main ( int argc, char ** argv )
 	if ( argc == 3 )
 	{
 	    char * endp;
-	    time_delta = strtol ( argv[2], & endp, 10 );
+	    delta = strtol ( argv[2], & endp, 10 );
 	    if ( * endp != 0 )
 	        error ( "badly formed time-delta: %s",
 		        argv[2] );
 	}
+
+	if ( delta >= 0 )
+	    tprintf ( "* delta = %ld\n", (long) delta );
 
 	tprintf ( "* deleting import,git and"
 		  " index,git if they exist\n" );
@@ -1826,57 +1832,83 @@ int main ( int argc, char ** argv )
 	qsort ( index, index_length, sizeof (element),
 	        index_compare );
 
+	/* Start git fast-import
+	 */
 	init_command();
 	append ( "git fast-import" );
 	git = open_command ( "w" );
+
+	/* Copy blobs
+	 */
 	import = fopen ( "import,git", "r" );
 	if ( import == NULL )
 	    errorno ( "cannot open file import,git"
 	              " for reading" );
-
 	copy ( import, "import,git",
 	       git, "| git fast-import" );
 	fclose ( import );
 
-	for ( i = 0; i < index_length; ++ i )
+	/* Output commits
+	 */
+	for ( i = 0; i < index_length; )
 	{
 	    const char * op = "committing";
-	    element * e = index + i;
+	    element * ei = index + i, * ej;
 
-	    /* Remove entries with duplicate time and
-	     * filename.
+	    /* Discover extent of commit [ei,ej).
+	     * Include entries duplicating ei time
+	     * and filename even if delta < 0.
+	     * Include entries with time <=
+	     * ei->time + delta.
 	     */
-	    if ( i + 1 != index_length
-	         &&
-		 e->time == (e+1)->time
-		 &&
-		 strcmp ( e->filename,
-		          (e+1)->filename ) == 0 )
-	        continue;
+	    ej = ei + 1;
+	    while ( ej - index < index_length
+	            &&
+		    ej->time == ei->time
+		    &&
+		       strcmp ( ej->filename,
+		                ei->filename )
+		    == 0 )
+	    	++ ej;
+	    while ( ej - index < index_length
+		    &&
+	            ej->time - ei->time <= delta )
+		++ ej;
 
+	    tprintf ( "* committing %ld\n", ei->time );
 	    fprintf ( git,
 	              "commit refs/heads/master\n" );
 	    fprintf ( git,
 	              "committer %s <%s> %ld +0000\n",
 		      committer, email,
-		      (long) e->time );
+		      (long) ei->time );
 	    fprintf ( git, "data 0\n" );
-	    while ( 1 )
+	    while ( ei < ej )
 	    {
-		tprintf ( "* %s %ld %s\n", op,
-			  e->time, e->filename );
-		op = "adding";
-		fprintf ( git,
-			  "M %s :%ld %s\n",
-			  e->executable ?
-			    "100755" : "100644",
-			  e->mark, e->filename );
-		if ( i + 1 == index_length )
-		    break;
-		if (   (e+1)->time - e->time
-		     > time_delta )
-		    break;
-		++i, ++ e;
+	        element * ek = ei + 1;
+		int duplicated = 0;
+		    /* If this entry is not the last
+		     * in [ei,ej) with its filename
+		     * it is duplicated and we skip it.
+		     */
+		while ( ek < ej && ! duplicated )
+		    duplicated =
+		        (    strcmp ( ei->filename,
+			              (ek++)->filename )
+			  == 0 );
+		if ( ! duplicated )
+		{
+		    const char * x =
+			( ei->executable ?
+			  "100755" : "100644" );
+		    tprintf ( "*   M %s :%ld %s\n", x,
+			      ei->mark, ei->filename );
+
+		    fprintf ( git,
+			      "M %s :%ld %s\n", x,
+			      ei->mark, ei->filename );
+		}
+		++ ei, ++ i;
 	    }
 	}
 
@@ -2261,7 +2293,7 @@ int main ( int argc, char ** argv )
 	              (long) current_revision->time,
 		      mark, executable, filename );
 	    tprintf ( "*     appended version with time"
-	              " %ld and mark %ld\n",
+	              " %ld and mark :%ld\n",
 		      current_revision->time, mark );
 	}
 	tprintf ( "* end appends to import,git"
