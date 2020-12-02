@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Wed Dec  2 05:08:14 EST 2020
+** Date:	Wed Dec  2 13:02:50 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -1465,11 +1465,17 @@ void cleanup ( void )
  * repository.
  */  
 typedef enum { GLOB, LIST, REMOVE } action;
+long dir_count;
+long file_count;
+    /* Number of directories/files listed or
+     * removed.
+     */
 long for_all_repos_in_directory
         ( const char * directory,
 	  action act, long mark );
 void for_all_repos ( action act )
 {
+    dir_count = file_count = 0;
     for_all_repos_in_directory ( ".", act, 0 );
 }
 long for_all_repos_in_directory
@@ -1612,9 +1618,13 @@ long for_all_repos_in_directory
 	{
 	    if ( unlink ( name ) < 0 )
 	        errorno ( "removing %s", name );
+	    ++ file_count;
 	}
 	else
+	{
 	    printf ( "  %s\n", name );
+	    ++ file_count;
+	}
     }
     free ( name );
     free ( path );
@@ -1629,6 +1639,7 @@ long for_all_repos_in_directory
 	{
 	    if ( rmdir ( directory ) < 0 )
 	        errorno ( "removing %s", directory );
+	    ++ dir_count;
 	}
 	else if ( is_rcs_dir )
 	    printf ( "  %s NOT DELETED (not empty)\n" );
@@ -1637,6 +1648,7 @@ long for_all_repos_in_directory
     else if ( act == LIST && is_deletable_dir )
     {
         printf ( "  %s\n", directory );
+	++ dir_count;
     }
 
     return
@@ -1955,7 +1967,28 @@ int main ( int argc, char ** argv )
     }
     else if ( strcmp ( op, "clean" ) == 0 )
     {
+        printf ( "Files/Directories to be Deleted:\n" );
 	for_all_repos ( LIST );
+	if ( file_count == 0 && dir_count == 0 )
+	{
+	    printf ( "None found!\n" );
+	    exit ( 0 );
+	}
+        printf ( "Do you want to delete these"
+	         " files/directories (YES/other)? "  );
+	fflush ( stdout );
+	line_length = getline
+	    ( & line, & line_size, stdin );
+	if (    line_length == 4
+	     && strcmp ( line, "YES\n" ) == 0 )
+	{
+	    for_all_repos ( REMOVE );
+	    printf ( "Removed %ld files and"
+	             " %ld directories!\n",
+		     file_count, dir_count );
+	}
+	else
+	    printf ( "ABORTED!\n" );
 
         exit ( 0 );
     }
