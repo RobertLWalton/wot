@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Tue Dec  1 12:28:25 EST 2020
+** Date:	Wed Dec  2 05:08:14 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -1464,7 +1464,7 @@ void cleanup ( void )
  * execute 'lrcs glob ...' or 'rm' for each
  * repository.
  */  
-typedef enum { GLOB, REMOVE } action;
+typedef enum { GLOB, LIST, REMOVE } action;
 long for_all_repos_in_directory
         ( const char * directory,
 	  action act, long mark );
@@ -1481,7 +1481,7 @@ long for_all_repos_in_directory
     size_t ns, ps;
     char * name, * path;
     struct stat status;
-    int is_rcs_dir;
+    int is_rcs_dir, is_deletable_dir;
 
     assert ( sizeof ( ent->d_name ) >= 256 );
         /* Size should be 256; if its zero,
@@ -1513,19 +1513,23 @@ long for_all_repos_in_directory
 
     is_rcs_dir = 1;
     if (    ps >= 5
-         && strcmp ( path - 5, "/RCS/" ) == 0 )
+         && strcmp ( path + ps - 5, "/RCS/" ) == 0 )
     	ps -= 4;
-    else if (    ps == 4
-              && strcmp ( path, "RCS/" ) == 0 )
+    else
+    if (    ps == 4
+         && strcmp ( path, "RCS/" ) == 0 )
     	ps -= 4;
-    else if (    ps >= 6
-              && strcmp ( path - 6, "/LRCS/" ) == 0 )
+    else
+    if (    ps >= 6
+         && strcmp ( path + ps - 6, "/LRCS/" ) == 0 )
     	ps -= 5;
-    else if (    ps == 5
-              && strcmp ( path, "LRCS/" ) == 0 )
+    else
+    if (    ps == 5
+         && strcmp ( path, "LRCS/" ) == 0 )
     	ps -= 5;
     else
 	is_rcs_dir = 0;
+    is_deletable_dir = is_rcs_dir;
 
     while ( 1 )
     {
@@ -1546,21 +1550,35 @@ long for_all_repos_in_directory
 	if ( S_ISDIR ( status.st_mode ) )
 	{
 	    if ( ent->d_name[0] == '.' )
+	    {
+	        if ( strcmp ( ent->d_name, "." ) != 0
+		     &&
+	             strcmp ( ent->d_name, ".." ) != 0 )
+		    is_deletable_dir = 0;
 		continue;
+	    }
 	    mark = for_all_repos_in_directory
 	        ( name, act, mark );
+	    if ( act != GLOB && mark == 0 )
+		is_deletable_dir = 0;
 	    continue;
 	}
 	else if ( ! S_ISREG ( status.st_mode ) )
+	{
+	    is_deletable_dir = 0;
 	    continue;
+	}
 
 	len = strlen ( name );
-	if ( len >= 2
-	     &&
-	     strcmp ( name + len - 2, ",v" ) != 0
-	     &&
-	     strcmp ( name + len - 2, ",V" ) != 0 )
+	if ( len < 2
+	     ||
+	     ( strcmp ( name + len - 2, ",v" ) != 0
+	       &&
+	       strcmp ( name + len - 2, ",V" ) != 0 ) )
+	{
+	    is_deletable_dir = 0;
 	    continue;
+	}
 	if ( act == GLOB )
 	{
 	    FILE * glob;
@@ -1590,11 +1608,13 @@ long for_all_repos_in_directory
 		        result, command );
 	    close_command ( glob );
 	}
-	else
+	else if ( act == REMOVE )
 	{
 	    if ( unlink ( name ) < 0 )
 	        errorno ( "removing %s", name );
 	}
+	else
+	    printf ( "  %s\n", name );
     }
     free ( name );
     free ( path );
@@ -1603,7 +1623,24 @@ long for_all_repos_in_directory
     tprintf ( "* done searching directory %s\n",
               directory );
 
-    return mark;
+    if ( act == REMOVE )
+    {
+        if ( is_deletable_dir )
+	{
+	    if ( rmdir ( directory ) < 0 )
+	        errorno ( "removing %s", directory );
+	}
+	else if ( is_rcs_dir )
+	    printf ( "  %s NOT DELETED (not empty)\n" );
+
+    }
+    else if ( act == LIST && is_deletable_dir )
+    {
+        printf ( "  %s\n", directory );
+    }
+
+    return
+        ( act == GLOB ? mark : is_deletable_dir );
 }
 
 /* Index data base.
@@ -1914,6 +1951,11 @@ int main ( int argc, char ** argv )
 
 	close_command ( git );
 
+        exit ( 0 );
+    }
+    else if ( strcmp ( op, "clean" ) == 0 )
+    {
+	for_all_repos ( LIST );
 
         exit ( 0 );
     }
