@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Wed Dec  2 13:02:50 EST 2020
+** Date:	Thu Dec  3 06:35:14 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -94,9 +94,11 @@ const char * documentation[] = {
 "and the user name and email parameters must be set.",
 "Directories whose names begin with `.' are ignored,",
 "but files are not.  If delta is given, it is a time",
-"interval in seconds, and files with update times",
-"within delta seconds of each other will be grouped",
-"into the same commit.",
+"interval in seconds, and file versions with update",
+"times within less than delta seconds of each other",
+"will be included in the same commit.  If two ver-",
+"sions that would be in the same commit have the same",
+"file name, only the later is committed.",
 "",
 "The `clean' command removes all the ,V and ,v files",
 "and all RCS and LRCS directories that become empty",
@@ -1907,8 +1909,8 @@ int main ( int argc, char ** argv )
 	    /* Discover extent of commit [ei,ej).
 	     * Include entries duplicating ei time
 	     * and filename even if delta < 0.
-	     * Include entries with time <=
-	     * ei->time + delta.
+	     * Increase ej until ej->time >=
+	     * (ej-1)->time + delta.
 	     */
 	    ej = ei + 1;
 	    while ( ej - index < index_length
@@ -1921,7 +1923,7 @@ int main ( int argc, char ** argv )
 	    	++ ej;
 	    while ( ej - index < index_length
 		    &&
-	            ej->time - ei->time <= delta )
+	            ej->time < (ej-1)->time + delta )
 		++ ej;
 
 	    tprintf ( "* committing %ld\n", ei->time );
