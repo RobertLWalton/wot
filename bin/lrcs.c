@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Thu Dec  3 06:35:14 EST 2020
+** Date:	Thu Dec  3 06:49:21 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -1952,8 +1952,9 @@ int main ( int argc, char ** argv )
 		    const char * x =
 			( ei->executable ?
 			  "100755" : "100644" );
-		    tprintf ( "*   M %s :%ld %s\n", x,
-			      ei->mark, ei->filename );
+		    tprintf ( "*   M %s :%ld %ld %s\n",
+		              x, ei->mark, ei->time,
+			      ei->filename );
 
 		    fprintf ( git,
 			      "M %s :%ld %s\n", x,
