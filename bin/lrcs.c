@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Thu Dec  3 06:49:21 EST 2020
+** Date:	Fri Dec  4 05:43:59 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -28,6 +28,10 @@
 #include <dirent.h>
 #include <errno.h>
 #include <assert.h>
+
+#define MODEMASK ( S_IRUSR | S_IWUSR | S_IXUSR | \
+                   S_IRGRP | S_IWGRP | S_IXGRP | \
+                   S_IROTH | S_IWOTH | S_IXOTH )
 
 const char * documentation[] = {
 "lrcs -doc",
@@ -2124,6 +2128,11 @@ int main ( int argc, char ** argv )
 	    fclose ( repos );
 	}
 
+	if ( fchmod ( fileno ( new_repos ),
+		      status.st_mode & MODEMASK ) < 0 )
+	    errorno ( "cannot chmod file %s",
+	              new_repos_name );
+
 	fclose ( new_repos );
 
 	final_repos_name = strdup ( new_repos_name );
@@ -2210,6 +2219,19 @@ int main ( int argc, char ** argv )
 	    printf ( "WARNING: failed to set"
 	             " modification time of %s\n",
 	             name );
+
+	if ( rev == 0 )
+	{
+	    if ( fstat ( fileno ( repos ),
+	                 & status ) < 0 )
+		errorno ( "cannot stat file %s",
+			  repos_name );
+	    if (   chmod ( name,
+			   status.st_mode & MODEMASK )
+		 < 0 )
+		errorno ( "cannot chmod file %s",
+			  name );
+	}
 	
 	if ( rename ( name, final_name )
 	     < 0 )
