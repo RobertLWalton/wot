@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Fri Dec  4 05:43:59 EST 2020
+** Date:	Fri Dec  4 07:08:43 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -108,7 +108,9 @@ const char * documentation[] = {
 "and all RCS and LRCS directories that become empty",
 "after the ,V and ,v files are deleted.  Directories",
 "whose names begin with `.' are ignored, but files",
-"are not.",
+"are not.  The items to be deleted are listed first",
+"and confirmation is then required to delete these",
+"items.",
 "",
 "For a file f, the program looks for LRCS/f,V, f,V,",
 "RCS/f,v, and f,v in this order, where the ,v files",
@@ -116,6 +118,18 @@ const char * documentation[] = {
 "repositories that is found is used for input.  For an",
 "`in' command, the output repository will be LRCS/f,V",
 "if the LRCS directory exists, and f,V otherwise.",
+"",
+"In general the read/write/execute mode of a file is",
+"matched with the mode of its repository.  The `in'",
+"command copies the mode from the file to the reposi-",
+"tory, the `out [0]' command copies the mode from",
+"the repository to the file, and the `git' command",
+"copies user executable permission from the [L]RCS",
+"repository to the git repository.  An `in' command",
+"that does not change the repository contents does",
+"not change the repository mode.  Whenever read/",
+"write/execute modes are set, setuid/setgid/sticky",
+"mode bits are cleared.",
 "",
 "The -t option causes execution to be traced.  It",
 "can be used to elicidate error messages.",
