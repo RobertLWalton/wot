@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	efm.c
-** Date:	Wed Jun 22 02:40:50 EDT 2016
+** Date:	Mon Dec 14 03:39:11 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -1221,7 +1221,8 @@ int crypt ( int decrypt,
 	    {
 		fprintf ( stderr,
 		          "* executing gpg --batch -q"
-		          " --no-tty" );
+		          " --no-tty"
+			  " --ignore-mdc-error" );
 		if ( input != NULL )
 		{
 		    fprintf ( stderr, " \\\n"
@@ -1242,6 +1243,7 @@ int crypt ( int decrypt,
 	    if ( execlp ( "gpg", "gpg",
 	                  "--passphrase-fd", "3",
 		          "--batch", "-q", "--no-tty",
+			  "--ignore-mdc-error",
 		          NULL ) < 0 )
 		error ( errno );
 	}
