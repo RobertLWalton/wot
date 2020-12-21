@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	lrcs.c
-** Date:	Fri Dec  4 07:08:43 EST 2020
+** Date:	Mon Dec 21 06:01:04 EST 2020
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -42,6 +42,7 @@ const char * documentation[] = {
 "lrcs [-t] diff file revision:revision"
 				" [diff-option...]",
 "lrcs [-t] git [committer e-mail] [delta]",
+"lrcs [-t] clean",
 "",
 "The Light Revision Control System (LRCS) is for use",
 "with files that make no reference to other files and",
