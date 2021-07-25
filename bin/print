@@ -5,7 +5,7 @@
 #
 # File:		print
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Sun Jul  8 05:11:51 EDT 2018
+# Date:		Sun Jul 25 15:29:19 EDT 2021
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -265,7 +265,7 @@ do
 	then
 	    break
 	fi
-	if [ -n $filename ]
+	if [ -n "$filename" ]
 	then
 	    FILENAME="STANDARD INPUT"
 	fi
@@ -278,10 +278,10 @@ do
 	number=$((number+1))
 	if [ $oswitch -eq 1 ]
 	then
-	    cp -p $file $tmpdir/${number}.pdf
+	    cp -p "$file" $tmpdir/${number}.pdf
 	    filelist="$filelist $tmpdir/${number}.pdf"
 	else
-	    lpr $printer $file
+	    lpr $printer "$file"
 	fi
 	continue
 	;;
@@ -289,10 +289,10 @@ do
 	number=$((number+1))
 	if [ $oswitch -eq 1 ]
 	then
-	    ps2pdf $file $tmpdir/${number}.pdf
+	    ps2pdf "$file" $tmpdir/${number}.pdf
 	    filelist="$filelist $tmpdir/${number}.pdf"
 	else
-	    lpr $printer $file
+	    lpr $printer "$file"
 	fi
 	continue
 	;;
@@ -302,19 +302,19 @@ do
 	    FILENAME="$file"
 	    ;;
 	n)
-	    FILENAME=`basename $file`
+	    FILENAME=`basename "$file"`
 	    ;;
 	esac
 	if [ -n "$date" ]
 	then
-	    DATE=`date -r $file +"$date"`
+	    DATE=`date -r "$file" +"$date"`
 	fi
     esac
 
     number=$((number+1))
     if [ $oswitch -eq 1 ]
     then
-	cat $file | unicode2latin1 | \
+	cat "$file" | unicode2latin1 | \
 	    enscript $landscape $border \
 		-b "$FILENAME|$DATE$login|$pagenumber" \
 		--margins=48:48:: \
@@ -324,7 +324,7 @@ do
 		ps2pdf - $tmpdir/${number}.pdf
 	filelist="$filelist $tmpdir/${number}.pdf"
     else
-	cat $file | unicode2latin1 | \
+	cat "$file" | unicode2latin1 | \
 	    enscript $landscape $border \
 		-b "$FILENAME|$DATE$login|$pagenumber" \
 		--margins=48:48:: \

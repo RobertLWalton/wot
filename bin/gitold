@@ -2,7 +2,7 @@
 #
 # File:		gitold
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Thu Apr 12 08:11:49 EDT 2012
+# Date:		Sun Jul 25 15:32:31 EDT 2021
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -36,7 +36,8 @@ c="$1"
 shift
 for F in "$@"
 do
-    ls=`git ls-tree "$commit" | grep "$F" | tr ' ' '\t'`
+    ls=`git ls-tree "$commit" | grep "	$F" | tr ' ' '\t'`
+    	# Note tab before $F
     if test -z "$ls"
     then
         echo "$F$c" not found
