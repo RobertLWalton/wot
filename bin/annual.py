@@ -4,7 +4,7 @@
 #
 # File:         annual.py
 # Authors:      Bob Walton (walton@acm.org)
-# Date:         Mon Aug  9 13:31:29 EDT 2021
+# Date:         Mon Aug  9 15:53:31 EDT 2021
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -17,7 +17,8 @@ import re
 document = """
 Program to Compute Annual Returns of an Investment
 
-Command: python3 annual.py INPUT-FILE-NAME [SELL-YEARS]
+Command: python3 annual.py [-L|-P] \\
+                 INPUT-FILE-NAME [SELL-YEARS]
 
   INPUT-FILE-NAME is the name of the input file.
   SELL-YEARS is a range of years: e.g., 1970-2020.
@@ -40,26 +41,58 @@ Input File Format:
     The YEAR VALUE lines can be in no particular order.
 
 Output Format:
-  There are typically 50 buy years and 5 sell years on
-  a page, and pages with different sell years can be
-  placed side-by-side to get a better picture of the
-  annual returns.  Space is reserved in the output for
-  values that cannot be computed because years are
-  missing in the input, with `---' indicating such
-  space.  Such missing data has no effect on the
-  values that can be computed.
+  Without options, one big page.  If you are going to
+  print portrait, you can have up to 50 buy years but
+  just 5 sell years.  If you are going to print
+  landscape, you can have 25 buy years and 10 sell
+  years.  Otherwise you can view any size page in a
+  window.
+
+  The -P option splits the output into multiple portrait
+  sized pages.  The -L option splits the output into
+  multiple landscape sized pages.  These pages can be
+  put side-by-side to get the big picture.
+
+  Output values that cannot be computed because data
+  for the buy or sell year is missing is represented
+  as X.XXX.  The value for a buy year the equals or
+  is greater than the sell year is blank.  Pages all
+  of whose values would be blank are not output.
 
   The output can be redirected to a file by the command:
 
-    python3 annual.py INPUT-FILE-NAME [SELL-YEARS] \\
-                    > OUTPUT-FILE-NAME
+    python3 annual.py [-P|-L] INPUT-FILE-NAME \\
+                      [SELL-YEARS] > OUTPUT-FILE-NAME
 """;
 
 
-if len ( sys.argv ) <= 1:
+max_buy_per_page = 1000000
+max_sell_per_page = 1000000
+filename = None
+sell_years = None
+
+argc = len ( sys.argv )
+i = 1
+
+if i >= argc:
     print ( document )
     exit ( 1 )
-if len ( sys.argv ) > 3:
+n = sys.argv[i]
+if n == '-L':
+    max_buy_per_page = 25
+    max_sell_per_page = 10
+    i += 1
+elif n == '-P':
+    max_buy_per_page = 50
+    max_sell_per_page = 5
+    i += 1
+if i < argc:
+    filename = sys.argv[i]
+    i += 1
+if i < argc:
+    sell_years = sys.argv[i]
+    i += 1
+if i < argc:
     print ( "too many arguments" )
     exit ( 1 )
 
@@ -69,7 +102,6 @@ description = []
 values = {}
 year_line = {}
 
-filename = sys.argv[1]
 line = ""
 line_number = 0
 input_done = False
@@ -154,7 +186,18 @@ def print_data ( current, left, right ):
         l = l.replace ( ' ', '_' )
     print ( l )
 
+first_page = True
 def print_page ( first_buy, last_buy, left, right ):
+    b = min ( first_buy, last_buy )
+    s = max ( left, right )
+    if b >= s: return # blank page
+
+    global first_page
+    if not first_page:
+        print ( "" )
+    else:
+        first_page = False
+
     for d in description:
         print ( d )
     print_header ( left, right )
@@ -212,15 +255,15 @@ try:
     first_buy_year = years[0]
     last_buy_year = years[-1]
 
-    if len ( sys.argv ) == 2:
+    if sell_years == None:
         first_sell_year = first_buy_year + 1
         last_sell_year = last_buy_year
     else:
-        lsell = sys.argv[2].strip()
-        sell = lsell.split ( "-" )
+        sell_years = sell_years.strip()
+        sell = sell_years.split ( "-" )
         if len ( sell ) != 2:
-            Fail ( sell + " argument is badly" +
-                          " formatted" )
+            Fail ( sell_years + " argument is badly" +
+                                " formatted" )
         if sell[0] == '':
             first_sell_year = first_buy_year + 1
         elif not year_re.match ( sell[0] ):
@@ -242,8 +285,19 @@ try:
                    str ( last_sell_year ) +
                    " is empty" )
 
-    print_page ( last_buy_year, first_buy_year,
-                 last_sell_year, first_sell_year )
+    s = last_sell_year
+    while s >= first_sell_year:
+        sy = min ( s - first_sell_year + 1,
+                   max_sell_per_page )
+        sy = s - sy + 1
+        b = last_buy_year
+        while b >= first_buy_year:
+            by = min ( b - first_buy_year + 1,
+                       max_buy_per_page )
+            by = b - by + 1
+            print_page ( b, by, s, sy )
+            b = by - 1
+        s = sy - 1
 
 
 except FileNotFoundError:
