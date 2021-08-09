@@ -4,7 +4,7 @@
 #
 # File:         annual.py
 # Authors:      Bob Walton (walton@acm.org)
-# Date:         Mon Aug  9 05:08:35 EDT 2021
+# Date:         Mon Aug  9 05:20:02 EDT 2021
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -59,6 +59,9 @@ Output Format:
 if len ( sys.argv ) <= 1:
     print ( document )
     exit ( 1 )
+if len ( sys.argv ) > 3:
+    print ( "too many arguments" )
+    exit ( 1 )
 
 year_re = re.compile ( r"^\d\d\d\d$" )
 
@@ -69,12 +72,17 @@ year_line = {}
 filename = sys.argv[1]
 line = ""
 line_number = 0
+input_done = False
 
 def fail_message ( message ):
-    print ( 'FATAL ERROR: ' + message + 
-            ' in line number ' + str ( line_number ) +
-            ':' + "\n" + line,
-            file = sys.stderr );
+    if input_done:
+        print ( 'FATAL ERROR: ' + message )
+    else:
+        print ( 'FATAL ERROR: ' + message + 
+                ' in line number ' +
+                str ( line_number ) +
+                ':' + "\n" + line,
+                file = sys.stderr );
 
 def Fail ( message ):
     fail_message ( message )
@@ -101,8 +109,7 @@ try:
             Fail ( "badly formatted data line" )
         lyear = pair[0]
         lvalue = pair[1]
-        match = year_re.match ( lyear )
-        if not match:
+        if not year_re.match ( lyear ):
             Fail ( lyear + " is not a 4-digit" +
                           " year number" )
         year = int ( lyear )
@@ -118,7 +125,46 @@ try:
                            str ( year_line[year] ) )
         year_line[year] = line_number
         values[year] = value
-        
+
+    input_done = True
+    years = list ( values )
+    if len ( years ) == 0:
+        Fail ( "there are no data lines" )
+    if len ( years ) == 1:
+        Fail ( "there is only one data lines" )
+    years.sort()
+    first_buy_year = years[0]
+    last_buy_year = years[-1]
+
+    if len ( sys.argv ) == 2:
+        first_sell_year = first_buy_year + 1
+        last_sell_year = last_buy_year
+    else:
+        lsell = sys.argv[2].strip()
+        sell = lsell.split ( "-" )
+        if len ( sell ) != 2:
+            Fail ( sell + " argument is badly" +
+                          " formatted" )
+        if sell[0] == '':
+            first_sell_year = first_buy_year + 1
+        elif not year_re.match ( sell[0] ):
+            Fail ( sell[0] + " in argument is not a" +
+                             " 4-digit number" )
+        else:
+            first_sell_year = int ( sell[0] )
+        if sell[1] == '':
+            last_sell_year = last_buy_year
+        elif not year_re.match ( sell[1] ):
+            Fail ( sell[1] + " in argument is not a" +
+                             " 4-digit number" )
+        else:
+            last_sell_year = int ( sell[1] )
+        if first_sell_year > last_sell_year:
+            Fail ( "sell year range " +
+                   str ( first_sell_year ) +
+                   "-" +
+                   str ( last_sell_year ) +
+                   " is empty" )
 
 
 except FileNotFoundError:
