@@ -4,7 +4,7 @@
 #
 # File:         annual.py
 # Authors:      Bob Walton (walton@acm.org)
-# Date:         Mon Aug  9 15:53:31 EDT 2021
+# Date:         Mon Aug  9 16:29:40 EDT 2021
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -173,7 +173,8 @@ def print_data ( current, left, right ):
     if left > right: sign = -1
     while True:
         r = compute_return ( current, left )
-        l += format ( r, ">8" )
+        if r == '': l += '        '
+        else: l += format ( r, ">7" ) + '%'
         if left == right: break
         if ( sign == +1 and right % 5 == 0 ) \
            or \
@@ -198,6 +199,8 @@ def print_page ( first_buy, last_buy, left, right ):
     else:
         first_page = False
 
+    print ( '* Average Annual Return in Percent' +
+            ' for Various Buy and Sell Years' )
     for d in description:
         print ( d )
     print_header ( left, right )
