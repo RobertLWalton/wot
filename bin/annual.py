@@ -4,7 +4,7 @@
 #
 # File:         annual.py
 # Authors:      Bob Walton (walton@acm.org)
-# Date:         Mon Aug  9 05:20:02 EDT 2021
+# Date:         Mon Aug  9 13:31:29 EDT 2021
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -88,6 +88,82 @@ def Fail ( message ):
     fail_message ( message )
     sys.exit ( 1 )
 
+# Compute the average annual return from buy year to
+# sell year, and return the resulting percentage as a
+# string with 2 decimal places.  If buy year >= sell
+# year, return ''.  Otherwise if no return can be
+# computed, return 'X.XX'.
+#
+def compute_return ( buy, sell ):
+    if buy >= sell: return ''
+    bval = values.get ( buy )
+    sval = values.get ( sell )
+    if bval == None: return 'X.XX'
+    if sval == None: return 'X.XX'
+    r = sval / bval
+    i = sell - buy
+    r = math.exp ( math.log ( r ) / i )
+    p = 100 * ( r - 1 )
+    return format ( p, '.2f' )
+
+# In the following functions, left is the leftmost
+# sell year, right is the rightmost sell year,
+# current is the current buy year.
+
+def print_header ( left, right ):
+    l1 = ' BUY   '
+    l2 = ' YEAR |'
+    col = 0
+    sign = +1
+    if left > right: sign = -1
+    while True:
+        l2 += format ( left, "8d" )
+        col += 8
+        if left == right: break
+        if ( sign == +1 and right % 5 == 0 ) \
+           or \
+           ( sign == -1 and left % 5 == 0 ):
+            l2 += ' |'
+            col += 2
+        if left > right: left += -1
+        else:            left += +1
+
+    l2 = l2.replace ( ' ', '_' )
+    l1 += 'SELL YEAR'.center ( col )
+
+    print ( l1 )
+    print ( l2 )
+
+def print_data ( current, left, right ):
+    l = format ( current, "5d" )
+    l += ' |'
+    sign = +1
+    if left > right: sign = -1
+    while True:
+        r = compute_return ( current, left )
+        l += format ( r, ">8" )
+        if left == right: break
+        if ( sign == +1 and right % 5 == 0 ) \
+           or \
+           ( sign == -1 and left % 5 == 0 ):
+            l += ' |'
+        if left > right: left += -1
+        else:            left += +1
+
+    if current % 5 == 0:
+        l = l.replace ( ' ', '_' )
+    print ( l )
+
+def print_page ( first_buy, last_buy, left, right ):
+    for d in description:
+        print ( d )
+    print_header ( left, right )
+    while True:
+        print_data ( first_buy, left, right )
+        if first_buy == last_buy: break
+        if first_buy > last_buy: first_buy += -1
+        else                   : first_buy += -1
+
 try:
     f = open ( filename )
     description_done = False
@@ -165,6 +241,9 @@ try:
                    "-" +
                    str ( last_sell_year ) +
                    " is empty" )
+
+    print_page ( last_buy_year, first_buy_year,
+                 last_sell_year, first_sell_year )
 
 
 except FileNotFoundError:
