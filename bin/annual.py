@@ -4,7 +4,7 @@
 #
 # File:         annual.py
 # Authors:      Bob Walton (walton@acm.org)
-# Date:         Mon Aug  9 16:29:40 EDT 2021
+# Date:         Mon Aug  9 17:24:00 EDT 2021
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -293,7 +293,7 @@ try:
         sy = min ( s - first_sell_year + 1,
                    max_sell_per_page )
         sy = s - sy + 1
-        b = last_buy_year
+        b = last_buy_year - 1
         while b >= first_buy_year:
             by = min ( b - first_buy_year + 1,
                        max_buy_per_page )
