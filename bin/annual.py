@@ -4,7 +4,7 @@
 #
 # File:         annual.py
 # Authors:      Bob Walton (walton@acm.org)
-# Date:         Mon Aug  9 17:24:00 EDT 2021
+# Date:         Wed Aug 11 14:48:30 EDT 2021
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -21,15 +21,23 @@ Command: python3 annual.py [-L|-P] \\
                  INPUT-FILE-NAME [SELL-YEARS]
 
   INPUT-FILE-NAME is the name of the input file.
-  SELL-YEARS is a range of years: e.g., 1970-2020.
-  If not given the maximum possible range is used.
+
+  SELL-YEARS is a range of years: e.g., 1970-2020,
+  1970-, -2020.  Years not given are given the
+  maximum or minimum values possible.  It is also
+  possible to just give a number, e.g., 20, in which
+  case the first sell year will be the last data year
+  minus the number plus 1.  E.g., if the last data year
+  is 2020 and SELL-YEARS is 15, the first sell year will
+  be 2006, and the number of sell years will be 15.
+  
   If neither INPUT-FILE-NAME nor SELL-YEARS are given,
   this document is output.
 
 Input File Format:
   First: Zero or more `description lines' each beginning
     with `*'.  These describe the investment.
-  Second: Two or more lines each of the form:
+  Second: Two or more data lines each of the form:
              YEAR VALUE
     Each of these means that the investment had the
     given VALUE at a given time in the given YEAR.
@@ -97,6 +105,7 @@ if i < argc:
     exit ( 1 )
 
 year_re = re.compile ( r"^\d\d\d\d$" )
+non_zero_re = re.compile ( r"^[1-9]\d*$" )
 
 description = []
 values = {}
@@ -255,32 +264,42 @@ try:
     if len ( years ) == 1:
         Fail ( "there is only one data lines" )
     years.sort()
-    first_buy_year = years[0]
-    last_buy_year = years[-1]
+    first_data_year = years[0]
+    last_data_year = years[-1]
 
     if sell_years == None:
-        first_sell_year = first_buy_year + 1
-        last_sell_year = last_buy_year
+        first_sell_year = first_data_year + 1
+        last_sell_year = last_data_year
     else:
         sell_years = sell_years.strip()
         sell = sell_years.split ( "-" )
-        if len ( sell ) != 2:
+        if len ( sell ) == 1:
+            if not non_zero_re.match ( sell[0] ):
+                Fail ( sell[0] + " in argument is not" +
+                                 " a non-zero number" )
+            first_sell_year = \
+                last_data_year - int ( sell[0] ) + 1
+            last_sell_year = last_data_year
+        elif len ( sell ) != 2:
             Fail ( sell_years + " argument is badly" +
                                 " formatted" )
-        if sell[0] == '':
-            first_sell_year = first_buy_year + 1
-        elif not year_re.match ( sell[0] ):
-            Fail ( sell[0] + " in argument is not a" +
-                             " 4-digit number" )
         else:
-            first_sell_year = int ( sell[0] )
-        if sell[1] == '':
-            last_sell_year = last_buy_year
-        elif not year_re.match ( sell[1] ):
-            Fail ( sell[1] + " in argument is not a" +
-                             " 4-digit number" )
-        else:
-            last_sell_year = int ( sell[1] )
+            if sell[0] == '':
+                first_sell_year = first_data_year + 1
+            elif not year_re.match ( sell[0] ):
+                Fail ( sell[0] + " in argument is not" +
+                                 " a 4-digit number" )
+            else:
+                first_sell_year = int ( sell[0] )
+
+            if sell[1] == '':
+                last_sell_year = last_data_year
+            elif not year_re.match ( sell[1] ):
+                Fail ( sell[1] + " in argument is not" +
+                                 " a 4-digit number" )
+            else:
+                last_sell_year = int ( sell[1] )
+
         if first_sell_year > last_sell_year:
             Fail ( "sell year range " +
                    str ( first_sell_year ) +
@@ -288,14 +307,19 @@ try:
                    str ( last_sell_year ) +
                    " is empty" )
 
-    s = last_sell_year
+    if first_sell_year > last_data_year:
+        Fail ( "First sell year = " +
+               str ( first_sell_year ) +
+               " > " + str ( last_data_year ) +
+               " = last data year" )
+    s = min( last_sell_year, last_data_year )
     while s >= first_sell_year:
         sy = min ( s - first_sell_year + 1,
                    max_sell_per_page )
         sy = s - sy + 1
-        b = last_buy_year - 1
-        while b >= first_buy_year:
-            by = min ( b - first_buy_year + 1,
+        b = last_data_year - 1
+        while b >= first_data_year:
+            by = min ( b - first_data_year + 1,
                        max_buy_per_page )
             by = b - by + 1
             print_page ( b, by, s, sy )
