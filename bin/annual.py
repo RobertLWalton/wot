@@ -4,7 +4,7 @@
 #
 # File:         annual.py
 # Authors:      Bob Walton (walton@acm.org)
-# Date:         Wed Aug 11 14:48:30 EDT 2021
+# Date:         Wed Aug 11 15:55:05 EDT 2021
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -108,8 +108,17 @@ year_re = re.compile ( r"^\d\d\d\d$" )
 non_zero_re = re.compile ( r"^[1-9]\d*$" )
 
 description = []
+    # Lines of the form `* ...' in order.
+
+# In the following, given data line `YEAR VALUE', then
+# year = int ( 'YEAR' ) and value = float ( 'VALUE' )
+#
 values = {}
+    # values[year] = value
 year_line = {}
+    # year_line[year] is line number of `YEAR VALUE'
+lvalues = {}
+    # lvalues[year] = 'VALUE'
 
 line = ""
 line_number = 0
@@ -152,31 +161,42 @@ def compute_return ( buy, sell ):
 # current is the current buy year.
 
 def print_header ( left, right ):
-    l1 = ' BUY   '
-    l2 = ' YEAR |'
+    l1 = '               '
+    l2 = ' BUY          |'
+    l3 = ' YEAR   VALUE |'
     col = 0
     sign = +1
     if left > right: sign = -1
     while True:
         l2 += format ( left, "8d" )
         col += 8
+        lvalue = lvalues.get ( left )
+        if lvalue == None:
+            lvalue = 'XXX'
+        l3 += format ( lvalue, ">8" )
         if left == right: break
         if ( sign == +1 and right % 5 == 0 ) \
            or \
            ( sign == -1 and left % 5 == 0 ):
             l2 += ' |'
+            l3 += ' |'
             col += 2
         if left > right: left += -1
         else:            left += +1
 
-    l2 = l2.replace ( ' ', '_' )
+    l3 = l3.replace ( ' ', '_' )
     l1 += 'SELL YEAR'.center ( col )
 
     print ( l1 )
     print ( l2 )
+    print ( l3 )
 
 def print_data ( current, left, right ):
     l = format ( current, "5d" )
+    lvalue = lvalues.get ( current )
+    if lvalue == None:
+        lvalue = 'XXX'
+    l += format ( lvalue, ">8" )
     l += ' |'
     sign = +1
     if left > right: sign = -1
@@ -256,6 +276,7 @@ try:
                            str ( year_line[year] ) )
         year_line[year] = line_number
         values[year] = value
+        lvalues[year] = lvalue
 
     input_done = True
     years = list ( values )
