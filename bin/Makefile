@@ -1,5 +1,5 @@
 all:	chkpage efm conf_helper remrestore \
-        unicode2latin1 lrcs help
+        unicode2latin1 lrcs help mkbootable
 
 help:	../help/git.help ../help/wot.help
 
@@ -36,6 +36,11 @@ lrcs:	lrcs.c
 	rm -f lrcs
 	gcc -ansi -pedantic -o lrcs lrcs.c
 	chmod 555 lrcs
+
+mkbootable:	mkbootable.c
+	rm -f mkbootable
+	gcc -ansi -pedantic -o mkbootable mkbootable.c
+	chmod 555 mkbootable
 
 remrestore:
 	ln -s remsave remrestore
