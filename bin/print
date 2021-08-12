@@ -5,7 +5,7 @@
 #
 # File:		print
 # Author:	Bob Walton <walton@deas.harvard.edu>
-# Date:		Sun Jul 25 15:29:19 EDT 2021
+# Date:		Thu Aug 12 04:14:26 EDT 2021
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -248,6 +248,7 @@ do
 	continue
 	;;
     "")
+        file="-"
 	;;
     *)
 	if [ ! -r "$file" ]
@@ -260,7 +261,7 @@ do
     esac
 
     case "$file" in
-    "" )
+    "-" )
         if [ $number -ne 0 -o $readerror -ne 0 ]
 	then
 	    break

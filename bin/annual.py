@@ -4,7 +4,7 @@
 #
 # File:         annual.py
 # Authors:      Bob Walton (walton@acm.org)
-# Date:         Wed Aug 11 15:55:05 EDT 2021
+# Date:         Thu Aug 12 03:59:00 EDT 2021
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -35,6 +35,7 @@ Command: python3 annual.py [-L|-P] \\
   this document is output.
 
 Input File Format:
+
   First: Zero or more `description lines' each beginning
     with `*'.  These describe the investment.
   Second: Two or more data lines each of the form:
@@ -47,30 +48,54 @@ Input File Format:
     session in the YEAR.
 
     The YEAR VALUE lines can be in no particular order.
+    YEAR VALUE lines for some intermediate years may be
+    missing.
 
 Output Format:
-  Without options, one big page.  If you are going to
-  print portrait, you can have up to 50 buy years but
-  just 5 sell years.  If you are going to print
-  landscape, you can have 25 buy years and 10 sell
-  years.  Otherwise you can view any size page in a
-  window.
+
+  Without options, the output is one big page.  If there
+  are at most 51 data lines and 5 sell years, it can be
+  printed as a portrait page.  If there are at most 26
+  data lines and 10 sell years, it can be printed as a
+  landscaped page.  Otherwise is can be viewed in a
+  computer window.
+
+  The -L option splits the output into multiple land-
+  scape sized pages.  Landscape pages can have at most
+  25 buy years but can have up to 10 sell years.
 
   The -P option splits the output into multiple portrait
-  sized pages.  The -L option splits the output into
-  multiple landscape sized pages.  These pages can be
-  put side-by-side to get the big picture.
+  sized pages.  Portrait pages can have up to 50 buy
+  years but at most 5 sell years.
+  
+  -L or -P Pages can be put side-by-side to get the
+  big picture.
 
   Output values that cannot be computed because data
-  for the buy or sell year is missing is represented
-  as X.XXX.  The value for a buy year the equals or
-  is greater than the sell year is blank.  Pages all
-  of whose values would be blank are not output.
+  for the buy or sell year is missing are represented
+  as X.XXX.  The value whose buy year equals or is
+  greater than its sell year is blank.  Pages all of
+  whose values would be blank are not output.
+
+  Input data VALUEs are printed for the buy and sell
+  years as they appear in the input.  Missing data
+  VALUEs print as XXX.
 
   The output can be redirected to a file by the command:
 
     python3 annual.py [-P|-L] INPUT-FILE-NAME \\
                       [SELL-YEARS] > OUTPUT-FILE-NAME
+
+Example:
+
+  If abc.in is an input file with at most 26 data lines,
+  then
+
+    python3 annual.py -L abc.in 20 > abc.out
+
+  will output one or two landscape pages in abc.out.
+
+     
 """;
 
 
