@@ -3,7 +3,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	mkbootaboe.c
-** Date:	Thu Aug 12 14:52:25 EDT 2021
+** Date:	Thu Aug 12 17:05:04 EDT 2021
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -59,7 +60,7 @@ struct partition  /* Partition in MBR */
         /* Number of sectors in partition */
 
     /* Sectors are 512 byte units. */
-};
+} partition;
 
 struct mbr /* Modern Standard MBR */
 {
@@ -78,7 +79,45 @@ struct mbr /* Modern Standard MBR */
 	 */
     uint16_t signature;
         /* Must be 0xAA55.  Boot signature. */
-};
+} mbr;
+
+/* Copy from file descriptor in to file descriptor
+ * out.  The first 512 bytes to be copied are
+ * replaced by mbr.  The names are file names used
+ * in error messages.
+ */
+int first = 1;
+char buffer[1<<16];
+void copy ( int in, int out,
+            const char * in_filename,
+            const char * out_filename )
+{
+    while ( 1 )
+    {
+        int r;
+	r = read ( in, buffer, sizeof ( buffer ) );
+	if ( r < 0 )
+	{
+	    printf ( "error reading %s\n",
+	             in_filename );
+	    exit ( 1 );
+	}
+	if ( r == 0 ) break;
+	if ( first )
+	{
+	    memcpy ( buffer, & mbr, 512 );
+	    first = 0;
+	    printf ( "mbr copied\n" );
+	}
+	r = write ( out, buffer, r );
+	if ( r < 0 )
+	{
+	    printf ( "error writing %s\n",
+	             out_filename );
+	    exit ( 1 );
+	}
+    }
+}
 
 int main ( int argc, char ** argv )
 {
@@ -86,12 +125,11 @@ int main ( int argc, char ** argv )
     off_t input_size, efi_size;
     uint32_t input_sectors, efi_sectors;
     struct stat statbuf;
-    struct partition partition;
-    struct mbr mbr;
     FILE * md5;
     char command[1 << 16];
     char md5sum[1 << 16];
         /* In UNIX max total pathname size is 4096. */
+    char * endp;
 
     if ( argc < 4 )
     {
@@ -164,7 +202,42 @@ int main ( int argc, char ** argv )
     printf ( "%s has %d sectors\n", argv[2],
              efi_sectors );
 
+    /* Construct MBR.  Bot mbr and partition are
+     * automatically initialized to zeroes.
+     */
 
+    md5sum[8] = 0;
+    mbr.label_id =
+        (uint32_t) strtol ( md5sum, & endp, 16 );
+    if ( endp != md5sum + 8 )
+    {
+	printf ( "%s has bad md5sum\n", argv[1] );
+	exit ( 1 );
+    }
+    mbr.signature = 0xAA55;
+    partition.status = 0x80;
+    partition.type = 0;
+    partition.first = 0;
+    partition.size = input_sectors;
+    memcpy ( mbr.partition[0], & partition, 16 );
+    partition.status = 0;
+    partition.type = 0xef;
+    partition.first = input_sectors;
+    partition.size = efi_sectors;
+    memcpy ( mbr.partition[1], & partition, 16 );
+
+    output = creat ( argv[3], S_IRUSR + S_IRGRP );
+    if ( output < 0 )
+    {
+	printf ( "%s: cannot create\n", argv [3] );
+	exit ( errno );
+    }
+    copy ( input, output, argv[1], argv[3] );
+    copy ( efi, output, argv[2], argv[3] );
+
+    close ( input );
+    close ( efi );
+    close ( output );
 
     exit (0);
 }
