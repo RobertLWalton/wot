@@ -4,7 +4,7 @@
 #
 # File:         annual.py
 # Authors:      Bob Walton (walton@acm.org)
-# Date:         Thu Aug 12 03:59:00 EDT 2021
+# Date:         Thu Aug 12 04:44:32 EDT 2021
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -97,7 +97,8 @@ Example:
 
      
 """;
-
+
+# Data
 
 max_buy_per_page = 1000000
 max_sell_per_page = 1000000
@@ -110,6 +111,7 @@ i = 1
 if i >= argc:
     print ( document )
     exit ( 1 )
+
 n = sys.argv[i]
 if n == '-L':
     max_buy_per_page = 25
@@ -119,12 +121,18 @@ elif n == '-P':
     max_buy_per_page = 50
     max_sell_per_page = 5
     i += 1
+
 if i < argc:
     filename = sys.argv[i]
     i += 1
+else:
+    print ( document )
+    exit ( 1 )
+
 if i < argc:
     sell_years = sys.argv[i]
     i += 1
+
 if i < argc:
     print ( "too many arguments" )
     exit ( 1 )
@@ -148,10 +156,13 @@ lvalues = {}
 line = ""
 line_number = 0
 input_done = False
+
+# Functions
 
 def fail_message ( message ):
     if input_done:
-        print ( 'FATAL ERROR: ' + message )
+        print ( 'FATAL ERROR: ' + message,
+                file = sys.stderr );
     else:
         print ( 'FATAL ERROR: ' + message + 
                 ' in line number ' +
@@ -200,14 +211,13 @@ def print_header ( left, right ):
             lvalue = 'XXX'
         l3 += format ( lvalue, ">8" )
         if left == right: break
-        if ( sign == +1 and right % 5 == 0 ) \
+        if ( sign == +1 and (left + sign) % 5 == 0 ) \
            or \
            ( sign == -1 and left % 5 == 0 ):
             l2 += ' |'
             l3 += ' |'
             col += 2
-        if left > right: left += -1
-        else:            left += +1
+        left += sign
 
     l3 = l3.replace ( ' ', '_' )
     l1 += 'SELL YEAR'.center ( col )
@@ -230,12 +240,11 @@ def print_data ( current, left, right ):
         if r == '': l += '        '
         else: l += format ( r, ">7" ) + '%'
         if left == right: break
-        if ( sign == +1 and right % 5 == 0 ) \
+        if ( sign == +1 and (left + sign) % 5 == 0 ) \
            or \
            ( sign == -1 and left % 5 == 0 ):
             l += ' |'
-        if left > right: left += -1
-        else:            left += +1
+        left += sign
 
     if current % 5 == 0:
         l = l.replace ( ' ', '_' )
@@ -263,8 +272,13 @@ def print_page ( first_buy, last_buy, left, right ):
         if first_buy == last_buy: break
         if first_buy > last_buy: first_buy += -1
         else                   : first_buy += -1
-
+
+# Main Program
+#
 try:
+
+    # Read input file
+    #
     f = open ( filename )
     description_done = False
     while True:
@@ -297,13 +311,15 @@ try:
         if value <= 0:
             Fail ( lvalue + " is negative or zero" )
         if year_line.get ( year ):
-            Fail ( lyear + " is was in line " +
+            Fail ( lyear + " was also in line " +
                            str ( year_line[year] ) )
         year_line[year] = line_number
         values[year] = value
         lvalues[year] = lvalue
+    input_done = True  # For fail_message
 
-    input_done = True
+    # Compute data years
+    #
     years = list ( values )
     if len ( years ) == 0:
         Fail ( "there are no data lines" )
@@ -313,6 +329,8 @@ try:
     first_data_year = years[0]
     last_data_year = years[-1]
 
+    # Compute sell years
+    #
     if sell_years == None:
         first_sell_year = first_data_year + 1
         last_sell_year = last_data_year
@@ -321,7 +339,7 @@ try:
         sell = sell_years.split ( "-" )
         if len ( sell ) == 1:
             if not non_zero_re.match ( sell[0] ):
-                Fail ( sell[0] + " in argument is not" +
+                Fail ( sell[0] + " argument is not" +
                                  " a non-zero number" )
             first_sell_year = \
                 last_data_year - int ( sell[0] ) + 1
@@ -353,12 +371,27 @@ try:
                    str ( last_sell_year ) +
                    " is empty" )
 
+    # Check buy/sell overlap
+    #
     if first_sell_year > last_data_year:
         Fail ( "First sell year = " +
                str ( first_sell_year ) +
                " > " + str ( last_data_year ) +
                " = last data year" )
-    s = min( last_sell_year, last_data_year )
+    if last_sell_year <= first_data_year:
+        Fail ( "Last sell year = " +
+               str ( last_sell_year ) +
+               " <= " + str ( first_data_year ) +
+               " = first data year" )
+
+    # Output pages
+    #
+    if first_sell_year < first_data_year + 1:
+        first_sell_year = first_data_year + 1
+    if last_sell_year > last_data_year:
+        last_sell_year = last_data_year
+
+    s = last_sell_year
     while s >= first_sell_year:
         sy = min ( s - first_sell_year + 1,
                    max_sell_per_page )
