@@ -3,7 +3,7 @@
 **
 ** Author:	Bob Walton (walton@deas.harvard.edu)
 ** File:	mkbootaboe.c
-** Date:	Thu Aug 12 17:05:04 EDT 2021
+** Date:	Fri Aug 13 17:51:44 EDT 2021
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -45,7 +45,10 @@ NULL };
 struct partition  /* Partition in MBR */
 {
     uint8_t status;
-        /* 0x80 for bootable partition; 0 otherwise. */
+        /* 0x80 for bootable partition;
+	 * 0 for non-bootable partion;
+	 * 1 for inactive (unused) partition;
+	 */
     uint8_t first_chs[3];
         /* Unused for LINUX USB. */
     uint8_t type;
@@ -206,6 +209,9 @@ int main ( int argc, char ** argv )
      * automatically initialized to zeroes.
      */
 
+    /* Make label_id = first 8 hex digits of
+     * INPUT-ISO-FILE md5sum.
+     */
     md5sum[8] = 0;
     mbr.label_id =
         (uint32_t) strtol ( md5sum, & endp, 16 );
@@ -215,17 +221,32 @@ int main ( int argc, char ** argv )
 	exit ( 1 );
     }
     mbr.signature = 0xAA55;
+
+    /* Mark last two partitions inactive.
+     */
+    partition.status = 1;
+    memcpy ( mbr.partition[2], & partition, 16 );
+    memcpy ( mbr.partition[3], & partition, 16 );
+
+    /* Make ISO 9660 partition
+     */
     partition.status = 0x80;
     partition.type = 0;
     partition.first = 0;
     partition.size = input_sectors;
     memcpy ( mbr.partition[0], & partition, 16 );
+
+    /* Make EFI partition
+     */
     partition.status = 0;
     partition.type = 0xef;
     partition.first = input_sectors;
     partition.size = efi_sectors;
     memcpy ( mbr.partition[1], & partition, 16 );
 
+    /* Copy MBR, INPUT-ISO-FILE, and EFI-PARTITION_
+     * CONTENTS to OUTPUT-ISO-FILE.
+     */
     output = creat ( argv[3], S_IRUSR + S_IRGRP );
     if ( output < 0 )
     {
@@ -235,6 +256,8 @@ int main ( int argc, char ** argv )
     copy ( input, output, argv[1], argv[3] );
     copy ( efi, output, argv[2], argv[3] );
 
+    /* Finish and exit.
+     */
     close ( input );
     close ( efi );
     close ( output );
