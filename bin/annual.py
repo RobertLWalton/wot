@@ -4,7 +4,7 @@
 #
 # File:         annual.py
 # Authors:      Bob Walton (walton@acm.org)
-# Date:         Thu Aug 12 04:44:32 EDT 2021
+# Date:         Thu Aug 26 17:26:20 EDT 2021
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -36,9 +36,23 @@ Command: python3 annual.py [-L|-P] \\
 
 Input File Format:
 
-  First: Zero or more `description lines' each beginning
+  Zero or more `description lines' each beginning
     with `*'.  These describe the investment.
-  Second: Two or more data lines each of the form:
+
+  Optional sales charge lines of the form:
+             pc PURCHASE-CHARGE
+             rc REDEMPTION-CHARGE
+    The charges are percentages (without the %).
+    To buy shares with value V you pay:
+        V / ( 1 - PURCHASE-CHARGE/100 )
+    Upon redeeming shares with value V you receive:
+        V * ( 1 - REDEMPTION-CHARGE/100 )
+    These input lines also generate description lines
+    of the form:
+        * Purchase Charge = X.XX%
+        * Redemption Charge = X.XX%
+
+  Two or more data lines each of the form:
              YEAR VALUE
     Each of these means that the investment had the
     given VALUE at a given time in the given YEAR.
@@ -50,6 +64,9 @@ Input File Format:
     The YEAR VALUE lines can be in no particular order.
     YEAR VALUE lines for some intermediate years may be
     missing.
+
+  The input lines may be in any order, but the output
+  of description lines will be in their input order.
 
 Output Format:
 
@@ -104,6 +121,8 @@ max_buy_per_page = 1000000
 max_sell_per_page = 1000000
 filename = None
 sell_years = None
+pc = 0
+rc = 0
 
 argc = len ( sys.argv )
 i = 1
@@ -186,6 +205,8 @@ def compute_return ( buy, sell ):
     sval = values.get ( sell )
     if bval == None: return 'X.XX'
     if sval == None: return 'X.XX'
+    bval = bval / ( 1 - pc/100 )
+    sval = sval * ( 1 - rc/100 )
     r = sval / bval
     i = sell - buy
     r = math.exp ( math.log ( r ) / i )
@@ -280,23 +301,39 @@ try:
     # Read input file
     #
     f = open ( filename )
-    description_done = False
     while True:
         line = f.readline()
         if line == '': break
         line_number += 1
         line = line.rstrip()
         if line == '': continue
-        if ( not description_done ):
-            if line[0] == '*':
-                description.append ( line )
-                continue
-            else:
-                description_done = True
+        if line[0] == '*':
+            description.append ( line )
+            continue
         line = line.strip()
         pair = line.split()
         if len ( pair ) != 2:
             Fail ( "badly formatted data line" )
+        if pair[0] == 'pc':
+            try:
+                pc = float ( pair[1] )
+            except:
+                Fail ( pair[1] + " is not a floating" +
+                                 " point number" )
+            description.append \
+                ( '* Purchase Charge = ' +
+                  format ( pc, '.2f' ) + '%' );
+            continue
+        if pair[0] == 'rc':
+            try:
+                rc = float ( pair[1] )
+            except:
+                Fail ( pair[1] + " is not a floating" +
+                                 " point number" )
+            description.append \
+                ( '* Redemption Charge = ' +
+                  format ( rc, '.2f' ) + '%' );
+            continue
         lyear = pair[0]
         lvalue = pair[1]
         if not year_re.match ( lyear ):
