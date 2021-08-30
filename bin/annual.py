@@ -4,7 +4,7 @@
 #
 # File:         annual.py
 # Authors:      Bob Walton (walton@acm.org)
-# Date:         Thu Aug 26 17:26:20 EDT 2021
+# Date:         Mon Aug 30 16:23:59 EDT 2021
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -259,16 +259,20 @@ def print_data ( current, left, right ):
     while True:
         r = compute_return ( current, left )
         if r == '': l += '        '
-        else: l += format ( r, ">7" ) + '%'
+        else:
+            c = format ( r, ">7" ) + '%'
+            if ( left - current ) % 5 == 0:
+                c = c.replace ( ' ', '.' )
+            l += c
         if left == right: break
         if ( sign == +1 and (left + sign) % 5 == 0 ) \
            or \
            ( sign == -1 and left % 5 == 0 ):
             l += ' |'
         left += sign
-
     if current % 5 == 0:
         l = l.replace ( ' ', '_' )
+
     print ( l )
 
 first_page = True
