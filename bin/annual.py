@@ -4,7 +4,7 @@
 #
 # File:         annual.py
 # Authors:      Bob Walton (walton@acm.org)
-# Date:         Mon Aug 30 16:23:59 EDT 2021
+# Date:         Tue Aug 31 03:33:42 EDT 2021
 #
 # The authors have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -93,6 +93,9 @@ Output Format:
   as X.XXX.  The value whose buy year equals or is
   greater than its sell year is blank.  Pages all of
   whose values would be blank are not output.
+
+  Dots `..' are used to indicate values for which the
+  buy and sell years differ by a multiple of 5.
 
   Input data VALUEs are printed for the buy and sell
   years as they appear in the input.  Missing data
