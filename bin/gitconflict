@@ -2,7 +2,7 @@
 #
 # File:		gitconflict
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sat Aug  1 21:46:59 EDT 2020
+# Date:		Sun May 15 14:48:49 EDT 2022
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -30,12 +30,19 @@ gitconflict remote [ filename ...]
     ;;
 esac
 
+if git branch | grep -q master
+then
+    master='master'
+else
+    master='main'
+fi
+
 remote="$1"
 shift
 git fetch $remote
 
 case "$1" in
-"") git diff --name-status origin/master
+"") git diff --name-status origin/$master
     ;;
 *) git diff FETCH_HEAD \
        --src-prefix=$remote/ --dst-prefix=working/ \

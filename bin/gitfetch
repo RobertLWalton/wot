@@ -2,7 +2,7 @@
 #
 # File:		gitfetch
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sun Aug  2 03:20:36 EDT 2020
+# Date:		Sun May 15 14:59:43 EDT 2022
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -13,7 +13,7 @@ case $1 in -doc*)
     echo "
 gitfetch [remote]
     Fetch all the commits from current repository
-    or designated remote repository to the \`master'
+    or designated remote repository to the current
     branch of the repository.
     
     The current repository \`HEAD' can then be diffed

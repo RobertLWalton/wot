@@ -2,7 +2,7 @@
 #
 # File:		gitbare
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Mon Dec 29 06:32:18 EST 2014
+# Date:		Sun May 15 14:40:58 EDT 2022
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -33,6 +33,13 @@ gitbare repositoryname
     ;;
 esac
 
+if git branch | grep -q master
+then
+    master='master'
+else
+    master='main'
+fi
+
 
 if test ! -d ./.git
 then
@@ -56,11 +63,11 @@ case "$1" in
     ;;
 esac
 
-echo git remote add -m master origin "$1"
-git remote add -m master origin "$1"
-echo git config --add branch.master.remote origin
-git config --add branch.master.remote origin
+echo git remote add -m $master origin "$1"
+git remote add -m $master origin "$1"
+echo git config --add branch.$master.remote origin
+git config --add branch.$master.remote origin
 echo git config --add \
-    branch.master.merge refs/heads/master
+    branch.$master.merge refs/heads/$master
 git config --add \
-    branch.master.merge refs/heads/master
+    branch.$master.merge refs/heads/$master

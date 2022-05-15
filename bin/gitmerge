@@ -2,19 +2,25 @@
 #
 # File:		gitmerge
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sat Aug  1 22:14:30 EDT 2020
+# Date:		Sun May 15 15:02:44 EDT 2022
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
 # for this program.
 
+if git branch | grep -q master
+then
+    master='master'
+else
+    master='main'
+fi
 
 case $1 in -doc*)
     echo "
 gitmerge [remote]
     Merge files from the current repository's remote
     origin or designated remote to the current
-    repository.  Does an implicit fetch of the \`master'
+    repository.  Does an implicit fetch of the \`$master'
     branch of the current or remote repository, and then
     merges this branch into the working files.
 
@@ -46,10 +52,10 @@ fi
 if test "$1" != ""
 then
     git fetch "$1"
-    git merge -m Merging "$1"/master
+    git merge -m Merging "$1"/$master
     # -m message cannot be empty
 else
     git fetch origin
-    git merge -m Merging origin/master
+    git merge -m Merging origin/$master
     # -m message cannot be empty
 fi

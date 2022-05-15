@@ -2,7 +2,7 @@
 #
 # File:		gitexpunge
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Mon Aug  8 23:53:52 EDT 2016
+# Date:		Sun May 15 14:53:41 EDT 2022
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -29,12 +29,19 @@ gitexpunge directory filename ...
     ;;
 esac
 
+if git branch | grep -q master
+then
+    master='master'
+else
+    master='main'
+fi
+
 askcontinue=0
 if [ -n "`git branch -r | grep origin`" ]
 then
-    if [ "`git diff --name-only HEAD origin/master`" ]
+    if [ "`git diff --name-only HEAD origin/$master`" ]
     then
-	echo "HEAD and origin/master differ"
+	echo "HEAD and origin/$master differ"
 	askcontinue=1
     fi
 fi
