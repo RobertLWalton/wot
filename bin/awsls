@@ -25,4 +25,4 @@ then
 fi
 
 echo aws s3 ls --summarize "$1"
-aws s3 ls --summarize "$1"
+aws s3 ls --recursive --summarize "$1"

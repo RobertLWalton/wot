@@ -2,7 +2,7 @@
 #
 # File:		gitlog
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Tue Jan 15 03:31:00 EST 2013
+# Date:		Sat Feb 11 02:53:32 EST 2023
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -10,10 +10,12 @@
 
 case "$1" in -doc*)
     echo "
-gitlog [{n} | ~n ]
+gitlog [{n} | ~n ] [file ...]
     List all commits and file changes beginning at
     a given commit and proceeding backward in time.
-    If no commit is given, ~0 is assumed."
+    If no commit is given, ~0 is assumed.  If files
+    are given, only commits involving the listed
+    files are shown."
 
     exit 1
     ;;
@@ -24,6 +26,7 @@ gitlog [{n} | ~n ]
     commit="HEAD@$1"
     pre={
     post=}
+    shift
     ;;
 
 ~*)
@@ -32,9 +35,10 @@ gitlog [{n} | ~n ]
     commit="HEAD$1"
     pre='~'
     post=
+    shift
     ;;
 
-"")
+*)
     i=0
     ancestor=--first-parent
     commit="HEAD"
@@ -42,23 +46,12 @@ gitlog [{n} | ~n ]
     post=
     ;;
 
-*)
-    echo ERROR: illegal commit "$1"
-    exit 1
-    ;;
-
 esac
-
-if test -z "$i"
-then
-    echo ERROR: illegal commit "$1"
-    exit 1
-fi
 
 
 git log $ancestor --name-status \
         --pretty=format:"%h - %cn - %cd" \
-        --date=local -M -C -C "$commit" 2>&1 | \
+        --date=local -M -C -C "$commit" "$@" 2>&1 | \
     awk 'BEGIN { i = '$i' }
          /^[0-9a-fA-F]* - / \
 	     { print "'$pre'" i "'$post' " $0
