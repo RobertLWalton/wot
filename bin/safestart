@@ -2,7 +2,7 @@
 #
 # File:		safestart
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Mon Aug  8 06:12:36 EDT 2016
+# Date:		Tue Sep 26 06:15:56 EDT 2023
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -12,11 +12,12 @@ case "$1" in -doc* | "")
     echo "
 safestart directory tar-file
 
-    Remove /run/user/<ID>/directory where <ID> is the
-    current numeric user id.  Copy the tar file to
-    /run/user/<ID>.  If the tar-file has extension .gpg,
-    call gpg to decrypt it.  Then call tar to unpack
-    it."
+    If /run/user/<ID>/directory exists, where <ID> is
+    the current numeric user id, do nothing.
+    
+    Otherwise copy the tar file to /run/user/<ID>.  If
+    the tar-file has extension .gpg, call gpg to decrypt
+    it.  Then call tar to unpack it."
 
     exit 1
     ;;
@@ -27,6 +28,10 @@ tarfile="$2"
 
 id=`id -ru`
 target=/run/user/$id
+if test -e $target/"$directory"
+then
+    exit 0
+fi
 if test ! -w $target
 then
     echo CANNOT WRITE $target
@@ -38,20 +43,8 @@ then
     exit 1
 fi
 
-tarbase=`basename "$tarfile"`
-if test -e $target/"$tarbase"
-then
-    echo rm -f $target/"$tarbase"
-    rm -f $target/"$tarbase"
-fi
-if test -e $target/"$directory"
-then
-    echo rm -rf $target/"$directory"
-    rm -rf $target/"$directory"
-fi
-
-echo cp "$tarfile" $target
-cp "$tarfile" $target
+echo cp -f "$tarfile" $target
+cp -f "$tarfile" $target
 
 case "$tarbase" in *.gpg )
     tarbase=`basename "$tarbase" .gpg`
