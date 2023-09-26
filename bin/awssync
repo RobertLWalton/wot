@@ -43,4 +43,4 @@ then
 fi
 
 echo aws s3 sync $n $d "$1" "$2"
-aws s3 sync $n $d "$1" "$2"
+aws s3 sync $n $d "$1" "$2" --profile walton-s3
