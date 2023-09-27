@@ -16,6 +16,9 @@ do
 	if ssh-add -l | grep -q $z
 	then
 	    donothing=
+	elif ssh-add -l | grep -q ":$zone "
+	then
+	    donothing=
 	else
 	    files="$files $z"
 	    found=1
