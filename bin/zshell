@@ -1,22 +1,13 @@
 #!/bin/bash
 
+SSH_TERM=$1; export SSH_TERM
 if [ $# -gt 1 ]
 then
-    echo ERROR: at most one zone may be given
-    exit 1
+    shift
 fi
 
-shopt -s nullglob
-if ! egrep -l "( |:)$1(\$|:)" ~/.ssh/*_id_{rsa,dsa}.pub
-then
-    echo ERROR: $1 is not a defined zone
-    exit 1
-fi
-shopt -u nullglob
-
-SSH_ZONE=$1; export SSH_ZONE
-pidf=~/.ssh/.agents/${SSH_ZONE}.pid
-sockf=~/.ssh/.agents/${SSH_ZONE}.sock
+pidf=~/.ssh/.agents/${SSH_TERM}.pid
+sockf=~/.ssh/.agents/${SSH_TERM}.sock
 if [ ! -d $pidf -o ! -e $sockf ]
 then
     if [ ! -d ~/.ssh/.agents ]
@@ -27,12 +18,11 @@ then
     eval `ssh-agent -s -a $sockf`
     ln -s /proc/$SSH_AGENT_PID $pidf
 else
-    SSH_AUTH_SOCK=~/.ssh/.agents/${SSH_ZONE}.sock
+    SSH_AUTH_SOCK=$sockf
     export SSH_AUTH_SOCK
     pidlink=`readlink $pidf`
     SSH_AGENT_PID=`basename $pidlink`
     export SSH_AGENT_PID
 fi
-zadd $SSH_ZONE
-echo "SSH_ZONE is $SSH_ZONE"
+zadd "$@"
 $SHELL
