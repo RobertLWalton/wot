@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# File:		gitdiff
+# File:		gitd
 # Author:	Bob Walton <walton@acm.org>
-# Date:		Sun Aug  2 02:57:55 EDT 2020
+# Date:		Fri Jul  5 07:05:53 AM EDT 2024
 #
 # The author(s) have placed this program in the public
 # domain; they make no warranty and accept no liability
@@ -12,10 +12,10 @@ fetch=no
 
 case "$1" in -doc*)
     echo "
-gitdiff [ l | r | f | {m} | ~m ] \\
-        [ l | r | f | {n} | ~n ] \\
-        [-n | -R | git-diff-option ...] \\
-        [-a | [--] filename ...]
+gitd [ l | r | f | {m} | ~m ] \\
+     [ l | r | f | {n} | ~n ] \\
+     [-n | -R | git-diff-option ...] \\
+     [-a | [--] filename ...]
     Lists differences between the working versions of
     files and either a previous committed version of the
     files or the last gitadd'ed versions.
@@ -43,7 +43,7 @@ synonymous
     --name-status that just lists the names and status
     of the files with differences.  The -R option is a
     standard git diff option the reverses order of the
-    files being diff'ed and may be useful in \`gitdiff
+    files being diff'ed and may be useful in \`gitd
     r -R' when the remote is more up to date than the
     local version." | less -F
 
