@@ -2,7 +2,7 @@
 **
 ** Author:	Bob Walton (walton@acm.org)
 ** File:	efm.c
-** Date:	Mon Dec 14 03:39:11 EST 2020
+** Date:	Wed Jul 24 04:40:11 AM EDT 2024
 **
 ** The authors have placed this program in the public
 ** domain; they make no warranty and accept no liability
@@ -394,7 +394,7 @@ struct comment * first_comment = NULL;
 void error ( int err_no )
 {
     const char * s = strerror ( err_no );
-    printf ( "ERROR: %s\n", s );
+    fprintf ( stderr, "ERROR: %s\n", s );
     exit ( 1 );
 }
 
@@ -1200,11 +1200,15 @@ int crypt ( int decrypt,
 	close ( 1 );
 	if ( dup2 ( outfd, 1 ) < 0 ) error ( errno );
 	close ( outfd );
+
+	/*
 	nullfd = open ( "/dev/null", O_RDONLY );
 	if ( nullfd < 0 ) error ( errno );
 	close ( 2 );
 	if ( dup2 ( nullfd, 2 ) < 0 ) error ( errno );
 	close ( nullfd );
+	*/
+
 	if ( passfd != 3 )
 	{
 	    close ( 3 );
@@ -1253,7 +1257,6 @@ int crypt ( int decrypt,
 	    {
 		fprintf ( stderr,
 		          "* executing gpg"
-			  " --cipher-algo BLOWFISH"
 			  " --batch -q --no-tty -c" );
 		if ( input != NULL )
 		{
@@ -1273,7 +1276,6 @@ int crypt ( int decrypt,
 		fflush ( stderr );
 	    }
 	    if ( execlp ( "gpg", "gpg",
-		          "--cipher-algo", "BLOWFISH",
 	                  "--passphrase-fd", "3",
 		          "--batch", "-q", "--no-tty",
 			  "-c", NULL ) < 0 )

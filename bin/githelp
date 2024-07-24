@@ -127,7 +127,7 @@ Committing
 
 Indexing
 --------
-`gitdiff -doc`
+`gitd -doc`
 `gitadd -doc`
 `gitsub -doc`
 `gitrm -doc`

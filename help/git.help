@@ -190,10 +190,10 @@ gituntracked
 Indexing
 --------
 
-gitdiff [ l | r | f | {m} | ~m ] \
-        [ l | r | f | {n} | ~n ] \
-        [-n | -R | git-diff-option ...] \
-        [-a | [--] filename ...]
+gitd [ l | r | f | {m} | ~m ] \
+     [ l | r | f | {n} | ~n ] \
+     [-n | -R | git-diff-option ...] \
+     [-a | [--] filename ...]
     Lists differences between the working versions of
     files and either a previous committed version of the
     files or the last gitadd'ed versions.
@@ -220,7 +220,7 @@ gitdiff [ l | r | f | {m} | ~m ] \
     --name-status that just lists the names and status
     of the files with differences.  The -R option is a
     standard git diff option the reverses order of the
-    files being diff'ed and may be useful in `gitdiff
+    files being diff'ed and may be useful in `gitd
     r -R' when the remote is more up to date than the
     local version.
 
@@ -335,10 +335,12 @@ git-make-local
 History and Tags
 ------- --- ----
 
-gitlog [{n} | ~n ]
+gitlog [{n} | ~n ] [file ...]
     List all commits and file changes beginning at
     a given commit and proceeding backward in time.
-    If no commit is given, ~0 is assumed.
+    If no commit is given, ~0 is assumed.  If files
+    are given, only commits involving the listed
+    files are shown.
 
 gitls [ {n} | ~n ] [-r]
     
