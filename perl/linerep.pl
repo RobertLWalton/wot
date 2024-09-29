@@ -4,11 +4,11 @@
 # instances of the $from lines by the $to lines.
 #
 #     lineref.pl, Bob Walton, walton@acm.org,
-#     Sat Sep 28 08:31:34 PM EDT 2024
+#     Sun Sep 29 03:30:36 AM EDT 2024
 
 
-my $FROM = $ARGV[0];
-my $TO   = $ARGV[1];
+$FROM = $ARGV[0];
+$TO   = $ARGV[1];
 
 if ( not defined $FROM )
 {
@@ -36,10 +36,10 @@ Blank lines at the beginning or end of the FROM-FILE
 contents are ignored, as if they did not exist.
 
 This program works in part by recoding the contents of
-the FROM-FILE as a regular expression.  If TO-FILE
-is not given, the standard input is ignored and the
-regular expression is copied to the standard output.
-This is only useful for debugging.
+the FROM-FILE as a regular expression.  If FROM-FILE is
+given but TO-FILE is not, the standard input is ignored
+and the regular expression is copied to the standard
+output.  This is only useful for debugging.
 
 ';
     exit ( 0 );
@@ -49,6 +49,7 @@ $/ = undef;
 open ( from_handle, $FROM )
     or die ( "cannot read $FROM" );
 $from = <from_handle>;
+    # read $FROM file into $from
 
 $from =~ s/^\s+|\s+$//g;
     # remove whitespace from ends of $from
@@ -58,10 +59,10 @@ $from = quotemeta ( $from );
 $from =~ s/(\\[ \n\t])+/\\s+/g;
     # replace all whitespace (now with \'s before) by the
     # regular subexpression \s+
-$from = '[ \t]*' . $from . '[ \t]*[\n]';
+$from = '[\ \t]*' . $from . '[\ \t\r]*[\n]';
     # include any whitespace at the beginning of the
     # first $from instance line and optional whitespace
-    # followed by \n at the end of the instance.
+    # followed by \r\n or \n at the end of the instance.
 
 if ( not defined $TO )
 {
@@ -72,9 +73,10 @@ if ( not defined $TO )
 open ( to_handle, $TO )
     or die ( "cannot read $TO" );
 $to = <to_handle>;
+    # read $TO file into $to
 $text = <STDIN>;
    # read standard input into the $text variable
    #
-$text =~ s/$from/$to/gm;
+$text =~ s/$from/$to/g;
     # replace $from by $to in $text
 print "$text";
