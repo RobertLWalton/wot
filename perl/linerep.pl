@@ -5,7 +5,7 @@
 # the $to lines.
 #
 #     lineref.pl, Bob Walton, walton@acm.org,
-#     Tue Oct  1 07:22:23 PM EDT 2024
+#     Wed Oct  2 02:10:08 AM EDT 2024
 
 use strict;
 use warnings;
@@ -28,7 +28,7 @@ of FROM-FILE by the contents of TO-FILE.
 
 The contents of FROM-FILE must be a sequence of lines
 encoding tokens that do not contain whitespace and
-that are separated by whitespace.  Occurances of the
+that are separated by whitespace.  Occurences of the
 FROM-FILE contents in the input text may have different
 whitespace characters than the FROM-FILE contents has;
 e.g., a space character may be replaced by a line-feed
@@ -38,24 +38,22 @@ character.
 Blank lines at the beginning or end of the FROM-FILE
 contents are ignored, as if they did not exist.
 
-This program works in part by recoding the contents of
+This program works in part by re-coding the contents of
 the FROM-FILE as a regular expression.  If FROM-FILE is
-given but TO-FILE is not, the standard input is ignored
-and the regular expression is copied to the standard
-output.  This is only useful for debugging.
+given but TO-FILE is not, no files are modified and
+the regular expression is copied to the standard output.
+This is only useful for debugging.
 
 Example:
 
-FROM-FILE Contents:
+---------- FROM-FILE Contents:
 FOOBAR ABC
     [ 99 ]
-
-TO-FILE Contents:
+---------- TO-FILE Contents:
 FOOBAR
 ABC
   [ 88 ]
-
-TEXT-FILE Contents BEFORE Modification:
+---------- TEXT-FILE Contents BEFORE Modification:
 FOOBAR
 [
     ABC [ 22 ]
@@ -65,8 +63,7 @@ FOOBAR ABC [ 33 ]
 FOOBAR
    ABC [ 99 ]
 THE END
-
-TEXT-FILE Contents AFTER Modification:
+---------- TEXT-FILE Contents AFTER Modification:
 FOOBAR
 [
     ABC [ 22 ]
@@ -83,7 +80,10 @@ THE END
     exit ( 0 );
 }
 
-$/ = undef;
+local $/;
+    # setting so that reading from a file reads the
+    # entire file all at once, instead of one line
+    # at a time
 open ( my $from_handle, $FROM )
     or die ( "cannot read $FROM: $!" );
 my $from = <$from_handle>;
@@ -94,13 +94,13 @@ $from =~ s/^\s+|\s+$//g;
 $from = quotemeta ( $from );
     # put \ just before all space and [ characters
     # and other regular expression metacharacters
-$from =~ s/(\\[ \n\t])+/\\s+/g;
+$from =~ s/(\\[ \r\n\t])+/\\s+/g;
     # replace all whitespace (now with \'s before) by
     # the regular subexpression \s+
-$from = '[\ \t]*' . $from . '[\ \t\r]*[\n]';
+$from = '[\ \t]*' . $from . '[\ \t\r]*\n';
     # include any whitespace at the beginning of the
     # first $from instance line and optional whitespace
-    # followed by \r\n or \n at the end of the instance.
+    # followed by \n at the end of the instance.
 
 my $TO   = shift;
 if ( not defined $TO )
