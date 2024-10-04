@@ -5,7 +5,7 @@
 # the $to lines.
 #
 #     lineref.pl, Bob Walton, walton@acm.org,
-#     Wed Oct  2 02:10:08 AM EDT 2024
+#     Fri Oct  4 07:10:30 AM EDT 2024
 
 use strict;
 use warnings;
@@ -16,14 +16,15 @@ if ( not defined $FROM )
 {
     print
 'perl linerep.pl
-perl linerep.pl FROM-FILE TO-FILE TEXT-FILE1 \
-                                  TEXT-FILE2 ...
+perl linerep.pl FROM-FILE TO-FILE LIST-FILE
 perl linerep.pl FROM-FILE
 
 When no FROM-FILE is given, this document is output.
 
-When TO-FILE is given, this program modifies the
-TEXT-FILEs by replacing every occurance of the contents
+LIST-FILE is a list of TEXT-FILE names, one per line.
+
+When LIST-FILE is given, this program modifies each
+TEXT-FILE by replacing every occurance of the contents
 of FROM-FILE by the contents of TO-FILE.
 
 The contents of FROM-FILE must be a sequence of lines
@@ -53,6 +54,8 @@ FOOBAR ABC
 FOOBAR
 ABC
   [ 88 ]
+---------- LIST-FILE Contents
+<TEXT-FILE name>
 ---------- TEXT-FILE Contents BEFORE Modification:
 FOOBAR
 [
@@ -114,10 +117,23 @@ open ( my $to_handle, $TO )
 my $to = <$to_handle>;
     # read $TO file into $to
 
-
-my $TEXT = shift;
-while ( defined $TEXT )
+my $LIST = shift;
+if ( not defined $LIST )
 {
+    print "TO-FILE read but LIST-FILE not given\n";
+    exit ( 1 );
+}
+open ( my $list_handle, $LIST )
+    or die ( "cannot read $LIST $!" );
+my $list = <$list_handle>;
+    # read $LIST file into $list
+
+
+my @files = split ( "\n", $list );
+foreach ( @files )
+{
+    my $TEXT = $_;
+    $TEXT =~ s/^\s+|\s+$//g;
     open ( my $text_handle, $TEXT )
 	or die ( "cannot read $TEXT: $!" );
     my $text = <$text_handle>;
